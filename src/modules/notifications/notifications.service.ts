@@ -18,21 +18,22 @@ export class NotificationsService {
 
   async sendVerificationEmail(to: string, token: string): Promise<void> {
     const frontendUrl = this.configService.get('frontendUrl');
-    const link = `${frontendUrl}/employer/verify-email?token=${token}`;
+    const appUrl = this.configService.get<string>('email.appUrl');
+    const verifyLink = `${appUrl}/auth/verify-email?token=${token}`;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({
       to,
       subject: 'Verify your Gainday email',
-      template: 'password-reset',
+      template: 'email-verification',
       context: {
-        resetLink: link,
+        verifyLink,
         year,
-        expiryHours: 24,
+        frontendUrl,
       },
     });
 
-    this.logger.log(`Verification email enqueued for ${to}`);
+    this.logger.log(`Email verification email enqueued for ${to}`);
   }
 
   async sendPasswordResetEmail(to: string, token: string): Promise<void> {
