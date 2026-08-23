@@ -30,22 +30,28 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto) {
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const user = await this.authService.validateUser(loginDto.email, loginDto.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    return this.authService.login(user);
+    const result = await this.authService.login(user);
+    this.setAuthCookie(res, result.access_token);
+    return result;
   }
 
   @Post('signup')
-  async signup(@Body() signupDto: SignupEmployerDto) {
-    return this.authService.registerEmployer(signupDto);
+  async signup(@Body() signupDto: SignupEmployerDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.registerEmployer(signupDto);
+    this.setAuthCookie(res, result.access_token);
+    return result;
   }
 
   @Post('register/employer')
-  async registerEmployer(@Body() signupDto: SignupEmployerDto) {
-    return this.authService.registerEmployer(signupDto);
+  async registerEmployer(@Body() signupDto: SignupEmployerDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.registerEmployer(signupDto);
+    this.setAuthCookie(res, result.access_token);
+    return result;
   }
 
   @Post('register/candidate')
@@ -90,6 +96,8 @@ export class AuthController {
     const result = await this.authService.validateGoogleUser(user);
     const frontendUrl = this.configService.get('frontendUrl');
 
+    this.setAuthCookie(res, result.access_token);
+
     return res.redirect(
       `${frontendUrl}/employer/oauth/callback?token=${result.access_token}`,
     );
@@ -101,5 +109,25 @@ export class AuthController {
     return {
       user,
     };
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+    return { message: 'Logged out successfully' };
+  }
+
+  private setAuthCookie(res: Response, token: string): void {
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
   }
 }

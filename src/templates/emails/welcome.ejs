@@ -5,56 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Welcome to Gainday</title>
     <style>
-      body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        line-height: 1.6;
-        color: #333;
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 20px;
-        background-color: #f5f5f5;
-      }
-      .container {
-        background-color: #ffffff;
-        border-radius: 8px;
-        padding: 40px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      h1 {
-        color: #2c3e50;
-        margin-bottom: 20px;
-      }
-      .button {
-        display: inline-block;
-        padding: 12px 24px;
-        background-color: #3498db;
-        color: white;
-        text-decoration: none;
-        border-radius: 4px;
-        margin-top: 20px;
-      }
-      .button:hover {
-        background-color: #2980b9;
-      }
-      .footer {
-        margin-top: 40px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-        font-size: 12px;
-        color: #666;
-        text-align: center;
-      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; color: #2d3748; background-color: #f7fafc; }
+      .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+      .header { background: linear-gradient(135deg, #1817fe 0%, #1814cc 100%); padding: 40px 20px; text-align: center; }
+      .logo { height: 50px; width: auto; margin-bottom: 20px; }
+      .header h1 { color: #ffffff; font-size: 28px; font-weight: 700; margin: 0; }
+      .content { padding: 40px 30px; }
+      .intro-text { font-size: 15px; line-height: 1.8; color: #4a5568; margin-bottom: 20px; }
+      .alert { border-radius: 6px; padding: 16px; margin: 20px 0; border-left: 4px solid; }
+      .alert-info { background-color: #f0f4ff; border-left-color: #1817fe; }
+      .alert-info strong { color: #1817fe; }
+      .alert-info p { color: #4a5568; }
+      .cta-button { display: inline-block; background: linear-gradient(135deg, #1817fe 0%, #1814cc 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px; margin: 25px 0; }
+      .cta-button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(24, 23, 254, 0.3); }
+      .feature { display: flex; align-items: flex-start; margin: 15px 0; font-size: 14px; }
+      .feature-icon { width: 20px; height: 20px; background-color: #1817fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 12px; flex-shrink: 0; font-size: 12px; }
+      .feature-text { color: #4a5568; }
+      .footer { background-color: #f7fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; }
+      .footer-text { font-size: 13px; color: #718096; margin: 8px 0; }
+      .footer-links a { color: #1817fe; text-decoration: none; margin: 0 5px; }
+      .divider { height: 1px; background-color: #e2e8f0; margin: 20px 0; }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>Welcome to Gainday, <%= firstName %>!</h1>
-      <p>Thank you for signing up. We're excited to have you on board.</p>
-      <p>Gainday is your platform for creating impact and reaching your goals. Get started by exploring our features and connecting with opportunities.</p>
-      <a href="<%= appUrl %>/dashboard" class="button">Get Started</a>
+      <div class="header">
+        <img src="<%= logoUrl %>" alt="Gainday" class="logo" />
+        <h1>Welcome to Gainday</h1>
+      </div>
+      <div class="content">
+        <p class="intro-text">Hello <strong><%= firstName %></strong>,</p>
+        <p class="intro-text">We're thrilled to have you join our community! Gainday is your platform for discovering talent, running fair assessments, and making data-driven hiring decisions.</p>
+        <div class="alert alert-info">
+          <strong>🚀 Getting Started</strong>
+          <p>Your account is ready to go. Log in to access your dashboard and start exploring what Gainday can do for you.</p>
+        </div>
+        <center><a href="<%= frontendUrl %>/dashboard" class="cta-button">Access Your Dashboard</a></center>
+        <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+          <h3 style="color: #2d3748; font-size: 16px; margin-bottom: 15px;">What You Can Do:</h3>
+          <div class="feature"><div class="feature-icon">✓</div><div class="feature-text">Create work simulations and assessments</div></div>
+          <div class="feature"><div class="feature-icon">✓</div><div class="feature-text">Invite candidates and track submissions</div></div>
+          <div class="feature"><div class="feature-icon">✓</div><div class="feature-text">Review detailed scoring and analytics</div></div>
+          <div class="feature"><div class="feature-icon">✓</div><div class="feature-text">Compare candidates with comprehensive reports</div></div>
+        </div>
+        <div class="divider"></div>
+        <p style="font-size: 14px; color: #4a5568; margin-top: 20px;">Need help? Our support team is here for you. Visit our help center or reply to this email with any questions.</p>
+      </div>
       <div class="footer">
-        <p>If you have any questions, feel free to reach out to our support team.</p>
-        <p>&copy; <%= year %> Gainday. All rights reserved.</p>
+        <p class="footer-text"><strong>Gainday</strong> — Hire With Confidence</p>
+        <p class="footer-text">© <%= year %> Gainday, Inc. All rights reserved.</p>
+        <p class="footer-text" style="margin-top: 15px; font-size: 12px;"><a href="<%= frontendUrl %>">Website</a> • <a href="<%= frontendUrl %>/help">Help</a> • <a href="<%= frontendUrl %>/privacy">Privacy</a></p>
       </div>
     </div>
   </body>

@@ -9,7 +9,7 @@ export declare class AuthController {
     private readonly authService;
     private readonly configService;
     constructor(authService: AuthService, configService: ConfigService);
-    login(loginDto: LoginDto): Promise<{
+    login(loginDto: LoginDto, res: Response): Promise<{
         access_token: string;
         user: {
             id: any;
@@ -19,7 +19,7 @@ export declare class AuthController {
             companyName: any;
         };
     }>;
-    signup(signupDto: SignupEmployerDto): Promise<{
+    signup(signupDto: SignupEmployerDto, res: Response): Promise<{
         access_token: string;
         user: {
             id: any;
@@ -29,7 +29,7 @@ export declare class AuthController {
             companyName: any;
         };
     }>;
-    registerEmployer(signupDto: SignupEmployerDto): Promise<{
+    registerEmployer(signupDto: SignupEmployerDto, res: Response): Promise<{
         access_token: string;
         user: {
             id: any;
@@ -61,4 +61,8 @@ export declare class AuthController {
     getProfile(user: any): {
         user: any;
     };
+    logout(res: Response): Promise<{
+        message: string;
+    }>;
+    private setAuthCookie;
 }

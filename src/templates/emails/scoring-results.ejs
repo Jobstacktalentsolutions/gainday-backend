@@ -5,138 +5,96 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Your Simulation Results</title>
     <style>
-      body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        line-height: 1.6;
-        color: #333;
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 20px;
-        background-color: #f5f5f5;
-      }
-      .container {
-        background-color: #ffffff;
-        border-radius: 8px;
-        padding: 40px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      h1 {
-        color: #2c3e50;
-        margin-bottom: 20px;
-      }
-      .score-section {
-        background-color: #f0f8ff;
-        border-left: 4px solid #3498db;
-        padding: 20px;
-        margin: 20px 0;
-        border-radius: 4px;
-      }
-      .overall-score {
-        font-size: 48px;
-        font-weight: bold;
-        color: #3498db;
-        text-align: center;
-        margin: 20px 0;
-      }
-      .score-subtitle {
-        text-align: center;
-        color: #666;
-        font-size: 14px;
-        margin-bottom: 20px;
-      }
-      .categories {
-        margin-top: 20px;
-      }
-      .category-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 0;
-        border-bottom: 1px solid #eee;
-      }
-      .category-item:last-child {
-        border-bottom: none;
-      }
-      .category-name {
-        font-weight: 600;
-        color: #2c3e50;
-      }
-      .category-score {
-        color: #3498db;
-        font-weight: bold;
-      }
-      .button {
-        display: inline-block;
-        padding: 12px 24px;
-        background-color: #3498db;
-        color: white;
-        text-decoration: none;
-        border-radius: 4px;
-        margin-top: 20px;
-      }
-      .button:hover {
-        background-color: #2980b9;
-      }
-      .footer {
-        margin-top: 40px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-        font-size: 12px;
-        color: #666;
-        text-align: center;
-      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; color: #2d3748; background-color: #f7fafc; }
+      .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+      .header { background: linear-gradient(135deg, #1817fe 0%, #1814cc 100%); padding: 40px 20px; text-align: center; }
+      .logo { height: 50px; width: auto; margin-bottom: 20px; }
+      .header h1 { color: #ffffff; font-size: 28px; font-weight: 700; margin: 0; }
+      .content { padding: 40px 30px; }
+      .intro-text { font-size: 15px; line-height: 1.8; color: #4a5568; margin-bottom: 25px; }
+      .badge { display: inline-block; background-color: #f0f4ff; color: #1817fe; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+      .score-card { background: linear-gradient(135deg, #1817fe 0%, #1814cc 100%); border-radius: 10px; padding: 40px; margin: 25px 0; text-align: center; color: white; }
+      .score-label { font-size: 14px; opacity: 0.9; font-weight: 500; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .score-value { font-size: 64px; font-weight: 800; line-height: 1; margin-bottom: 15px; }
+      .score-description { font-size: 16px; opacity: 0.95; }
+      .metrics { background-color: #f0f4ff; border-radius: 10px; padding: 25px; margin: 25px 0; }
+      .metrics-title { font-size: 16px; font-weight: 700; color: #2d3748; margin-bottom: 20px; }
+      .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #e2e8f0; }
+      .metric-row:last-child { border-bottom: none; }
+      .metric-name { font-size: 14px; color: #4a5568; font-weight: 500; }
+      .metric-score { font-size: 16px; font-weight: 700; color: #1817fe; }
+      .score-bar { background-color: #e2e8f0; height: 6px; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+      .score-bar-fill { height: 100%; background: linear-gradient(90deg, #1817fe 0%, #1814cc 100%); }
+      .cta-section { background-color: #f7fafc; border-radius: 10px; padding: 25px; margin: 25px 0; text-align: center; }
+      .cta-section h3 { color: #2d3748; font-size: 18px; margin-bottom: 15px; }
+      .cta-section p { color: #4a5568; margin-bottom: 15px; font-size: 14px; }
+      .cta-button { display: inline-block; background: linear-gradient(135deg, #1817fe 0%, #1814cc 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px; }
+      .alert { border-radius: 6px; padding: 16px; margin: 20px 0; border-left: 4px solid; }
+      .alert-success { background-color: #f0fdf4; border-left-color: #22c55e; }
+      .alert-success strong { color: #16a34a; }
+      .alert-success p { color: #166534; }
+      .footer { background-color: #f7fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; }
+      .footer-text { font-size: 13px; color: #718096; margin: 8px 0; }
+      .footer-links a { color: #1817fe; text-decoration: none; margin: 0 5px; }
+      .divider { height: 1px; background-color: #e2e8f0; margin: 20px 0; }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>Your Simulation Results</h1>
-      <p>Congratulations! Your work simulation for <strong><%= jobTitle %></strong> has been scored.</p>
-
-      <div class="score-section">
-        <div class="overall-score"><%= overallScore %></div>
-        <div class="score-subtitle">Your Overall Score</div>
-
+      <div class="header">
+        <img src="<%= logoUrl %>" alt="Gainday" class="logo" />
+        <h1>Your Simulation Results 🎯</h1>
+      </div>
+      <div class="content">
+        <span class="badge"><%= jobTitle %></span>
+        <p class="intro-text">Congratulations! Your work simulation has been evaluated by our AI-powered assessment framework. Here's how you performed:</p>
+        <div class="score-card">
+          <div class="score-label">Your Overall Score</div>
+          <div class="score-value"><%= overallScore %></div>
+          <div class="score-description">Out of 100</div>
+        </div>
         <% if (categoryScores) { %>
-        <div class="categories">
-          <% if (categoryScores.problemSolving) { %>
-          <div class="category-item">
-            <span class="category-name">Problem Solving</span>
-            <span class="category-score"><%= categoryScores.problemSolving %></span>
-          </div>
+        <div class="metrics">
+          <div class="metrics-title">📊 Performance by Category</div>
+          <% if (categoryScores.problemSolving !== undefined) { %>
+          <div class="metric-row"><div class="metric-name">Problem Solving</div><div class="metric-score"><%= categoryScores.problemSolving %></div></div>
+          <div class="score-bar"><div class="score-bar-fill" style="width: <%= categoryScores.problemSolving %>%"></div></div>
           <% } %>
-          <% if (categoryScores.execution) { %>
-          <div class="category-item">
-            <span class="category-name">Execution</span>
-            <span class="category-score"><%= categoryScores.execution %></span>
-          </div>
+          <% if (categoryScores.execution !== undefined) { %>
+          <div class="metric-row" style="margin-top: 15px;"><div class="metric-name">Execution</div><div class="metric-score"><%= categoryScores.execution %></div></div>
+          <div class="score-bar"><div class="score-bar-fill" style="width: <%= categoryScores.execution %>%"></div></div>
           <% } %>
-          <% if (categoryScores.writtenCommunication) { %>
-          <div class="category-item">
-            <span class="category-name">Written Communication</span>
-            <span class="category-score"><%= categoryScores.writtenCommunication %></span>
-          </div>
+          <% if (categoryScores.writtenCommunication !== undefined) { %>
+          <div class="metric-row" style="margin-top: 15px;"><div class="metric-name">Written Communication</div><div class="metric-score"><%= categoryScores.writtenCommunication %></div></div>
+          <div class="score-bar"><div class="score-bar-fill" style="width: <%= categoryScores.writtenCommunication %>%"></div></div>
           <% } %>
-          <% if (categoryScores.domainAwareness) { %>
-          <div class="category-item">
-            <span class="category-name">Domain Awareness</span>
-            <span class="category-score"><%= categoryScores.domainAwareness %></span>
-          </div>
+          <% if (categoryScores.domainAwareness !== undefined) { %>
+          <div class="metric-row" style="margin-top: 15px;"><div class="metric-name">Domain Awareness</div><div class="metric-score"><%= categoryScores.domainAwareness %></div></div>
+          <div class="score-bar"><div class="score-bar-fill" style="width: <%= categoryScores.domainAwareness %>%"></div></div>
           <% } %>
-          <% if (categoryScores.prioritization) { %>
-          <div class="category-item">
-            <span class="category-name">Prioritization</span>
-            <span class="category-score"><%= categoryScores.prioritization %></span>
-          </div>
+          <% if (categoryScores.prioritization !== undefined) { %>
+          <div class="metric-row" style="margin-top: 15px;"><div class="metric-name">Prioritization</div><div class="metric-score"><%= categoryScores.prioritization %></div></div>
+          <div class="score-bar"><div class="score-bar-fill" style="width: <%= categoryScores.prioritization %>%"></div></div>
           <% } %>
         </div>
         <% } %>
+        <div class="cta-section">
+          <h3>View Your Complete Feedback</h3>
+          <p>Log in to see detailed feedback, insights, and recommendations for improvement.</p>
+          <a href="<%= dashboardUrl %>" class="cta-button">View Full Results</a>
+        </div>
+        <div class="alert alert-success">
+          <strong>💡 What Happens Next?</strong>
+          <p>Your results will be reviewed by our hiring partners. If you're a strong match, they may reach out with next steps. Keep an eye on your email for updates!</p>
+        </div>
+        <div class="divider"></div>
+        <p style="font-size: 14px; color: #4a5568;"><strong>Have questions about your results?</strong> Our support team can help explain your score and provide guidance. Reach out anytime.</p>
       </div>
-
-      <p>Log in to view detailed feedback and insights across all grading categories.</p>
-      <a href="<%= dashboardUrl %>" class="button">View Full Results</a>
-
       <div class="footer">
-        <p>This is an automated notification from Gainday.</p>
-        <p>&copy; <%= year %> Gainday. All rights reserved.</p>
+        <p class="footer-text"><strong>Gainday</strong> — Hire With Confidence</p>
+        <p class="footer-text">© <%= year %> Gainday, Inc. All rights reserved.</p>
+        <p class="footer-text" style="margin-top: 15px; font-size: 12px;"><a href="<%= frontendUrl %>">Website</a> • <a href="<%= frontendUrl %>/help">Help</a> • <a href="<%= frontendUrl %>/privacy">Privacy</a></p>
       </div>
     </div>
   </body>

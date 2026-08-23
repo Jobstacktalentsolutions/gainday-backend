@@ -30,18 +30,24 @@ let AuthController = class AuthController {
         this.authService = authService;
         this.configService = configService;
     }
-    async login(loginDto) {
+    async login(loginDto, res) {
         const user = await this.authService.validateUser(loginDto.email, loginDto.password);
         if (!user) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        return this.authService.login(user);
+        const result = await this.authService.login(user);
+        this.setAuthCookie(res, result.access_token);
+        return result;
     }
-    async signup(signupDto) {
-        return this.authService.registerEmployer(signupDto);
+    async signup(signupDto, res) {
+        const result = await this.authService.registerEmployer(signupDto);
+        this.setAuthCookie(res, result.access_token);
+        return result;
     }
-    async registerEmployer(signupDto) {
-        return this.authService.registerEmployer(signupDto);
+    async registerEmployer(signupDto, res) {
+        const result = await this.authService.registerEmployer(signupDto);
+        this.setAuthCookie(res, result.access_token);
+        return result;
     }
     async registerCandidate(body) {
         return this.authService.registerJobSeeker(body.email, body.password, body.fullName);
@@ -67,6 +73,7 @@ let AuthController = class AuthController {
     async googleCallback(user, res) {
         const result = await this.authService.validateGoogleUser(user);
         const frontendUrl = this.configService.get('frontendUrl');
+        this.setAuthCookie(res, result.access_token);
         return res.redirect(`${frontendUrl}/employer/oauth/callback?token=${result.access_token}`);
     }
     getProfile(user) {
@@ -74,28 +81,47 @@ let AuthController = class AuthController {
             user,
         };
     }
+    async logout(res) {
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+        });
+        return { message: 'Logged out successfully' };
+    }
+    setAuthCookie(res, token) {
+        res.cookie('access_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
     (0, common_1.Post)('signup'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [signup_employer_dto_1.SignupEmployerDto]),
+    __metadata("design:paramtypes", [signup_employer_dto_1.SignupEmployerDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "signup", null);
 __decorate([
     (0, common_1.Post)('register/employer'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [signup_employer_dto_1.SignupEmployerDto]),
+    __metadata("design:paramtypes", [signup_employer_dto_1.SignupEmployerDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "registerEmployer", null);
 __decorate([
@@ -153,6 +179,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "getProfile", null);
+__decorate([
+    (0, common_1.Post)('logout'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Res)({ passthrough: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "logout", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService,

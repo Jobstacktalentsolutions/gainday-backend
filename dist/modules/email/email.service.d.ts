@@ -14,6 +14,7 @@ export declare class EmailService {
     private apiKey;
     private fromEmail;
     private fromName;
+    private frontendUrl;
     private readonly breevoApiUrl;
     constructor(configService: ConfigService);
     renderTemplate(templateName: string, context?: Record<string, any>): Promise<string>;

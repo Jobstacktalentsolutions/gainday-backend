@@ -21,12 +21,14 @@ export class EmailService {
   private apiKey: string;
   private fromEmail: string;
   private fromName: string;
+  private frontendUrl: string;
   private readonly breevoApiUrl = 'https://api.brevo.com/v3/smtp/email';
 
   constructor(private configService: ConfigService) {
     this.apiKey = this.configService.get<string>('email.brevoApiKey', '');
     this.fromEmail = this.configService.get<string>('email.fromEmail', 'noreply@gainday.com');
     this.fromName = this.configService.get<string>('email.fromName', 'Gainday');
+    this.frontendUrl = this.configService.get<string>('frontendUrl', 'http://localhost:5173');
 
     if (!this.apiKey) {
       this.logger.warn('Brevo API key not configured');
@@ -35,14 +37,26 @@ export class EmailService {
 
   async renderTemplate(templateName: string, context: Record<string, any> = {}): Promise<string> {
     try {
-      const templatePath = path.join(process.cwd(), 'src', 'templates', 'emails', `${templateName}.ejs`);
+      const templatesDir = path.join(process.cwd(), 'src', 'templates', 'emails');
+      const templatePath = path.join(templatesDir, `${templateName}.ejs`);
 
       if (!fs.existsSync(templatePath)) {
         throw new Error(`Email template not found: ${templatePath}`);
       }
 
-      const html = await ejs.renderFile(templatePath, context, {
+      // Add frontend URL and logo to all templates
+      const enrichedContext = {
+        ...context,
+        frontendUrl: this.frontendUrl,
+        logoUrl: `${this.frontendUrl}/gainday.svg`,
+        year: context.year || new Date().getFullYear(),
+      };
+
+      // Render the template with proper directory configuration for includes
+      const html = await ejs.renderFile(templatePath, enrichedContext, {
         async: true,
+        filename: templatePath,
+        views: [templatesDir],
       });
 
       return html;
