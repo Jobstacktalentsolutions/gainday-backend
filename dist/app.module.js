@@ -28,6 +28,7 @@ const scoring_module_1 = require("./modules/scoring/scoring.module");
 const payments_module_1 = require("./modules/payments/payments.module");
 const admin_module_1 = require("./modules/admin/admin.module");
 const notifications_module_1 = require("./modules/notifications/notifications.module");
+const email_module_1 = require("./modules/email/email.module");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 let AppModule = class AppModule {
@@ -72,6 +73,7 @@ exports.AppModule = AppModule = __decorate([
             payments_module_1.PaymentsModule,
             admin_module_1.AdminModule,
             notifications_module_1.NotificationsModule,
+            email_module_1.EmailModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

@@ -20,6 +20,7 @@ import { ScoringModule } from './modules/scoring/scoring.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { EmailModule } from './modules/email/email.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -69,6 +70,7 @@ import { AppService } from './app.service';
     PaymentsModule,
     AdminModule,
     NotificationsModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

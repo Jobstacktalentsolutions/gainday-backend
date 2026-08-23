@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your Simulation Results</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 40px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 20px;
+      }
+      .score-section {
+        background-color: #f0f8ff;
+        border-left: 4px solid #3498db;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+      .overall-score {
+        font-size: 48px;
+        font-weight: bold;
+        color: #3498db;
+        text-align: center;
+        margin: 20px 0;
+      }
+      .score-subtitle {
+        text-align: center;
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+      .categories {
+        margin-top: 20px;
+      }
+      .category-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .category-item:last-child {
+        border-bottom: none;
+      }
+      .category-name {
+        font-weight: 600;
+        color: #2c3e50;
+      }
+      .category-score {
+        color: #3498db;
+        font-weight: bold;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #3498db;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        margin-top: 20px;
+      }
+      .button:hover {
+        background-color: #2980b9;
+      }
+      .footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        font-size: 12px;
+        color: #666;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Your Simulation Results</h1>
+      <p>Congratulations! Your work simulation for <strong><%= jobTitle %></strong> has been scored.</p>
+
+      <div class="score-section">
+        <div class="overall-score"><%= overallScore %></div>
+        <div class="score-subtitle">Your Overall Score</div>
+
+        <% if (categoryScores) { %>
+        <div class="categories">
+          <% if (categoryScores.problemSolving) { %>
+          <div class="category-item">
+            <span class="category-name">Problem Solving</span>
+            <span class="category-score"><%= categoryScores.problemSolving %></span>
+          </div>
+          <% } %>
+          <% if (categoryScores.execution) { %>
+          <div class="category-item">
+            <span class="category-name">Execution</span>
+            <span class="category-score"><%= categoryScores.execution %></span>
+          </div>
+          <% } %>
+          <% if (categoryScores.writtenCommunication) { %>
+          <div class="category-item">
+            <span class="category-name">Written Communication</span>
+            <span class="category-score"><%= categoryScores.writtenCommunication %></span>
+          </div>
+          <% } %>
+          <% if (categoryScores.domainAwareness) { %>
+          <div class="category-item">
+            <span class="category-name">Domain Awareness</span>
+            <span class="category-score"><%= categoryScores.domainAwareness %></span>
+          </div>
+          <% } %>
+          <% if (categoryScores.prioritization) { %>
+          <div class="category-item">
+            <span class="category-name">Prioritization</span>
+            <span class="category-score"><%= categoryScores.prioritization %></span>
+          </div>
+          <% } %>
+        </div>
+        <% } %>
+      </div>
+
+      <p>Log in to view detailed feedback and insights across all grading categories.</p>
+      <a href="<%= dashboardUrl %>" class="button">View Full Results</a>
+
+      <div class="footer">
+        <p>This is an automated notification from Gainday.</p>
+        <p>&copy; <%= year %> Gainday. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

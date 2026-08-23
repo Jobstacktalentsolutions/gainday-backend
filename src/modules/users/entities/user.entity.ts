@@ -7,29 +7,52 @@ export enum UserRole {
   ADMIN = 'ADMIN',
 }
 
+export enum AuthProvider {
+  LOCAL = 'local',
+  GOOGLE = 'google',
+}
+
 @Entity('users')
 export class User extends BaseEntity {
   @Column({ unique: true })
   email: string;
 
-  @Column({ select: false })
+  @Column({ select: false, nullable: true })
   password?: string;
 
   @Column({ type: 'enum', enum: UserRole })
   role: UserRole;
 
+  @Column({ type: 'enum', enum: AuthProvider, default: AuthProvider.LOCAL })
+  authProvider: AuthProvider;
+
+  @Column({ nullable: true, unique: true })
+  googleId?: string;
+
   @Column({ nullable: true })
   fullName?: string;
 
-  // Employer specific fields
   @Column({ nullable: true })
   companyName?: string;
 
   @Column({ nullable: true })
   phoneNumber?: string;
 
-  // Job Seeker specific fields: persistent capability scores
-  // Rolling average scores can be stored here or in a separate table
+  @Column({ default: false })
+  isEmailVerified: boolean;
+
+  @Column({ nullable: true, select: false })
+  emailVerificationToken?: string;
+
+  @Column({ type: 'timestamp with time zone', nullable: true, select: false })
+  emailVerificationExpires?: Date;
+
+  @Column({ nullable: true, select: false })
+  passwordResetToken?: string;
+
+  @Column({ type: 'timestamp with time zone', nullable: true, select: false })
+  passwordResetExpires?: Date;
+
   @Column({ type: 'jsonb', nullable: true })
   capabilityScores?: {
     [domain: string]: {

@@ -80,11 +80,20 @@ export class ScoringProcessor extends WorkerHost {
 
         // Email result notification to candidate
         const candidateEmail = submission.candidate?.email || submission.guestInfo?.email;
-        if (candidateEmail) {
-          await this.notificationsService.sendEmail(
+        if (candidateEmail && submission.overallScore !== undefined) {
+          await this.notificationsService.sendScoringResultsEmail(
             candidateEmail,
-            `Your work simulation results for ${job.title} are ready`,
-            `You scored ${submission.overallScore} overall. Log in to view detailed feedback across the five grading categories.`,
+            job.title,
+            submission.overallScore,
+            submission.categoryScores
+              ? {
+                  problemSolving: submission.categoryScores.problemSolving?.score || 0,
+                  execution: submission.categoryScores.execution?.score || 0,
+                  writtenCommunication: submission.categoryScores.writtenCommunication?.score || 0,
+                  domainAwareness: submission.categoryScores.domainAwareness?.score || 0,
+                  prioritization: submission.categoryScores.prioritization?.score || 0,
+                }
+              : undefined,
           );
         }
 

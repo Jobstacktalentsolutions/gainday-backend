@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.User = exports.UserRole = void 0;
+exports.User = exports.AuthProvider = exports.UserRole = void 0;
 const typeorm_1 = require("typeorm");
 const base_entity_1 = require("../../../common/entities/base.entity");
 var UserRole;
@@ -18,13 +18,25 @@ var UserRole;
     UserRole["JOB_SEEKER"] = "JOB_SEEKER";
     UserRole["ADMIN"] = "ADMIN";
 })(UserRole || (exports.UserRole = UserRole = {}));
+var AuthProvider;
+(function (AuthProvider) {
+    AuthProvider["LOCAL"] = "local";
+    AuthProvider["GOOGLE"] = "google";
+})(AuthProvider || (exports.AuthProvider = AuthProvider = {}));
 let User = class User extends base_entity_1.BaseEntity {
     email;
     password;
     role;
+    authProvider;
+    googleId;
     fullName;
     companyName;
     phoneNumber;
+    isEmailVerified;
+    emailVerificationToken;
+    emailVerificationExpires;
+    passwordResetToken;
+    passwordResetExpires;
     capabilityScores;
     isActive;
 };
@@ -34,13 +46,21 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ select: false }),
+    (0, typeorm_1.Column)({ select: false, nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'enum', enum: UserRole }),
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'enum', enum: AuthProvider, default: AuthProvider.LOCAL }),
+    __metadata("design:type", String)
+], User.prototype, "authProvider", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true, unique: true }),
+    __metadata("design:type", String)
+], User.prototype, "googleId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
@@ -53,6 +73,26 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "phoneNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isEmailVerified", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true, select: false }),
+    __metadata("design:type", String)
+], User.prototype, "emailVerificationToken", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp with time zone', nullable: true, select: false }),
+    __metadata("design:type", Date)
+], User.prototype, "emailVerificationExpires", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true, select: false }),
+    __metadata("design:type", String)
+], User.prototype, "passwordResetToken", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp with time zone', nullable: true, select: false }),
+    __metadata("design:type", Date)
+], User.prototype, "passwordResetExpires", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'jsonb', nullable: true }),
     __metadata("design:type", Object)

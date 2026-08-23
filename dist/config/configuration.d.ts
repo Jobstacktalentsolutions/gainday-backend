@@ -14,5 +14,17 @@ declare const _default: () => {
         secret: string;
         expiresIn: string;
     };
+    email: {
+        brevoApiKey: string;
+        fromEmail: string;
+        fromName: string;
+        appUrl: string;
+    };
+    google: {
+        clientId: string | undefined;
+        clientSecret: string | undefined;
+        callbackUrl: string;
+    };
+    frontendUrl: string;
 };
 export default _default;

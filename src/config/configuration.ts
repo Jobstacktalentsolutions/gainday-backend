@@ -32,5 +32,17 @@ export default () => {
       secret: process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production',
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
+    email: {
+      brevoApiKey: process.env.BREVO_API_KEY || '',
+      fromEmail: process.env.EMAIL_FROM || 'noreply@gainday.com',
+      fromName: process.env.EMAIL_FROM_NAME || 'Gainday',
+      appUrl: process.env.APP_URL || 'http://localhost:3000',
+    },
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback',
+    },
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   };
 };
