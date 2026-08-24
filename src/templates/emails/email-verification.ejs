@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reset Your Password</title>
+    <title>Verify Your Email Address</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; color: #2d3748; background-color: #f7fafc; }
@@ -14,21 +14,13 @@
       .content { padding: 40px 30px; }
       .intro-text { font-size: 15px; line-height: 1.8; color: #4a5568; margin-bottom: 20px; }
       .alert { border-radius: 6px; padding: 16px; margin: 20px 0; border-left: 4px solid; }
-      .alert-danger { background-color: #fff5f5; border-left-color: #f56565; }
-      .alert-danger strong { color: #c53030; }
-      .alert-danger p { color: #742a2a; }
-      .alert-warning { background-color: #fffaf0; border-left-color: #ed8936; }
-      .alert-warning strong { color: #c05621; }
-      .alert-warning p { color: #7c2d12; }
       .alert-info { background-color: #f0f4ff; border-left-color: #1817fe; }
       .alert-info strong { color: #1817fe; }
       .alert-info p, .alert-info li { color: #4a5568; }
-      .alert-info ul { margin: 0; padding-left: 20px; font-size: 14px; }
-      .alert-info li { margin: 6px 0; }
       .cta-button { display: inline-block; background: linear-gradient(135deg, #1817fe 0%, #1814cc 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px; margin: 25px 0; }
       .link-box { background-color: #f7fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 6px; margin: 20px 0; word-break: break-all; }
       .link-label { font-size: 12px; color: #718096; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
-      .reset-link { color: #1817fe; font-size: 14px; font-family: 'Monaco', 'Menlo', monospace; }
+      .verify-link { color: #1817fe; font-size: 14px; font-family: 'Monaco', 'Menlo', monospace; }
       .footer { background-color: #f7fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; }
       .footer-text { font-size: 13px; color: #718096; margin: 8px 0; }
       .footer-links a { color: #1817fe; text-decoration: none; margin: 0 5px; }
@@ -39,35 +31,22 @@
     <div class="container">
       <div class="header">
         <img src="<%= logoUrl %>" alt="Gainday" class="logo" />
-        <h1>Reset Your Password</h1>
+        <h1>Welcome to Gainday</h1>
       </div>
       <div class="content">
-        <div class="alert alert-danger">
-          <strong>🔒 Security Notice</strong>
-          <p>We received a request to reset your password. If this wasn't you, please ignore this email and your account will remain secure.</p>
-        </div>
-        <p class="intro-text">To reset your password, click the button below or copy the link and paste it into your browser.</p>
-        <center><a href="<%= resetLink %>" class="cta-button">Reset Your Password</a></center>
-        <p class="intro-text">Or use this link:</p>
-        <div class="link-box">
-          <div class="link-label">Reset Link</div>
-          <div class="reset-link"><%= resetLink %></div>
-        </div>
-        <div class="alert alert-warning">
-          <strong>⏰ Expires in <%= expiryHours %> hours</strong>
-          <p>This link will expire for security reasons. Generate a new one if needed.</p>
-        </div>
         <div class="alert alert-info">
-          <strong>🛡️ Stay Safe Online</strong>
-          <ul>
-            <li>Never share this link with anyone</li>
-            <li>Choose a strong, unique password</li>
-            <li>Use a mix of uppercase, lowercase, numbers, and symbols</li>
-            <li>Don't reuse passwords from other accounts</li>
-          </ul>
+          <strong>👋 Welcome aboard!</strong>
+          <p>Thank you for signing up for Gainday. To complete your account registration and start using the platform, please verify your email address.</p>
+        </div>
+        <p class="intro-text">Click the button below to verify your email address:</p>
+        <center><a href="<%= verifyLink %>" class="cta-button">Verify Email Address</a></center>
+        <p class="intro-text">If the button doesn't work, copy and paste the link below into your browser:</p>
+        <div class="link-box">
+          <div class="link-label">Verification Link</div>
+          <div class="verify-link"><%= verifyLink %></div>
         </div>
         <div class="divider"></div>
-        <p style="font-size: 14px; color: #4a5568;"><strong>Didn't request a password reset?</strong><br/>If you didn't make this request, please contact our support team immediately. Your account may have been compromised.</p>
+        <p style="font-size: 14px; color: #4a5568;">If you did not sign up for an account, you can safely ignore this email.</p>
       </div>
       <div class="footer">
         <p class="footer-text"><strong>Gainday</strong> — Hire With Confidence</p>

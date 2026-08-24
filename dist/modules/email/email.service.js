@@ -100,8 +100,8 @@ let EmailService = EmailService_1 = class EmailService {
         try {
             const html = await this.renderTemplate(payload.template, payload.context);
             const toList = Array.isArray(payload.to)
-                ? payload.to.map((email) => ({ email, name: '' }))
-                : [{ email: payload.to, name: '' }];
+                ? payload.to.map((email) => ({ email }))
+                : [{ email: payload.to }];
             const emailData = {
                 to: toList,
                 subject: payload.subject,
@@ -130,14 +130,21 @@ let EmailService = EmailService_1 = class EmailService {
             this.logger.log(`Email sent successfully to ${Array.isArray(payload.to) ? payload.to.join(', ') : payload.to}`);
         }
         catch (error) {
-            this.logger.error(`Failed to send email:`, error);
+            if (error.isAxiosError) {
+                const status = error.response?.status;
+                const data = error.response?.data;
+                const errMsg = `Failed to send email: Status ${status} - ${JSON.stringify(data)}`;
+                this.logger.error(errMsg);
+                throw new Error(errMsg);
+            }
+            this.logger.error(`Failed to send email: ${error.message || error}`);
             throw error;
         }
     }
     async sendBatchEmail(recipients, subject, template, context = {}) {
         try {
             const html = await this.renderTemplate(template, context);
-            const toList = recipients.map((email) => ({ email, name: '' }));
+            const toList = recipients.map((email) => ({ email }));
             const emailData = {
                 to: toList,
                 subject,
@@ -157,7 +164,14 @@ let EmailService = EmailService_1 = class EmailService {
             this.logger.log(`Batch email sent to ${recipients.length} recipients`);
         }
         catch (error) {
-            this.logger.error(`Failed to send batch email:`, error);
+            if (error.isAxiosError) {
+                const status = error.response?.status;
+                const data = error.response?.data;
+                const errMsg = `Failed to send batch email: Status ${status} - ${JSON.stringify(data)}`;
+                this.logger.error(errMsg);
+                throw new Error(errMsg);
+            }
+            this.logger.error(`Failed to send batch email: ${error.message || error}`);
             throw error;
         }
     }
