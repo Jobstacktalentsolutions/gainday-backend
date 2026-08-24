@@ -48,6 +48,12 @@ let UsersService = class UsersService {
             emailVerificationExpires: expires,
         });
     }
+    async updateVerificationToken(userId, token, expires) {
+        await this.userRepository.update(userId, {
+            emailVerificationToken: token,
+            emailVerificationExpires: expires,
+        });
+    }
     async verifyEmailByToken(token) {
         const user = await this.userRepository
             .createQueryBuilder('user')

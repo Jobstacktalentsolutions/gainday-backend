@@ -36,13 +36,22 @@ let AuthController = class AuthController {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
         const result = await this.authService.login(user);
+        if (!user.isEmailVerified) {
+            await this.authService.resendVerificationEmail(user.email);
+        }
         this.setAuthCookie(res, result.access_token);
-        return result;
+        return {
+            ...result,
+            isEmailVerified: user.isEmailVerified,
+        };
     }
     async signup(signupDto, res) {
         const result = await this.authService.registerEmployer(signupDto);
         this.setAuthCookie(res, result.access_token);
-        return result;
+        return {
+            ...result,
+            isEmailVerified: false,
+        };
     }
     async registerEmployer(signupDto, res) {
         const result = await this.authService.registerEmployer(signupDto);
@@ -62,11 +71,16 @@ let AuthController = class AuthController {
     }
     async verifyEmail(token, res) {
         if (!token) {
-            return res.redirect(`${this.configService.get('frontendUrl')}/employer/verify-email?verified=false`);
+            return res.redirect(`${this.configService.get('frontendUrl')}/employer/verify-email?error=true`);
         }
         const verified = await this.authService.verifyEmail(token);
         const frontendUrl = this.configService.get('frontendUrl');
-        return res.redirect(`${frontendUrl}/employer/verify-email?verified=${verified}`);
+        if (verified) {
+            return res.redirect(`${frontendUrl}/employer/verify-email?verified=true`);
+        }
+        else {
+            return res.redirect(`${frontendUrl}/employer/verify-email?error=true`);
+        }
     }
     googleAuth() {
     }

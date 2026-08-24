@@ -10,6 +10,7 @@ export declare class AuthController {
     private readonly configService;
     constructor(authService: AuthService, configService: ConfigService);
     login(loginDto: LoginDto, res: Response): Promise<{
+        isEmailVerified: any;
         access_token: string;
         user: {
             id: any;
@@ -20,6 +21,7 @@ export declare class AuthController {
         };
     }>;
     signup(signupDto: SignupEmployerDto, res: Response): Promise<{
+        isEmailVerified: boolean;
         access_token: string;
         user: {
             id: any;

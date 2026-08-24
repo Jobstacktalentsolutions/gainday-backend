@@ -42,6 +42,7 @@ export declare class AuthService {
     requestPasswordReset(email: string): Promise<void>;
     resetPassword(dto: ResetPasswordDto): Promise<void>;
     verifyEmail(token: string): Promise<boolean>;
+    resendVerificationEmail(email: string): Promise<void>;
     validateGoogleUser(googleUserData: any): Promise<{
         access_token: string;
         user: {

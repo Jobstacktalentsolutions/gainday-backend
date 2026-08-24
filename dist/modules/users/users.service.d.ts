@@ -9,6 +9,7 @@ export declare class UsersService {
     findByGoogleId(googleId: string): Promise<User | null>;
     createUser(data: Partial<User>): Promise<User>;
     setEmailVerificationToken(userId: string, token: string, expires: Date): Promise<void>;
+    updateVerificationToken(userId: string, token: string, expires: Date): Promise<void>;
     verifyEmailByToken(token: string): Promise<User | null>;
     setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void>;
     findByValidPasswordResetToken(token: string): Promise<User | null>;
