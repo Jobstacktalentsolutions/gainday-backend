@@ -151,6 +151,19 @@ export class AuthService {
     return !!result;
   }
 
+  async resendVerificationEmail(email: string): Promise<void> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      return;
+    }
+
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+    const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await this.usersService.updateVerificationToken(user.id, emailVerificationToken, emailVerificationExpires);
+    await this.notificationsService.sendVerificationEmail(email, emailVerificationToken);
+  }
+
   async validateGoogleUser(googleUserData: any) {
     const { email, googleId, fullName } = googleUserData;
 

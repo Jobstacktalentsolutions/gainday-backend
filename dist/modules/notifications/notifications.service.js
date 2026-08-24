@@ -28,19 +28,20 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
     }
     async sendVerificationEmail(to, token) {
         const frontendUrl = this.configService.get('frontendUrl');
-        const link = `${frontendUrl}/employer/verify-email?token=${token}`;
+        const appUrl = this.configService.get('email.appUrl');
+        const verifyLink = `${appUrl}/auth/verify-email?token=${token}`;
         const year = new Date().getFullYear();
         await this.emailQueueService.enqueueEmail({
             to,
             subject: 'Verify your Gainday email',
-            template: 'password-reset',
+            template: 'email-verification',
             context: {
-                resetLink: link,
+                verifyLink,
                 year,
-                expiryHours: 24,
+                frontendUrl,
             },
         });
-        this.logger.log(`Verification email enqueued for ${to}`);
+        this.logger.log(`Email verification email enqueued for ${to}`);
     }
     async sendPasswordResetEmail(to, token) {
         const frontendUrl = this.configService.get('frontendUrl');

@@ -42,6 +42,13 @@ export class UsersService {
     });
   }
 
+  async updateVerificationToken(userId: string, token: string, expires: Date): Promise<void> {
+    await this.userRepository.update(userId, {
+      emailVerificationToken: token,
+      emailVerificationExpires: expires,
+    });
+  }
+
   async verifyEmailByToken(token: string): Promise<User | null> {
     const user = await this.userRepository
       .createQueryBuilder('user')
