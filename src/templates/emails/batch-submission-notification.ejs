@@ -1,81 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>New Submissions Received</title>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; color: #2d3748; background-color: #f7fafc; }
-      .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
-      .header { background: linear-gradient(135deg, #1817fe 0%, #1814cc 100%); padding: 40px 20px; text-align: center; }
-      .logo { height: 50px; width: auto; margin-bottom: 20px; }
-      .header h1 { color: #ffffff; font-size: 28px; font-weight: 700; margin: 0; }
-      .content { padding: 40px 30px; }
-      .intro-text { font-size: 15px; line-height: 1.8; color: #4a5568; margin-bottom: 25px; }
-      .alert { border-radius: 6px; padding: 16px; margin: 20px 0; border-left: 4px solid; }
-      .alert-info { background-color: #f0f4ff; border-left-color: #1817fe; }
-      .alert-info strong { color: #1817fe; }
-      .alert-info p { color: #4a5568; }
-      .alert-info ul { margin: 0; padding-left: 20px; font-size: 14px; }
-      .alert-info li { margin: 6px 0; color: #4a5568; }
-      .submission-card { background: linear-gradient(135deg, #e6f3ff 0%, #f0f4ff 100%); border: 2px solid #1817fe; border-radius: 10px; padding: 30px; margin: 25px 0; text-align: center; }
-      .submission-count { font-size: 48px; font-weight: 800; color: #1817fe; margin: 0 0 10px 0; line-height: 1; }
-      .submission-label { font-size: 16px; color: #4a5568; margin-bottom: 20px; font-weight: 500; }
-      .job-title-box { background-color: rgba(24, 23, 254, 0.1); padding: 15px; border-radius: 6px; margin-top: 15px; }
-      .job-title { font-size: 18px; font-weight: 700; color: #1817fe; }
-      .cta-button { display: inline-block; background: linear-gradient(135deg, #1817fe 0%, #1814cc 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 15px; margin: 30px 0; }
-      .stats { background-color: #f0f4ff; border-radius: 10px; padding: 25px; margin: 25px 0; }
-      .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-      .stat-row:last-child { border-bottom: none; }
-      .stat-label { color: #4a5568; font-weight: 500; }
-      .stat-value { color: #1817fe; font-weight: 700; }
-      .footer { background-color: #f7fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; }
-      .footer-text { font-size: 13px; color: #718096; margin: 8px 0; }
-      .footer-links a { color: #1817fe; text-decoration: none; margin: 0 5px; }
-      .divider { height: 1px; background-color: #e2e8f0; margin: 20px 0; }
-    </style>
-  </head>
-  <body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Submissions Received</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', sans-serif; line-height: 1.6; color: #2d3748; background-color: #f7fafc; }
+    .wrapper { width: 100%; background-color: #f7fafc; padding: 20px 0; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; }
+    .header { padding: 40px 20px; text-align: center; border-bottom: 1px solid #e2e8f0; }
+    .logo { height: 40px; width: auto; margin-bottom: 16px; }
+    .header h1 { font-size: 24px; font-weight: 600; color: #1a202c; margin: 0; }
+    .content { padding: 40px 30px; }
+    .intro { font-size: 15px; color: #4a5568; margin-bottom: 24px; line-height: 1.6; }
+    .card { background-color: #f0f4ff; border-left: 4px solid #1817fe; padding: 24px; margin: 24px 0; border-radius: 6px; }
+    .card-number { font-size: 36px; font-weight: 700; color: #1817fe; margin: 0; }
+    .card-label { font-size: 14px; color: #4a5568; margin: 8px 0 0 0; }
+    .card-title { font-size: 16px; font-weight: 600; color: #1817fe; margin-top: 16px; }
+    .cta-button { display: inline-block; background-color: #1817fe; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 14px; margin: 24px 0; }
+    .footer { background-color: #f7fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; }
+    .footer-text { font-size: 12px; color: #718096; margin: 6px 0; }
+    .social-icons { margin: 20px 0; display: flex; gap: 16px; justify-content: center; }
+    .social-icons a { display: inline-block; width: 32px; height: 32px; border-radius: 50%; background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; text-decoration: none; border: 1px solid #e2e8f0; }
+    .social-icons a:hover { background-color: #cbd5e0; }
+    .divider { height: 1px; background-color: #e2e8f0; margin: 24px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
     <div class="container">
       <div class="header">
         <img src="<%= logoUrl %>" alt="Gainday" class="logo" />
-        <h1>New Submissions Received! 🎉</h1>
+        <h1>New Submissions Received</h1>
       </div>
+
       <div class="content">
-        <p class="intro-text">Great news! You've received new applications for your job posting. It's time to review and find your perfect match.</p>
-        <div class="submission-card">
-          <div class="submission-count"><%= candidateCount %></div>
-          <div class="submission-label">New Submission<%= candidateCount !== 1 ? 's' : '' %> Received</div>
-          <div class="job-title-box">
-            <div style="font-size: 12px; color: #718096; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;">Position</div>
-            <div class="job-title"><%= jobTitle %></div>
-          </div>
+        <p class="intro">Great news! You've received new applications for your job posting.</p>
+
+        <div class="card">
+          <div class="card-number"><%= candidateCount %></div>
+          <div class="card-label">New Submission<%= candidateCount !== 1 ? 's' : '' %></div>
+          <div class="card-title"><%= jobTitle %></div>
         </div>
-        <center><a href="<%= frontendUrl %>/submissions" class="cta-button">Review Submissions</a></center>
-        <div class="alert alert-info">
-          <strong>📋 What's Next?</strong>
-          <ul>
-            <li>Review candidate applications and work samples</li>
-            <li>Compare candidates using our scoring tools</li>
-            <li>Shortlist top performers for next rounds</li>
-            <li>Share feedback and extend offers</li>
-          </ul>
-        </div>
-        <div class="stats">
-          <div style="font-size: 14px; color: #718096; margin-bottom: 12px; text-transform: uppercase; font-weight: 600;">Summary</div>
-          <div class="stat-row"><div class="stat-label">Submissions waiting</div><div class="stat-value"><%= candidateCount %></div></div>
-          <div class="stat-row"><div class="stat-label">Access 24/7</div><div style="color: #4a5568;">From your dashboard</div></div>
-          <div class="stat-row"><div class="stat-label">Smart scoring</div><div style="color: #4a5568;">AI-powered decisions</div></div>
-        </div>
+
+        <center>
+          <a href="<%= frontendUrl %>/employer/jobs" class="cta-button">Review Applications</a>
+        </center>
+
         <div class="divider"></div>
-        <p style="font-size: 14px; color: #4a5568;"><strong>Pro Tip:</strong> Gainday evaluates each candidate across 5 key dimensions including problem-solving, communication, and execution. Use these insights to make confident hiring decisions.</p>
+
+        <p class="intro" style="font-size: 13px;">Log in to your Gainday dashboard to review candidates, compare their scores, and manage next steps.</p>
       </div>
+
       <div class="footer">
-        <p class="footer-text"><strong>Gainday</strong> — Hire With Confidence</p>
+        <p class="footer-text"><strong>Gainday</strong> • Hire With Confidence</p>
         <p class="footer-text">© <%= year %> Gainday, Inc. All rights reserved.</p>
-        <p class="footer-text" style="margin-top: 15px; font-size: 12px;"><a href="<%= frontendUrl %>">Website</a> • <a href="<%= frontendUrl %>/help">Help</a> • <a href="<%= frontendUrl %>/privacy">Privacy</a></p>
+        <div class="social-icons">
+          <a href="https://twitter.com/gainday" title="Twitter">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1817fe" stroke-width="2"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2s9 5 20 5a9.5 9.5 0 0 0-9-5.5c4.75 2.25 9-1 9-5.5v-1c.75-.5 1.43-1.12 2-1.855z"/></svg>
+          </a>
+          <a href="https://linkedin.com/company/gainday" title="LinkedIn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1817fe" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+          </a>
+        </div>
+        <p class="footer-text" style="margin-top: 16px; font-size: 11px;"><a href="<%= frontendUrl %>/help" style="color: #1817fe; text-decoration: none;">Help</a> • <a href="<%= frontendUrl %>/privacy" style="color: #1817fe; text-decoration: none;">Privacy</a> • <a href="<%= frontendUrl %>/terms" style="color: #1817fe; text-decoration: none;">Terms</a></p>
       </div>
     </div>
-  </body>
+  </div>
+</body>
 </html>
