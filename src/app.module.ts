@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import configuration from './config/configuration';
 import { DbModule } from './db/db.module';
+import { AiModule } from './modules/ai/ai.module';
 
 // Modules
 import { AuthModule } from './modules/auth/auth.module';
@@ -29,6 +30,9 @@ import { AppService } from './app.service';
 
     // Database connection using Drizzle ORM
     DbModule,
+
+    // AI generation pipeline model/embeddings providers
+    AiModule,
 
     // Queue connection using BullMQ & Redis
     BullModule.forRootAsync({

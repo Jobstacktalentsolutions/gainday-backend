@@ -1,15 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Simulation, SimulationTask } from './entities/simulation.entity';
-import { Job } from '../jobs/entities/job.entity';
+import { Inject, Injectable } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
+import { DRIZZLE } from '../../db/db.constants';
+import { DrizzleDb } from '../../db/client';
+import { simulations, Simulation, SimulationTask } from '../../db/schema';
+import { Job } from '../../db/schema';
 
 @Injectable()
 export class SimulationsService {
-  constructor(
-    @InjectRepository(Simulation)
-    private readonly simulationRepository: Repository<Simulation>,
-  ) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   async generateSimulation(job: Job): Promise<Simulation> {
     // Generate role-specific work simulation mock based on Job Details
@@ -48,29 +46,37 @@ export class SimulationsService {
       },
     ];
 
-    const simulation = this.simulationRepository.create({
-      jobId: job.id,
-      tasks,
-      timeLimitMinutes: 30,
-    });
+    const [simulation] = await this.db
+      .insert(simulations)
+      .values({
+        jobId: job.id,
+        tasks,
+        timeLimitMinutes: 30,
+      })
+      .returning();
 
-    return this.simulationRepository.save(simulation);
+    return simulation;
   }
 
   async findByJobId(jobId: string): Promise<Simulation | null> {
-    return this.simulationRepository.findOne({ where: { jobId } });
+    const [simulation] = await this.db.select().from(simulations).where(eq(simulations.jobId, jobId));
+    return simulation ?? null;
   }
 
   async findById(id: string): Promise<Simulation | null> {
-    return this.simulationRepository.findOne({ where: { id } });
+    const [simulation] = await this.db.select().from(simulations).where(eq(simulations.id, id));
+    return simulation ?? null;
   }
 
   async updateSimulationTasks(simulationId: string, tasks: SimulationTask[]): Promise<Simulation> {
-    const simulation = await this.simulationRepository.findOne({ where: { id: simulationId } });
+    const [simulation] = await this.db
+      .update(simulations)
+      .set({ tasks, updatedAt: new Date() })
+      .where(eq(simulations.id, simulationId))
+      .returning();
     if (!simulation) {
       throw new Error('Simulation not found');
     }
-    simulation.tasks = tasks;
-    return this.simulationRepository.save(simulation);
+    return simulation;
   }
 }

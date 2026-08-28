@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Submission } from './entities/submission.entity';
 import { SubmissionsService } from './submissions.service';
 import { SubmissionsController } from './submissions.controller';
 import { BullModule } from '@nestjs/bullmq';
@@ -9,7 +7,6 @@ import { JobsModule } from '../jobs/jobs.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Submission]),
     BullModule.registerQueue({
       name: 'scoring',
     }),

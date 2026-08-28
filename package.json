@@ -25,6 +25,9 @@
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.3",
+    "@langchain/core": "^1.2.9",
+    "@langchain/google-genai": "^2.3.0",
+    "@langchain/langgraph": "^1.4.13",
     "@nestjs/bullmq": "^11.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.0",
@@ -45,7 +48,8 @@
     "passport-jwt": "^4.0.1",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.20"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
