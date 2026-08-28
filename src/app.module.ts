@@ -1,14 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import configuration from './config/configuration';
-
-// Entities
-import { User } from './modules/users/entities/user.entity';
-import { Job } from './modules/jobs/entities/job.entity';
-import { Simulation } from './modules/simulations/entities/simulation.entity';
-import { Submission } from './modules/submissions/entities/submission.entity';
+import { DbModule } from './db/db.module';
 
 // Modules
 import { AuthModule } from './modules/auth/auth.module';
@@ -33,18 +27,8 @@ import { AppService } from './app.service';
       load: [configuration],
     }),
 
-    // Database connection using TypeORM
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.get<string>('database.url'),
-        entities: [User, Job, Simulation, Submission],
-        synchronize: true, // Set to false in production, migrations are preferred
-        logging: false,
-      }),
-    }),
+    // Database connection using Drizzle ORM
+    DbModule,
 
     // Queue connection using BullMQ & Redis
     BullModule.forRootAsync({
