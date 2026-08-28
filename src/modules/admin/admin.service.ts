@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { count, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
@@ -166,6 +166,8 @@ export class AdminService {
         .where(eq(simulations.id, simulation.id));
     }
 
+    await this.reactivateJobIfReviewComplete(reviewItem.jobId);
+
     return updatedReviewItem;
   }
 
@@ -183,6 +185,38 @@ export class AdminService {
     if (!reviewItem) {
       throw new Error('Generation review item not found');
     }
+
+    await this.reactivateJobIfReviewComplete(reviewItem.jobId);
+
     return reviewItem;
+  }
+
+  /**
+   * A job held at UNDER_REVIEW has one or more generation slots pending admin
+   * resolution. Once every review item for that job has been approved or
+   * rejected, the job can safely go ACTIVE again.
+   */
+  private async reactivateJobIfReviewComplete(jobId: string): Promise<void> {
+    const [{ pendingCount }] = await this.db
+      .select({ pendingCount: count() })
+      .from(generationReviewItems)
+      .where(
+        and(
+          eq(generationReviewItems.jobId, jobId),
+          eq(generationReviewItems.status, 'PENDING'),
+        ),
+      );
+
+    if (pendingCount > 0) {
+      return;
+    }
+
+    const [job] = await this.db.select().from(jobs).where(eq(jobs.id, jobId));
+    if (job?.status === 'UNDER_REVIEW') {
+      await this.db
+        .update(jobs)
+        .set({ status: 'ACTIVE', updatedAt: new Date() })
+        .where(eq(jobs.id, jobId));
+    }
   }
 }

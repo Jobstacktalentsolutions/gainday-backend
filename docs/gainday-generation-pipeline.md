@@ -44,6 +44,16 @@ Adding a new role means writing a new self-contained module (extraction specific
 ### 2.4 Current rollout plan
 **Sales first.** Sales content is primarily text-based at this stage, which means it can be built and validated inside the current architecture without also having to solve a data-visualization presentation layer at the same time. Finance requires that visual/tabular presentation work in addition to the generation logic, so it's sequenced second, once the sales module has proven the role-isolated architecture end to end. The companion document — GAINDAY Sales Role: Simulation Categories & Grading — is the content that fills the sales module described in 2.2, sourced from research into how sales candidates are actually assessed.
 
+### 2.5 Interface Type Taxonomy
+Different task categories need to be presented differently — this was underspecified as a single generic "presentation-layer requirements" bullet in 2.2 and is formalized here as its own taxonomy, analogous to the task-pattern taxonomy in Section 5. Every generated task is tagged with an **interface type** as part of its metadata (Section 6.1), which tells the frontend how to render it.
+
+**Current interface types (MVP scope — sales):**
+- **Rich Text Composer** — for tasks where the candidate produces a standalone written deliverable with no one replying to them (e.g. a cold outreach email, an account plan). Supports basic formatting (paragraphs, bullets) matching what the real deliverable would look like.
+- **Text Area** — for tasks where the candidate responds to a described scenario or a persona's statement shown as read-only context above the input, but no back-and-forth thread is presented (e.g. an objection-handling reply, a situational-judgment response). Deliberately not a chat/message-thread interface — kept simple for now, no multi-turn UI.
+- **Table View + Response Panel** — for tasks built on structured data the candidate has to work with (e.g. a mock CRM lead list for prioritization): a data table alongside a response area for the ranking/classification and its justification.
+
+**Extensibility note:** this taxonomy is expected to grow as new roles are added — finance, for instance, will need an interface type (or types) for charts, computed figures, or other visual/numeric data display that none of the three current types cover. Each role module (Section 2.2) can introduce new interface types rather than being constrained to the three above; this list is the current baseline, not a ceiling.
+
 ---
 
 ## 3. Extraction Stage
@@ -104,7 +114,7 @@ For each of the selected tasks, the generation agent produces a structured objec
 
 ### 6.1 Structure
 - The task itself (scenario text, task components per the role module's allowed types — Section 5 or the role-specific equivalent)
-- Associated metadata (task type, category, source fields it was derived from)
+- Associated metadata (task type, category, source fields it was derived from, and **interface type** per Section 2.5 — tells the frontend how to render the task)
 - **Problem inclusion rule:** if a business Problem was extracted in Section 3, it must be woven into the task content. If no Problem was extracted, the task is generated without one — never fabricated to fill the field.
 - A set of **anchor responses** (Section 6.2), used later at grading time
 
@@ -170,4 +180,5 @@ Generation and grading run at different points and use different model settings.
 - **Anchor-correctness validation method (Section 7.1)** needs to be specified concretely per role — e.g. a second-pass LLM check against known domain rules, or periodic human/expert spot-review — not left as an unspecified checkbox.
 - **Role config schema** — a concrete schema (what fields every role module must implement: extraction prompt, task types, criteria framing, critic checks, presentation spec) needs to be defined so future roles beyond sales and finance can be added consistently.
 - **Presentation-layer ownership** — needs a decision on whether presentation requirements live in the same LangGraph module as generation logic, or are tracked as a separate frontend-facing spec per role that references it.
+- **Finance interface types (Section 2.5)** are not yet defined — charts, tables of computed figures, and other visual/numeric display needs will have to be specified when the finance module is built, since none of the three current sales-derived interface types (Rich Text Composer, Text Area, Table View) are designed for that.
 - **Sales sub-role granularity** — Category extraction for sales needs to distinguish SDR / AE / CSM (Section 3), not treat "Sales" as one bucket; the companion Sales document covers why.
