@@ -2,7 +2,7 @@ import { Controller, Get, Param, UseGuards, ForbiddenException, NotFoundExceptio
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole } from './entities/user.entity';
+import { UserRole } from '../../db/schema';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)

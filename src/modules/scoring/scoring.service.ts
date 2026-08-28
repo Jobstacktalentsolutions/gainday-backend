@@ -1,12 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Submission } from '../submissions/entities/submission.entity';
-import { SimulationTask } from '../simulations/entities/simulation.entity';
+import { Submission } from '../../db/schema';
+
+type SubmissionWithSimulation = Submission & {
+  simulation?: { tasks?: { type: string }[] } | null;
+};
 
 @Injectable()
 export class ScoringService {
   private readonly logger = new Logger(ScoringService.name);
 
-  async scoreSubmission(submission: Submission): Promise<Partial<Submission>> {
+  async scoreSubmission(submission: SubmissionWithSimulation): Promise<Record<string, unknown>> {
     this.logger.log(`Scoring submission: ${submission.id}`);
     
     // Check if the simulation contains a prioritization task
@@ -37,7 +40,7 @@ export class ScoringService {
       (prioritizationScore * weights.prioritization);
 
     return {
-      status: 'SCORED' as any,
+      status: 'SCORED' as const,
       overallScore: Math.round(overallScore * 100) / 100,
       categoryScores: {
         problemSolving: {

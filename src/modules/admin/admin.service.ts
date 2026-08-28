@@ -1,62 +1,60 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity';
-import { Job, JobStatus } from '../jobs/entities/job.entity';
-import { Submission, SubmissionStatus } from '../submissions/entities/submission.entity';
+import { Inject, Injectable } from '@nestjs/common';
+import { count, eq } from 'drizzle-orm';
+import { DRIZZLE } from '../../db/db.constants';
+import { DrizzleDb } from '../../db/client';
+import { users, jobs, submissions } from '../../db/schema';
 
 @Injectable()
 export class AdminService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(Job)
-    private readonly jobRepository: Repository<Job>,
-    @InjectRepository(Submission)
-    private readonly submissionRepository: Repository<Submission>,
-  ) {}
+  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   async getAdminStats() {
-    const activeJobs = await this.jobRepository.count({ where: { status: JobStatus.ACTIVE } });
-    const totalUsers = await this.userRepository.count();
-    const openSubmissions = await this.submissionRepository.count({ where: { status: SubmissionStatus.PENDING } });
-    
-    return {
-      activeJobs,
-      totalUsers,
-      openSubmissions,
-      jobsFilled: await this.jobRepository.count({ where: { status: JobStatus.CLOSED } }),
-    };
+    const [[{ activeJobs }], [{ totalUsers }], [{ openSubmissions }], [{ jobsFilled }]] = await Promise.all([
+      this.db.select({ activeJobs: count() }).from(jobs).where(eq(jobs.status, 'ACTIVE')),
+      this.db.select({ totalUsers: count() }).from(users),
+      this.db.select({ openSubmissions: count() }).from(submissions).where(eq(submissions.status, 'PENDING')),
+      this.db.select({ jobsFilled: count() }).from(jobs).where(eq(jobs.status, 'CLOSED')),
+    ]);
+
+    return { activeJobs, totalUsers, openSubmissions, jobsFilled };
   }
 
-  async setUserActiveStatus(userId: string, isActive: boolean): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+  async setUserActiveStatus(userId: string, isActive: boolean) {
+    const [user] = await this.db
+      .update(users)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
     if (!user) {
       throw new Error('User not found');
     }
-    user.isActive = isActive;
-    return this.userRepository.save(user);
+    return user;
   }
 
-  async reviewAntiCheatFlag(submissionId: string, action: 'UPHOLD' | 'OVERTURN'): Promise<Submission> {
-    const submission = await this.submissionRepository.findOne({ where: { id: submissionId } });
+  async reviewAntiCheatFlag(submissionId: string, action: 'UPHOLD' | 'OVERTURN') {
+    const values =
+      action === 'UPHOLD'
+        ? {
+            status: 'DISQUALIFIED' as const,
+            disqualificationReason: 'Anti-cheat violation confirmed by admin review.',
+          }
+        : {
+            status: 'PENDING' as const,
+            isAntiCheatFlagged: false,
+          };
+
+    const [submission] = await this.db
+      .update(submissions)
+      .set({ ...values, updatedAt: new Date() })
+      .where(eq(submissions.id, submissionId))
+      .returning();
     if (!submission) {
       throw new Error('Submission not found');
     }
-
-    if (action === 'UPHOLD') {
-      submission.status = SubmissionStatus.DISQUALIFIED;
-      submission.disqualificationReason = 'Anti-cheat violation confirmed by admin review.';
-    } else {
-      submission.status = SubmissionStatus.PENDING; // Re-enters scoring queue
-      submission.isAntiCheatFlagged = false;
-      // In production, trigger scoring job queue
-    }
-
-    return this.submissionRepository.save(submission);
+    return submission;
   }
 
   async deleteInappropriateJob(jobId: string): Promise<void> {
-    await this.jobRepository.delete(jobId);
+    await this.db.delete(jobs).where(eq(jobs.id, jobId));
   }
 }

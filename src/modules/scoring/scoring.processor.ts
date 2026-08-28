@@ -1,11 +1,10 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Job as BullJob } from 'bullmq';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Submission, SubmissionStatus } from '../submissions/entities/submission.entity';
-import { Job, JobStatus } from '../jobs/entities/job.entity';
-import { User } from '../users/entities/user.entity';
+import { eq, and } from 'drizzle-orm';
+import { DRIZZLE } from '../../db/db.constants';
+import { DrizzleDb } from '../../db/client';
+import { jobs, submissions } from '../../db/schema';
 import { ScoringService } from './scoring.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
@@ -16,10 +15,7 @@ export class ScoringProcessor extends WorkerHost {
   private readonly logger = new Logger(ScoringProcessor.name);
 
   constructor(
-    @InjectRepository(Submission)
-    private readonly submissionRepository: Repository<Submission>,
-    @InjectRepository(Job)
-    private readonly jobRepository: Repository<Job>,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly scoringService: ScoringService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
@@ -31,67 +27,68 @@ export class ScoringProcessor extends WorkerHost {
     const { jobId } = bullJob.data;
     this.logger.log(`Processing batch scoring for Job ID: ${jobId}`);
 
-    // Fetch the job
-    const job = await this.jobRepository.findOne({ where: { id: jobId }, relations: ['employer'] });
+    const job = await this.db.query.jobs.findFirst({
+      where: eq(jobs.id, jobId),
+      with: { employer: true },
+    });
     if (!job) {
       throw new Error(`Job not found: ${jobId}`);
     }
 
-    // Update job status to UNDER_REVIEW
-    job.status = JobStatus.UNDER_REVIEW;
-    await this.jobRepository.save(job);
+    await this.db.update(jobs).set({ status: 'UNDER_REVIEW', updatedAt: new Date() }).where(eq(jobs.id, jobId));
 
-    // Fetch all pending submissions for this job
-    const submissions = await this.submissionRepository.find({
-      where: { jobId, status: SubmissionStatus.PENDING },
-      relations: ['simulation'],
+    const pendingSubmissions = await this.db.query.submissions.findMany({
+      where: and(eq(submissions.jobId, jobId), eq(submissions.status, 'PENDING')),
+      with: { simulation: true, candidate: true },
     });
 
-    this.logger.log(`Found ${submissions.length} submissions to score for Job ID: ${jobId}`);
+    this.logger.log(`Found ${pendingSubmissions.length} submissions to score for Job ID: ${jobId}`);
 
     let processedCount = 0;
-    for (const submission of submissions) {
+    for (const submission of pendingSubmissions) {
       try {
-        submission.status = SubmissionStatus.SCORING;
-        await this.submissionRepository.save(submission);
+        await this.db
+          .update(submissions)
+          .set({ status: 'SCORING', updatedAt: new Date() })
+          .where(eq(submissions.id, submission.id));
 
-        // Run LLM-as-judge scoring framework
         const scoreResults = await this.scoringService.scoreSubmission(submission);
-        Object.assign(submission, scoreResults);
-        await this.submissionRepository.save(submission);
+        const [updatedSubmission] = await this.db
+          .update(submissions)
+          .set({ ...scoreResults, updatedAt: new Date() })
+          .where(eq(submissions.id, submission.id))
+          .returning();
 
-        // Update candidate rolling Capability Score if user is logged in
-        if (submission.candidateId && submission.overallScore) {
+        if (updatedSubmission.candidateId && updatedSubmission.overallScore) {
           await this.usersService.updateUserCapabilityScores(
-            submission.candidateId,
+            updatedSubmission.candidateId,
             job.roleCategory,
             {
-              score: submission.overallScore,
+              score: updatedSubmission.overallScore,
               categories: {
-                problemSolving: submission.categoryScores?.problemSolving?.score || 0,
-                execution: submission.categoryScores?.execution?.score || 0,
-                writtenCommunication: submission.categoryScores?.writtenCommunication?.score || 0,
-                domainAwareness: submission.categoryScores?.domainAwareness?.score || 0,
-                prioritization: submission.categoryScores?.prioritization?.score || 0,
+                problemSolving: updatedSubmission.categoryScores?.problemSolving?.score || 0,
+                execution: updatedSubmission.categoryScores?.execution?.score || 0,
+                writtenCommunication: updatedSubmission.categoryScores?.writtenCommunication?.score || 0,
+                domainAwareness: updatedSubmission.categoryScores?.domainAwareness?.score || 0,
+                prioritization: updatedSubmission.categoryScores?.prioritization?.score || 0,
               },
             },
           );
         }
 
-        // Email result notification to candidate
         const candidateEmail = submission.candidate?.email || submission.guestInfo?.email;
-        if (candidateEmail && submission.overallScore !== undefined) {
+        if (candidateEmail && updatedSubmission.overallScore !== undefined) {
           await this.notificationsService.sendScoringResultsEmail(
             candidateEmail,
             job.title,
-            submission.overallScore,
-            submission.categoryScores
+            updatedSubmission.overallScore,
+            updatedSubmission.categoryScores
               ? {
-                  problemSolving: submission.categoryScores.problemSolving?.score || 0,
-                  execution: submission.categoryScores.execution?.score || 0,
-                  writtenCommunication: submission.categoryScores.writtenCommunication?.score || 0,
-                  domainAwareness: submission.categoryScores.domainAwareness?.score || 0,
-                  prioritization: submission.categoryScores.prioritization?.score || 0,
+                  problemSolving: updatedSubmission.categoryScores.problemSolving?.score || 0,
+                  execution: updatedSubmission.categoryScores.execution?.score || 0,
+                  writtenCommunication: updatedSubmission.categoryScores.writtenCommunication?.score || 0,
+                  domainAwareness: updatedSubmission.categoryScores.domainAwareness?.score || 0,
+                  prioritization: updatedSubmission.categoryScores.prioritization?.score || 0,
                 }
               : undefined,
           );
@@ -103,17 +100,10 @@ export class ScoringProcessor extends WorkerHost {
       }
     }
 
-    // Update job status to SHORTLIST_READY once all submissions are scored
-    job.status = JobStatus.SHORTLIST_READY;
-    await this.jobRepository.save(job);
+    await this.db.update(jobs).set({ status: 'SHORTLIST_READY', updatedAt: new Date() }).where(eq(jobs.id, jobId));
 
-    // Send batch notification email to employer
     if (job.employer?.email && processedCount > 0) {
-      await this.notificationsService.sendBatchNotification(
-        job.employer.email,
-        processedCount,
-        job.title,
-      );
+      await this.notificationsService.sendBatchNotification(job.employer.email, processedCount, job.title);
     }
 
     return { processedCount };

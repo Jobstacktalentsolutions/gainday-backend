@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { UserRole, AuthProvider } from '../users/entities/user.entity';
+import { UserRole, AuthProvider } from '../../db/schema';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import * as bcrypt from 'bcrypt';

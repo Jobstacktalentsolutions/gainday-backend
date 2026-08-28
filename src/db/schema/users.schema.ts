@@ -7,6 +7,19 @@ import { submissions } from './submissions.schema';
 export const userRoleEnum = pgEnum('user_role', ['EMPLOYER', 'JOB_SEEKER', 'ADMIN']);
 export const authProviderEnum = pgEnum('auth_provider', ['local', 'google']);
 
+export const UserRole = {
+  EMPLOYER: 'EMPLOYER',
+  JOB_SEEKER: 'JOB_SEEKER',
+  ADMIN: 'ADMIN',
+} as const;
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
+export const AuthProvider = {
+  LOCAL: 'local',
+  GOOGLE: 'google',
+} as const;
+export type AuthProvider = (typeof AuthProvider)[keyof typeof AuthProvider];
+
 export interface CapabilityScores {
   [domain: string]: {
     score: number;
@@ -25,8 +38,8 @@ export const users = pgTable('users', {
   ...baseColumns,
   email: varchar('email', { length: 255 }).notNull().unique(),
   password: varchar('password', { length: 255 }),
-  role: userRoleEnum('role').notNull(),
-  authProvider: authProviderEnum('auth_provider').notNull().default('local'),
+  role: userRoleEnum('role').notNull().$type<UserRole>(),
+  authProvider: authProviderEnum('auth_provider').notNull().default('local').$type<AuthProvider>(),
   googleId: varchar('google_id', { length: 255 }).unique(),
   fullName: varchar('full_name', { length: 255 }),
   companyName: varchar('company_name', { length: 255 }),

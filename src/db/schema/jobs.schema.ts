@@ -13,6 +13,15 @@ export const jobStatusEnum = pgEnum('job_status', [
   'CLOSED',
 ]);
 
+export const JobStatus = {
+  DRAFT: 'DRAFT',
+  ACTIVE: 'ACTIVE',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  SHORTLIST_READY: 'SHORTLIST_READY',
+  CLOSED: 'CLOSED',
+} as const;
+export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
+
 export interface SalaryRange {
   min: number;
   max: number;
@@ -30,7 +39,7 @@ export const jobs = pgTable('jobs', {
   salaryRange: jsonb('salary_range').$type<SalaryRange>().notNull(),
   applicationDeadline: timestamp('application_deadline', { withTimezone: true }).notNull(),
   businessProblem: text('business_problem').notNull(),
-  status: jobStatusEnum('status').notNull().default('DRAFT'),
+  status: jobStatusEnum('status').notNull().default('DRAFT').$type<JobStatus>(),
   employerId: uuid('employer_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),

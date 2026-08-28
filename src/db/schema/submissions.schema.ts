@@ -12,6 +12,14 @@ export const submissionStatusEnum = pgEnum('submission_status', [
   'DISQUALIFIED',
 ]);
 
+export const SubmissionStatus = {
+  PENDING: 'PENDING',
+  SCORING: 'SCORING',
+  SCORED: 'SCORED',
+  DISQUALIFIED: 'DISQUALIFIED',
+} as const;
+export type SubmissionStatus = (typeof SubmissionStatus)[keyof typeof SubmissionStatus];
+
 export interface CandidateAnswer {
   taskId: string;
   responseBody: string;
@@ -50,7 +58,7 @@ export const submissions = pgTable('submissions', {
     .references(() => simulations.id),
   candidateId: uuid('candidate_id').references(() => users.id, { onDelete: 'set null' }),
   guestInfo: jsonb('guest_info').$type<GuestInfo>(),
-  status: submissionStatusEnum('status').notNull().default('PENDING'),
+  status: submissionStatusEnum('status').notNull().default('PENDING').$type<SubmissionStatus>(),
   answers: jsonb('answers').$type<CandidateAnswer[]>().notNull().default([]),
   overallScore: numeric('overall_score', { precision: 5, scale: 2, mode: 'number' }),
   categoryScores: jsonb('category_scores').$type<CategoryScores>(),
