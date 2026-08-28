@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Submission } from '../../db/schema';
 
 type SubmissionWithSimulation = Submission & {
-  simulation?: { tasks?: { type: string }[] } | null;
+  simulation?: unknown;
 };
 
 @Injectable()
@@ -11,33 +11,26 @@ export class ScoringService {
 
   async scoreSubmission(submission: SubmissionWithSimulation): Promise<Record<string, unknown>> {
     this.logger.log(`Scoring submission: ${submission.id}`);
-    
-    // Check if the simulation contains a prioritization task
-    const simulation = submission.simulation;
-    const hasPrioritization = simulation?.tasks?.some(t => t.type === 'TRIAGE_PRIORITIZATION') || false;
 
     // Weights
     const weights = {
-      problemSolving: hasPrioritization ? 0.30 : 0.40,
-      execution: 0.20,
-      writtenCommunication: 0.20,
-      domainAwareness: 0.20,
-      prioritization: hasPrioritization ? 0.10 : 0.00,
+      problemSolving: 0.4,
+      judgmentExecution: 0.2,
+      writtenCommunication: 0.2,
+      commercialDomainAwareness: 0.2,
     };
 
     // Calculate score for each category (mocked for initial setup)
     const problemSolvingScore = 85;
-    const executionScore = 90;
+    const judgmentExecutionScore = 90;
     const writtenCommScore = 80;
-    const domainAwarenessScore = 75;
-    const prioritizationScore = hasPrioritization ? 100 : 0;
+    const commercialDomainAwarenessScore = 75;
 
-    const overallScore = 
-      (problemSolvingScore * weights.problemSolving) +
-      (executionScore * weights.execution) +
-      (writtenCommScore * weights.writtenCommunication) +
-      (domainAwarenessScore * weights.domainAwareness) +
-      (prioritizationScore * weights.prioritization);
+    const overallScore =
+      problemSolvingScore * weights.problemSolving +
+      judgmentExecutionScore * weights.judgmentExecution +
+      writtenCommScore * weights.writtenCommunication +
+      commercialDomainAwarenessScore * weights.commercialDomainAwareness;
 
     return {
       status: 'SCORED' as const,
@@ -48,8 +41,8 @@ export class ScoringService {
           rationale: 'Demonstrated strong reasoning and identified core issues correctly.',
           evidence: 'Identified internal audit discrepancies as critical to team operations.',
         },
-        execution: {
-          score: executionScore,
+        judgmentExecution: {
+          score: judgmentExecutionScore,
           rationale: 'Followed instructions completely, strictly adhering to word limits.',
           evidence: 'Word counts were 235 (limit 250) and 130 (limit 150).',
         },
@@ -58,15 +51,10 @@ export class ScoringService {
           rationale: 'Very clear, structured responses with professional tone.',
           evidence: 'Proper business greeting, logical paragraphs, clear bullet points.',
         },
-        domainAwareness: {
-          score: domainAwarenessScore,
+        commercialDomainAwareness: {
+          score: commercialDomainAwarenessScore,
           rationale: 'Demonstrated good understanding of stakeholder interests and commercial tradeoffs.',
           evidence: 'Acknowledged partner budget constraints when defending recommendations.',
-        },
-        prioritization: {
-          score: prioritizationScore,
-          rationale: hasPrioritization ? 'Perfect match with expert-defined priority matrix.' : 'N/A',
-          evidence: hasPrioritization ? 'Ranked options: Wire Transfer -> Q2 reports -> Prospect -> Lunch.' : 'N/A',
         },
       },
     };

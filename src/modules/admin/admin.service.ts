@@ -2,11 +2,27 @@ import { Inject, Injectable } from '@nestjs/common';
 import { count, eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { users, jobs, submissions } from '../../db/schema';
+import {
+  users,
+  jobs,
+  submissions,
+  simulations,
+  questionBank,
+  generationReviewItems,
+  GenerationReviewStatus,
+} from '../../db/schema';
+import { AnchorResponse, QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
+import { SimulationTask } from '../../db/schema/simulations.schema';
+import { EMBEDDINGS } from '../ai/ai.constants';
+import { Embeddings } from '@langchain/core/embeddings';
+import { embedTaskContent } from '../generation/utils/embedding.util';
 
 @Injectable()
 export class AdminService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
+    @Inject(EMBEDDINGS) private readonly embeddings: Embeddings,
+  ) {}
 
   async getAdminStats() {
     const [[{ activeJobs }], [{ totalUsers }], [{ openSubmissions }], [{ jobsFilled }]] = await Promise.all([
@@ -56,5 +72,93 @@ export class AdminService {
 
   async deleteInappropriateJob(jobId: string): Promise<void> {
     await this.db.delete(jobs).where(eq(jobs.id, jobId));
+  }
+
+  async listGenerationReviewItems(status?: GenerationReviewStatus) {
+    return this.db.query.generationReviewItems.findMany({
+      where: status ? eq(generationReviewItems.status, status) : undefined,
+      with: { job: true },
+    });
+  }
+
+  async approveGenerationReviewWithEdits(
+    reviewItemId: string,
+    adminId: string,
+    editedTaskContent: QuestionBankTaskContent,
+    editedAnchors: AnchorResponse[],
+  ) {
+    const [reviewItem] = await this.db
+      .select()
+      .from(generationReviewItems)
+      .where(eq(generationReviewItems.id, reviewItemId));
+    if (!reviewItem) {
+      throw new Error('Generation review item not found');
+    }
+
+    const [updatedReviewItem] = await this.db
+      .update(generationReviewItems)
+      .set({
+        status: 'APPROVED_WITH_EDITS',
+        resolvedTaskContent: editedTaskContent,
+        resolvedAnchors: editedAnchors,
+        reviewedByAdminId: adminId,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(generationReviewItems.id, reviewItemId))
+      .returning();
+
+    const embedding = await embedTaskContent(this.embeddings, editedTaskContent);
+    await this.db.insert(questionBank).values({
+      category: reviewItem.category,
+      intent: editedTaskContent.title,
+      taskType: editedTaskContent.taskType,
+      taskContent: editedTaskContent,
+      anchors: editedAnchors,
+      sourceJobId: reviewItem.jobId,
+      embedding,
+    });
+
+    const [simulation] = await this.db
+      .select()
+      .from(simulations)
+      .where(eq(simulations.jobId, reviewItem.jobId));
+    if (simulation) {
+      const newTask: SimulationTask = {
+        id: `${reviewItem.jobId}-review-${reviewItem.id}`,
+        taskType: editedTaskContent.taskType,
+        category: reviewItem.category,
+        title: editedTaskContent.title,
+        scenarioDescription: editedTaskContent.scenarioDescription,
+        questionPrompt: editedTaskContent.questionPrompt,
+        objectiveComponent: editedTaskContent.objectiveComponent,
+        openEndedComponent: editedTaskContent.openEndedComponent,
+        businessProblemDerived: editedTaskContent.businessProblemDerived,
+        anchors: editedAnchors,
+      };
+      await this.db
+        .update(simulations)
+        .set({ tasks: [...simulation.tasks, newTask], updatedAt: new Date() })
+        .where(eq(simulations.id, simulation.id));
+    }
+
+    return updatedReviewItem;
+  }
+
+  async rejectGenerationReview(reviewItemId: string, adminId: string) {
+    const [reviewItem] = await this.db
+      .update(generationReviewItems)
+      .set({
+        status: 'REJECTED',
+        reviewedByAdminId: adminId,
+        reviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(generationReviewItems.id, reviewItemId))
+      .returning();
+    if (!reviewItem) {
+      throw new Error('Generation review item not found');
+    }
+    return reviewItem;
   }
 }
