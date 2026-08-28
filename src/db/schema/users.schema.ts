@@ -26,10 +26,9 @@ export interface CapabilityScores {
     updatedAt: string;
     categories: {
       problemSolving: number;
-      execution: number;
+      judgmentExecution: number;
       writtenCommunication: number;
-      domainAwareness: number;
-      prioritization: number;
+      commercialDomainAwareness: number;
     };
   };
 }

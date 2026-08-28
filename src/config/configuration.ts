@@ -59,5 +59,17 @@ export default () => {
       generationTemperature: parseFloat(process.env.AI_GENERATION_TEMPERATURE || '0.9'),
       criticTemperature: parseFloat(process.env.AI_CRITIC_TEMPERATURE || '0'),
     },
+    generation: {
+      candidatePoolSize: parseInt(process.env.GENERATION_CANDIDATE_POOL_SIZE || '15', 10),
+      selectedTaskCount: parseInt(process.env.GENERATION_SELECTED_COUNT || '4', 10),
+      maxCriticAttempts: parseInt(process.env.GENERATION_MAX_CRITIC_ATTEMPTS || '3', 10),
+      duplicateSimilarityThreshold: parseFloat(
+        process.env.GENERATION_DUPLICATE_SIMILARITY_THRESHOLD || '0.92',
+      ),
+      noveltyCheckTopK: parseInt(process.env.GENERATION_NOVELTY_TOP_K || '5', 10),
+      anchorScorePoints: (process.env.GENERATION_ANCHOR_SCORE_POINTS || '0,3,5,7,10')
+        .split(',')
+        .map(Number),
+    },
   };
 };

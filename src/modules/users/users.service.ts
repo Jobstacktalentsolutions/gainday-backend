@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
-import { DrizzleDb } from '../../db/client';
+import type { DrizzleDb } from '../../db/client';
 import { users, User, NewUser, CapabilityScores } from '../../db/schema';
 
 const publicColumns = {

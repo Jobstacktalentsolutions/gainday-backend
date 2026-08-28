@@ -3,7 +3,7 @@ import { eq, and } from 'drizzle-orm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { DRIZZLE } from '../../db/db.constants';
-import { DrizzleDb } from '../../db/client';
+import type { DrizzleDb } from '../../db/client';
 import { submissions, CandidateAnswer } from '../../db/schema';
 
 @Injectable()

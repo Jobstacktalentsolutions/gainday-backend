@@ -23,8 +23,6 @@ export type SubmissionStatus = (typeof SubmissionStatus)[keyof typeof Submission
 export interface CandidateAnswer {
   taskId: string;
   responseBody: string;
-  prioritizationOrder?: string[];
-  prioritizationJustification?: string;
   timeSpentSeconds: number;
 }
 
@@ -36,10 +34,9 @@ export interface CategoryScoreDetail {
 
 export interface CategoryScores {
   problemSolving: CategoryScoreDetail;
-  execution: CategoryScoreDetail;
+  judgmentExecution: CategoryScoreDetail;
   writtenCommunication: CategoryScoreDetail;
-  domainAwareness: CategoryScoreDetail;
-  prioritization: CategoryScoreDetail;
+  commercialDomainAwareness: CategoryScoreDetail;
 }
 
 export interface GuestInfo {

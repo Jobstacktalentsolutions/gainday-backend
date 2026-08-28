@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Post, Put, Body, UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SimulationsService } from './simulations.service';
+import { GenerationService } from '../generation/generation.service';
 import { JobsService } from '../jobs/jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -11,6 +12,7 @@ import { UserRole } from '../../db/schema';
 export class SimulationsController {
   constructor(
     private readonly simulationsService: SimulationsService,
+    private readonly generationService: GenerationService,
     private readonly jobsService: JobsService,
   ) {}
 
@@ -30,7 +32,8 @@ export class SimulationsController {
     if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
       throw new ForbiddenException('You may only generate simulations for your own jobs');
     }
-    return this.simulationsService.generateSimulation(job);
+    await this.generationService.queueGeneration(job.id);
+    return { status: 'queued', jobId: job.id };
   }
 
   @Put(':id')

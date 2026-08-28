@@ -3,8 +3,8 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Job as BullJob } from 'bullmq';
 import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
-import { DrizzleDb } from '../../db/client';
-import { jobs, submissions } from '../../db/schema';
+import type { DrizzleDb } from '../../db/client';
+import { jobs, submissions, jobExtractions } from '../../db/schema';
 import { ScoringService } from './scoring.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
@@ -37,6 +37,11 @@ export class ScoringProcessor extends WorkerHost {
 
     await this.db.update(jobs).set({ status: 'UNDER_REVIEW', updatedAt: new Date() }).where(eq(jobs.id, jobId));
 
+    const extraction = await this.db.query.jobExtractions.findFirst({
+      where: eq(jobExtractions.jobId, jobId),
+    });
+    const capabilityDomain = extraction?.category ?? job.roleCategory;
+
     const pendingSubmissions = await this.db.query.submissions.findMany({
       where: and(eq(submissions.jobId, jobId), eq(submissions.status, 'PENDING')),
       with: { simulation: true, candidate: true },
@@ -62,22 +67,22 @@ export class ScoringProcessor extends WorkerHost {
         if (updatedSubmission.candidateId && updatedSubmission.overallScore) {
           await this.usersService.updateUserCapabilityScores(
             updatedSubmission.candidateId,
-            job.roleCategory,
+            capabilityDomain,
             {
               score: updatedSubmission.overallScore,
               categories: {
                 problemSolving: updatedSubmission.categoryScores?.problemSolving?.score || 0,
-                execution: updatedSubmission.categoryScores?.execution?.score || 0,
+                judgmentExecution: updatedSubmission.categoryScores?.judgmentExecution?.score || 0,
                 writtenCommunication: updatedSubmission.categoryScores?.writtenCommunication?.score || 0,
-                domainAwareness: updatedSubmission.categoryScores?.domainAwareness?.score || 0,
-                prioritization: updatedSubmission.categoryScores?.prioritization?.score || 0,
+                commercialDomainAwareness:
+                  updatedSubmission.categoryScores?.commercialDomainAwareness?.score || 0,
               },
             },
           );
         }
 
         const candidateEmail = submission.candidate?.email || submission.guestInfo?.email;
-        if (candidateEmail && updatedSubmission.overallScore !== undefined) {
+        if (candidateEmail && updatedSubmission.overallScore != null) {
           await this.notificationsService.sendScoringResultsEmail(
             candidateEmail,
             job.title,
@@ -85,10 +90,10 @@ export class ScoringProcessor extends WorkerHost {
             updatedSubmission.categoryScores
               ? {
                   problemSolving: updatedSubmission.categoryScores.problemSolving?.score || 0,
-                  execution: updatedSubmission.categoryScores.execution?.score || 0,
+                  judgmentExecution: updatedSubmission.categoryScores.judgmentExecution?.score || 0,
                   writtenCommunication: updatedSubmission.categoryScores.writtenCommunication?.score || 0,
-                  domainAwareness: updatedSubmission.categoryScores.domainAwareness?.score || 0,
-                  prioritization: updatedSubmission.categoryScores.prioritization?.score || 0,
+                  commercialDomainAwareness:
+                    updatedSubmission.categoryScores.commercialDomainAwareness?.score || 0,
                 }
               : undefined,
           );

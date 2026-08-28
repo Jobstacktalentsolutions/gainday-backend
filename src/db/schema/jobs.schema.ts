@@ -7,18 +7,22 @@ import { submissions } from './submissions.schema';
 
 export const jobStatusEnum = pgEnum('job_status', [
   'DRAFT',
+  'GENERATING',
   'ACTIVE',
   'UNDER_REVIEW',
   'SHORTLIST_READY',
   'CLOSED',
+  'GENERATION_FAILED',
 ]);
 
 export const JobStatus = {
   DRAFT: 'DRAFT',
+  GENERATING: 'GENERATING',
   ACTIVE: 'ACTIVE',
   UNDER_REVIEW: 'UNDER_REVIEW',
   SHORTLIST_READY: 'SHORTLIST_READY',
   CLOSED: 'CLOSED',
+  GENERATION_FAILED: 'GENERATION_FAILED',
 } as const;
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 

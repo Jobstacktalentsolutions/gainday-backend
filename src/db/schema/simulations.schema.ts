@@ -3,22 +3,32 @@ import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
 import { submissions } from './submissions.schema';
+import { AnchorResponse } from './question-bank.schema';
 
-export interface SimulationTaskOption {
-  id: string;
-  title: string;
-  description: string;
-}
+export type ObjectiveComponentType =
+  | 'NUMERIC_INPUT'
+  | 'CLASSIFICATION'
+  | 'PROCEDURAL_SEQUENCING'
+  | 'SINGLE_BEST_ACTION'
+  | 'MULTI_SELECT_UNDER_CONSTRAINT';
+
+export type OpenEndedComponentType =
+  | 'WRITTEN_JUSTIFICATION'
+  | 'DRAFTED_COMMUNICATION'
+  | 'INTERPRETATION_ANALYSIS'
+  | 'STAKEHOLDER_PUSHBACK_RESPONSE';
 
 export interface SimulationTask {
   id: string;
-  type: 'TRIAGE_PRIORITIZATION' | 'INTERPRET_SUMMARIZE' | 'TRADE_OFF_DECISION' | 'STAKEHOLDER_RESPONSE';
+  taskType: string; // role-module-defined key (see src/modules/generation/roles)
+  category: string;
   title: string;
   scenarioDescription: string;
   questionPrompt: string;
-  wordLimit?: number;
-  optionsToPrioritize?: SimulationTaskOption[];
+  objectiveComponent?: Record<string, unknown>;
+  openEndedComponent?: Record<string, unknown>;
   businessProblemDerived: boolean;
+  anchors: AnchorResponse[];
 }
 
 export const simulations = pgTable('simulations', {
