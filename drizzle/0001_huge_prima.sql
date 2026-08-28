@@ -1,0 +1,2 @@
+ALTER TABLE "question_bank" ALTER COLUMN "embedding" SET DATA TYPE halfvec(3072);--> statement-breakpoint
+CREATE INDEX "question_bank_embedding_hnsw_idx" ON "question_bank" USING hnsw ("embedding" halfvec_cosine_ops);

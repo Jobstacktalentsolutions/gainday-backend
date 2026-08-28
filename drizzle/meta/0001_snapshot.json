@@ -1,6 +1,6 @@
 {
-  "id": "d3595291-e2a0-42e6-8cda-7faaf17793ac",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "51f2da8c-07ae-4735-b1de-891e1e4c47fd",
+  "prevId": "d3595291-e2a0-42e6-8cda-7faaf17793ac",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -577,12 +577,28 @@
         },
         "embedding": {
           "name": "embedding",
-          "type": "vector(3072)",
+          "type": "halfvec(3072)",
           "primaryKey": false,
           "notNull": true
         }
       },
       "indexes": {
+        "question_bank_embedding_hnsw_idx": {
+          "name": "question_bank_embedding_hnsw_idx",
+          "columns": [
+            {
+              "expression": "embedding",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "halfvec_cosine_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "hnsw",
+          "with": {}
+        },
         "question_bank_category_idx": {
           "name": "question_bank_category_idx",
           "columns": [

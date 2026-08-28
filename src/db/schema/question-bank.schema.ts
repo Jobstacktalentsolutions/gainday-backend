@@ -8,7 +8,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
-import { vector } from './vector.column';
+import { halfvec } from './vector.column';
 
 const EMBEDDING_DIMENSIONS = 3072; // must match ai.gemini.embeddingDimensions (gemini-embedding-001)
 
@@ -48,12 +48,15 @@ export const questionBank = pgTable(
     sourceJobId: uuid('source_job_id').references(() => jobs.id, {
       onDelete: 'set null',
     }),
-    embedding: vector('embedding', EMBEDDING_DIMENSIONS).notNull(),
+    // halfvec (not vector): HNSW on `vector` caps at 2000 dims, and this is
+    // 3072-d (gemini-embedding-001). halfvec raises the HNSW cap to 4000 by
+    // storing each dimension as a 16-bit float instead of 32-bit.
+    embedding: halfvec('embedding', EMBEDDING_DIMENSIONS).notNull(),
   },
   (table) => [
     index('question_bank_embedding_hnsw_idx').using(
       'hnsw',
-      table.embedding.op('vector_cosine_ops'),
+      table.embedding.op('halfvec_cosine_ops'),
     ),
     index('question_bank_category_idx').on(table.category),
   ],
