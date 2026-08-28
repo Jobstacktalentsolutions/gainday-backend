@@ -85,7 +85,10 @@ export class AuthService {
       emailVerificationExpires,
     });
 
-    await this.notificationsService.sendVerificationEmail(email, emailVerificationToken);
+    await this.notificationsService.sendVerificationEmail(
+      email,
+      emailVerificationToken,
+    );
 
     return this.login(user);
   }
@@ -110,7 +113,10 @@ export class AuthService {
       emailVerificationExpires,
     });
 
-    await this.notificationsService.sendVerificationEmail(email, emailVerificationToken);
+    await this.notificationsService.sendVerificationEmail(
+      email,
+      emailVerificationToken,
+    );
 
     return this.login(user);
   }
@@ -125,7 +131,11 @@ export class AuthService {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
 
-    await this.usersService.setPasswordResetToken(user.id, resetToken, resetExpires);
+    await this.usersService.setPasswordResetToken(
+      user.id,
+      resetToken,
+      resetExpires,
+    );
     await this.notificationsService.sendPasswordResetEmail(email, resetToken);
   }
 
@@ -160,8 +170,15 @@ export class AuthService {
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    await this.usersService.updateVerificationToken(user.id, emailVerificationToken, emailVerificationExpires);
-    await this.notificationsService.sendVerificationEmail(email, emailVerificationToken);
+    await this.usersService.updateVerificationToken(
+      user.id,
+      emailVerificationToken,
+      emailVerificationExpires,
+    );
+    await this.notificationsService.sendVerificationEmail(
+      email,
+      emailVerificationToken,
+    );
   }
 
   async validateGoogleUser(googleUserData: any) {

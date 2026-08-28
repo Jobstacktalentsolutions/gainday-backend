@@ -42,7 +42,8 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
     key: 'MULTI_SELECT_UNDER_CONSTRAINT',
     label: 'Multi-select under constraint',
     objectiveComponentType: 'MULTI_SELECT_UNDER_CONSTRAINT',
-    description: 'E.g. "choose 2 of 3," graded against an ideal set membership.',
+    description:
+      'E.g. "choose 2 of 3," graded against an ideal set membership.',
   },
   {
     key: 'WRITTEN_JUSTIFICATION',
@@ -113,7 +114,9 @@ export const FinanceRoleModule: RoleModule = {
       task: GeneratedTaskCandidate,
       criticModel,
     ): Promise<AnchorCorrectnessResult> {
-      const structuredModel = criticModel.withStructuredOutput(anchorCorrectnessSchema);
+      const structuredModel = criticModel.withStructuredOutput<
+        z.infer<typeof anchorCorrectnessSchema>
+      >(anchorCorrectnessSchema);
       const result = await structuredModel.invoke([
         new SystemMessage(FINANCE_ANCHOR_CORRECTNESS_PROMPT),
         new HumanMessage(

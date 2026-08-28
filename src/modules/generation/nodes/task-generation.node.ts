@@ -1,6 +1,10 @@
+import { z } from 'zod';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { GenerationContext } from '../graph/generation-context';
-import { GenerationState, GenerationStateUpdate } from '../state/generation-state';
+import {
+  GenerationState,
+  GenerationStateUpdate,
+} from '../state/generation-state';
 import { taskGenerationSchema } from '../schemas/task-generation.schema';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 
@@ -29,7 +33,9 @@ function selectCandidateForSlot(state: GenerationState): TaskCandidateRecord {
   if (state.currentAttempt === 0) {
     const candidate = state.selectedCandidates[state.currentSlotIndex];
     if (!candidate) {
-      throw new Error(`No selected candidate for slot index ${state.currentSlotIndex}`);
+      throw new Error(
+        `No selected candidate for slot index ${state.currentSlotIndex}`,
+      );
     }
     return candidate;
   }
@@ -37,11 +43,17 @@ function selectCandidateForSlot(state: GenerationState): TaskCandidateRecord {
   const triedIds = new Set(state.triedCandidateIds);
   const untried = state.candidatePool
     .filter((c) => !triedIds.has(c.candidateId))
-    .sort((a, b) => (b.judgeScore?.composite ?? -Infinity) - (a.judgeScore?.composite ?? -Infinity));
+    .sort(
+      (a, b) =>
+        (b.judgeScore?.composite ?? -Infinity) -
+        (a.judgeScore?.composite ?? -Infinity),
+    );
 
   const next = untried[0];
   if (!next) {
-    throw new Error(`No untried candidates remain in the pool for slot index ${state.currentSlotIndex}`);
+    throw new Error(
+      `No untried candidates remain in the pool for slot index ${state.currentSlotIndex}`,
+    );
   }
   return next;
 }
@@ -50,21 +62,30 @@ export function taskGenerationNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
     const candidate = selectCandidateForSlot(state);
     const roleModule = state.roleModule;
-    const allowedTypeKeys = roleModule.allowedTaskPatternTypes.map((t) => t.key) as [string, ...string[]];
+    const allowedTypeKeys = roleModule.allowedTaskPatternTypes.map(
+      (t) => t.key,
+    ) as [string, ...string[]];
 
     const promptText = TASK_GENERATION_PROMPT_BASE.replace(
       '{{problemSolving}}',
       roleModule.anchorCriteriaFraming.problemSolving,
     )
-      .replace('{{judgmentExecution}}', roleModule.anchorCriteriaFraming.judgmentExecution)
-      .replace('{{writtenCommunication}}', roleModule.anchorCriteriaFraming.writtenCommunication)
+      .replace(
+        '{{judgmentExecution}}',
+        roleModule.anchorCriteriaFraming.judgmentExecution,
+      )
+      .replace(
+        '{{writtenCommunication}}',
+        roleModule.anchorCriteriaFraming.writtenCommunication,
+      )
       .replace(
         '{{commercialDomainAwareness}}',
         roleModule.anchorCriteriaFraming.commercialDomainAwareness,
       );
 
     const schema = taskGenerationSchema(allowedTypeKeys);
-    const model = ctx.generationModel.withStructuredOutput(schema);
+    const model =
+      ctx.generationModel.withStructuredOutput<z.infer<typeof schema>>(schema);
 
     const result = await model.invoke([
       new SystemMessage(
@@ -84,7 +105,8 @@ export function taskGenerationNode(ctx: GenerationContext) {
     ]);
 
     // Hard rule enforcement, not just prompt-trusted: never fabricate a business problem.
-    const businessProblemDerived = state.problem === null ? false : result.businessProblemDerived;
+    const businessProblemDerived =
+      state.problem === null ? false : result.businessProblemDerived;
 
     return {
       currentTaskDraft: {

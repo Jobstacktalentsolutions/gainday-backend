@@ -12,7 +12,9 @@ export function regenerationRouter(ctx: GenerationContext) {
   return (state: GenerationState): RegenRoute => {
     const result = state.currentCriticResult;
     if (!result) {
-      throw new Error('regeneration router invoked with no currentCriticResult in state');
+      throw new Error(
+        'regeneration router invoked with no currentCriticResult in state',
+      );
     }
 
     if (result.passed) {
@@ -36,6 +38,8 @@ export function retryStateUpdate(state: GenerationState) {
   const draft = state.currentTaskDraft;
   return {
     currentAttempt: state.currentAttempt + 1,
-    triedCandidateIds: draft ? [...state.triedCandidateIds, draft.candidateId] : state.triedCandidateIds,
+    triedCandidateIds: draft
+      ? [...state.triedCandidateIds, draft.candidateId]
+      : state.triedCandidateIds,
   };
 }

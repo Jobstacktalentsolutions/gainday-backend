@@ -9,7 +9,11 @@ export const categoryExtractionSchema = z.object({
 });
 
 export const intentProblemExtractionSchema = z.object({
-  intent: z.string().describe('The skills and competencies the employer expects the hire to demonstrate.'),
+  intent: z
+    .string()
+    .describe(
+      'The skills and competencies the employer expects the hire to demonstrate.',
+    ),
   problem: z
     .string()
     .nullable()

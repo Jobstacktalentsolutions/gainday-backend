@@ -1,4 +1,14 @@
-import { Controller, Get, Param, Post, Put, Body, UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Body,
+  UseGuards,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { SimulationsService } from './simulations.service';
 import { GenerationService } from '../generation/generation.service';
 import { JobsService } from '../jobs/jobs.service';
@@ -24,13 +34,18 @@ export class SimulationsController {
   @Post('job/:jobId/generate')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
-  async generateForJob(@Param('jobId') jobId: string, @CurrentUser() user: any) {
+  async generateForJob(
+    @Param('jobId') jobId: string,
+    @CurrentUser() user: any,
+  ) {
     const job = await this.jobsService.findById(jobId);
     if (!job) {
       throw new NotFoundException('Job not found');
     }
     if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
-      throw new ForbiddenException('You may only generate simulations for your own jobs');
+      throw new ForbiddenException(
+        'You may only generate simulations for your own jobs',
+      );
     }
     await this.generationService.queueGeneration(job.id);
     return { status: 'queued', jobId: job.id };
@@ -53,7 +68,9 @@ export class SimulationsController {
       throw new NotFoundException('Job not found');
     }
     if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
-      throw new ForbiddenException('You may only edit simulations for your own jobs');
+      throw new ForbiddenException(
+        'You may only edit simulations for your own jobs',
+      );
     }
     return this.simulationsService.updateSimulationTasks(id, body.tasks);
   }

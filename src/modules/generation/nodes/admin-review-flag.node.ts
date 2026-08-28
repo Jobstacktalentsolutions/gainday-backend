@@ -1,5 +1,8 @@
 import { GenerationContext } from '../graph/generation-context';
-import { GenerationState, GenerationStateUpdate } from '../state/generation-state';
+import {
+  GenerationState,
+  GenerationStateUpdate,
+} from '../state/generation-state';
 import { FailedGenerationAttempt } from '../../../db/schema/generation-review.schema';
 
 /**
@@ -8,12 +11,17 @@ import { FailedGenerationAttempt } from '../../../db/schema/generation-review.sc
  * anything itself — GenerationService writes generation_review_items rows from
  * state.adminReviewItems after the graph completes.
  */
-export function adminReviewFlagNode(_ctx: GenerationContext) {
-  return async (state: GenerationState): Promise<GenerationStateUpdate> => {
+export function adminReviewFlagNode(ctx: GenerationContext) {
+  // ctx is unused here (no LLM/DB calls in this node) but kept for signature
+  // consistency with every other node factory in the graph.
+  void ctx;
+  return (state: GenerationState): GenerationStateUpdate => {
     const draft = state.currentTaskDraft;
     const critic = state.currentCriticResult;
     if (!draft || !critic) {
-      throw new Error('admin-review-flag node invoked with missing currentTaskDraft/currentCriticResult');
+      throw new Error(
+        'admin-review-flag node invoked with missing currentTaskDraft/currentCriticResult',
+      );
     }
 
     const attempt: FailedGenerationAttempt = {

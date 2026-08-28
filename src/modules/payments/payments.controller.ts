@@ -1,4 +1,13 @@
-import { Controller, Post, Body, Get, Query, UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Query,
+  UseGuards,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { SubmissionsService } from '../submissions/submissions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -23,7 +32,10 @@ export class PaymentsController {
   }
 
   @Post('checkout')
-  async checkout(@Body() body: { candidateIds: string[] }, @CurrentUser() user: any) {
+  async checkout(
+    @Body() body: { candidateIds: string[] },
+    @CurrentUser() user: any,
+  ) {
     if (user.role !== UserRole.ADMIN) {
       for (const submissionId of body.candidateIds) {
         const submission = await this.submissionsService.findById(submissionId);
@@ -31,7 +43,9 @@ export class PaymentsController {
           throw new NotFoundException(`Submission ${submissionId} not found`);
         }
         if (submission.job.employerId !== user.id) {
-          throw new ForbiddenException('You may only unlock candidates for your own jobs');
+          throw new ForbiddenException(
+            'You may only unlock candidates for your own jobs',
+          );
         }
       }
     }

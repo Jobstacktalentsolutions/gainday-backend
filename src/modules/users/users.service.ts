@@ -25,38 +25,65 @@ export class UsersService {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   async findByEmail(email: string): Promise<User | null> {
-    const [user] = await this.db.select(publicColumns).from(users).where(eq(users.email, email));
+    const [user] = await this.db
+      .select(publicColumns)
+      .from(users)
+      .where(eq(users.email, email));
     return (user as User) ?? null;
   }
 
   async findByEmailWithPassword(email: string): Promise<User | null> {
-    const [user] = await this.db.select().from(users).where(eq(users.email, email));
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
     return user ?? null;
   }
 
   async findById(id: string): Promise<User | null> {
-    const [user] = await this.db.select(publicColumns).from(users).where(eq(users.id, id));
+    const [user] = await this.db
+      .select(publicColumns)
+      .from(users)
+      .where(eq(users.id, id));
     return (user as User) ?? null;
   }
 
   async findByGoogleId(googleId: string): Promise<User | null> {
-    const [user] = await this.db.select(publicColumns).from(users).where(eq(users.googleId, googleId));
+    const [user] = await this.db
+      .select(publicColumns)
+      .from(users)
+      .where(eq(users.googleId, googleId));
     return (user as User) ?? null;
   }
 
   async createUser(data: Partial<NewUser>): Promise<User> {
-    const [user] = await this.db.insert(users).values(data as NewUser).returning();
+    const [user] = await this.db
+      .insert(users)
+      .values(data as NewUser)
+      .returning();
     return user;
   }
 
-  async setEmailVerificationToken(userId: string, token: string, expires: Date): Promise<void> {
+  async setEmailVerificationToken(
+    userId: string,
+    token: string,
+    expires: Date,
+  ): Promise<void> {
     await this.db
       .update(users)
-      .set({ emailVerificationToken: token, emailVerificationExpires: expires, updatedAt: new Date() })
+      .set({
+        emailVerificationToken: token,
+        emailVerificationExpires: expires,
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, userId));
   }
 
-  async updateVerificationToken(userId: string, token: string, expires: Date): Promise<void> {
+  async updateVerificationToken(
+    userId: string,
+    token: string,
+    expires: Date,
+  ): Promise<void> {
     await this.setEmailVerificationToken(userId, token, expires);
   }
 
@@ -66,7 +93,11 @@ export class UsersService {
       .from(users)
       .where(eq(users.emailVerificationToken, token));
 
-    if (!user || !user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+    if (
+      !user ||
+      !user.emailVerificationExpires ||
+      user.emailVerificationExpires < new Date()
+    ) {
       return null;
     }
 
@@ -84,17 +115,32 @@ export class UsersService {
     return updated as User;
   }
 
-  async setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void> {
+  async setPasswordResetToken(
+    userId: string,
+    token: string,
+    expires: Date,
+  ): Promise<void> {
     await this.db
       .update(users)
-      .set({ passwordResetToken: token, passwordResetExpires: expires, updatedAt: new Date() })
+      .set({
+        passwordResetToken: token,
+        passwordResetExpires: expires,
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, userId));
   }
 
   async findByValidPasswordResetToken(token: string): Promise<User | null> {
-    const [user] = await this.db.select().from(users).where(eq(users.passwordResetToken, token));
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.passwordResetToken, token));
 
-    if (!user || !user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+    if (
+      !user ||
+      !user.passwordResetExpires ||
+      user.passwordResetExpires < new Date()
+    ) {
       return null;
     }
 
@@ -113,8 +159,15 @@ export class UsersService {
       .where(eq(users.id, userId));
   }
 
-  async updateUserCapabilityScores(userId: string, domain: string, scoreDetails: any): Promise<User> {
-    const [existing] = await this.db.select().from(users).where(eq(users.id, userId));
+  async updateUserCapabilityScores(
+    userId: string,
+    domain: string,
+    scoreDetails: any,
+  ): Promise<User> {
+    const [existing] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
     if (!existing) {
       throw new Error('User not found');
     }

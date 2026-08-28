@@ -1,6 +1,9 @@
 import { Annotation } from '@langchain/langgraph';
 import { RoleModule } from '../roles/role-module.interface';
-import { AnchorResponse, QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
+import {
+  AnchorResponse,
+  QuestionBankTaskContent,
+} from '../../../db/schema/question-bank.schema';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { FailedGenerationAttempt } from '../../../db/schema/generation-review.schema';
 
@@ -60,7 +63,11 @@ export const GenerationStateAnnotation = Annotation.Root({
     default: () => [],
   }),
   adminReviewItems: Annotation<
-    { slotIndex: number; category: string; attempts: FailedGenerationAttempt[] }[]
+    {
+      slotIndex: number;
+      category: string;
+      attempts: FailedGenerationAttempt[];
+    }[]
   >({
     reducer: (left, right) => left.concat(right),
     default: () => [],

@@ -27,7 +27,9 @@ export const jobExtractions = pgTable('job_extractions', {
   category: varchar('category', { length: 255 }).notNull(),
   intent: text('intent').notNull(),
   problem: text('problem'),
-  candidatePool: jsonb('candidate_pool').$type<TaskCandidateRecord[]>().notNull(),
+  candidatePool: jsonb('candidate_pool')
+    .$type<TaskCandidateRecord[]>()
+    .notNull(),
 });
 
 export const jobExtractionsRelations = relations(jobExtractions, ({ one }) => ({

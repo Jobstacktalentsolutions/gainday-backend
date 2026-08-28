@@ -1,6 +1,10 @@
+import { z } from 'zod';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { GenerationContext } from '../graph/generation-context';
-import { GenerationState, GenerationStateUpdate } from '../state/generation-state';
+import {
+  GenerationState,
+  GenerationStateUpdate,
+} from '../state/generation-state';
 import { candidatePoolSchema } from '../schemas/task-candidate.schema';
 import { RoleModuleNotConfiguredError } from '../roles/role-module.interface';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
@@ -12,13 +16,18 @@ Each candidate's taskType MUST be one of the allowed types listed below; do not 
 
 export function overgenerateNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
-    const allowedTypeKeys = state.roleModule.allowedTaskPatternTypes.map((t) => t.key);
+    const allowedTypeKeys = state.roleModule.allowedTaskPatternTypes.map(
+      (t) => t.key,
+    );
     if (allowedTypeKeys.length === 0) {
       throw new RoleModuleNotConfiguredError(state.category);
     }
 
-    const schema = candidatePoolSchema(allowedTypeKeys as [string, ...string[]]);
-    const model = ctx.generationModel.withStructuredOutput(schema);
+    const schema = candidatePoolSchema(
+      allowedTypeKeys as [string, ...string[]],
+    );
+    const model =
+      ctx.generationModel.withStructuredOutput<z.infer<typeof schema>>(schema);
 
     const allowedTypesDescription = state.roleModule.allowedTaskPatternTypes
       .map((t) => `- ${t.key}: ${t.description}`)

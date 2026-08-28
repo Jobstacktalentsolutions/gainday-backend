@@ -55,7 +55,11 @@ export class NotificationsService {
     this.logger.log(`Password reset email enqueued for ${to}`);
   }
 
-  async sendBatchNotification(employerEmail: string, candidateCount: number, jobTitle: string): Promise<void> {
+  async sendBatchNotification(
+    employerEmail: string,
+    candidateCount: number,
+    jobTitle: string,
+  ): Promise<void> {
     const appUrl = this.configService.get<string>('email.appUrl');
     const year = new Date().getFullYear();
 
@@ -72,7 +76,9 @@ export class NotificationsService {
       },
     });
 
-    this.logger.log(`Batch submission notification enqueued for ${employerEmail}`);
+    this.logger.log(
+      `Batch submission notification enqueued for ${employerEmail}`,
+    );
   }
 
   async sendScoringResultsEmail(

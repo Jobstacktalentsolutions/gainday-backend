@@ -11,7 +11,9 @@ export const judgeScoreSchema = z.object({
         .min(0)
         .max(10)
         .nullable()
-        .describe('Only score this if a business Problem was extracted; otherwise null.'),
+        .describe(
+          'Only score this if a business Problem was extracted; otherwise null.',
+        ),
     }),
   ),
 });

@@ -22,8 +22,10 @@ export const SalesRoleModule: RoleModule = {
   extraction: {
     categorySubDomainGuidance:
       'TODO(sales-content): sub-role granularity (SDR/AE/CSM) framing pending companion Sales document.',
-    intentFramingGuidance: 'TODO(sales-content): pending companion Sales document.',
-    expectedTaskGuidance: 'TODO(sales-content): pending companion Sales document.',
+    intentFramingGuidance:
+      'TODO(sales-content): pending companion Sales document.',
+    expectedTaskGuidance:
+      'TODO(sales-content): pending companion Sales document.',
   },
 
   allowedTaskPatternTypes: [],
@@ -36,15 +38,18 @@ export const SalesRoleModule: RoleModule = {
   },
 
   criticChecks: {
-    async checkAnchorCorrectness() {
-      throw new Error(
-        'Sales role module has no anchor-correctness check yet — companion Sales content pending.',
+    checkAnchorCorrectness() {
+      return Promise.reject(
+        new Error(
+          'Sales role module has no anchor-correctness check yet — companion Sales content pending.',
+        ),
       );
     },
   },
 
   presentationSpec: {
     rendererHint: 'sales-conversational',
-    notes: 'TODO(sales-content): message-thread/persona presentation spec pending.',
+    notes:
+      'TODO(sales-content): message-thread/persona presentation spec pending.',
   },
 };

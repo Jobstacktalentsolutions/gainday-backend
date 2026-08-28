@@ -46,7 +46,9 @@ export class SubmissionsService {
 
     const completedAt = new Date();
     const timeTakenSeconds = Math.floor(
-      (completedAt.getTime() - (submission.startedAt?.getTime() || completedAt.getTime())) / 1000,
+      (completedAt.getTime() -
+        (submission.startedAt?.getTime() || completedAt.getTime())) /
+        1000,
     );
 
     const [updated] = await this.db
@@ -59,7 +61,9 @@ export class SubmissionsService {
   }
 
   async queueBatchScoring(jobId: string, delayMs: number): Promise<void> {
-    this.logger.log(`Queueing batch scoring for Job ID ${jobId} in ${delayMs}ms`);
+    this.logger.log(
+      `Queueing batch scoring for Job ID ${jobId} in ${delayMs}ms`,
+    );
     await this.scoringQueue.add(
       'batch-score-job',
       { jobId },
@@ -96,12 +100,18 @@ export class SubmissionsService {
 
   async findPendingByJob(jobId: string) {
     return this.db.query.submissions.findMany({
-      where: and(eq(submissions.jobId, jobId), eq(submissions.status, 'PENDING')),
+      where: and(
+        eq(submissions.jobId, jobId),
+        eq(submissions.status, 'PENDING'),
+      ),
       with: { simulation: true },
     });
   }
 
-  async updateStatus(submissionId: string, status: (typeof submissions.$inferSelect)['status']) {
+  async updateStatus(
+    submissionId: string,
+    status: (typeof submissions.$inferSelect)['status'],
+  ) {
     const [submission] = await this.db
       .update(submissions)
       .set({ status, updatedAt: new Date() })
@@ -110,7 +120,10 @@ export class SubmissionsService {
     return submission;
   }
 
-  async saveScoringResult(submissionId: string, scoreResults: Record<string, unknown>) {
+  async saveScoringResult(
+    submissionId: string,
+    scoreResults: Record<string, unknown>,
+  ) {
     const [submission] = await this.db
       .update(submissions)
       .set({ ...scoreResults, updatedAt: new Date() })

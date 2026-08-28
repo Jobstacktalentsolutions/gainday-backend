@@ -1,6 +1,10 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule, JwtModuleAsyncOptions, JwtModuleOptions } from '@nestjs/jwt';
+import {
+  JwtModule,
+  JwtModuleAsyncOptions,
+  JwtModuleOptions,
+} from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -16,10 +20,11 @@ const jwtModuleOptions: JwtModuleAsyncOptions = {
   imports: [ConfigModule],
   inject: [ConfigService],
   useFactory: (configService: ConfigService): JwtModuleOptions => {
-    const expiresIn = configService.get<string | number>('jwt.expiresIn') || '7d';
+    const expiresIn =
+      configService.get<string | number>('jwt.expiresIn') || '7d';
     return {
       secret: configService.get<string>('jwt.secret'),
-      signOptions: { expiresIn: expiresIn as string | number },
+      signOptions: { expiresIn: expiresIn },
     } as JwtModuleOptions;
   },
 };
@@ -32,7 +37,20 @@ const jwtModuleOptions: JwtModuleAsyncOptions = {
     JwtModule.registerAsync(jwtModuleOptions),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, RolesGuard, JwtAuthGuard, OptionalJwtAuthGuard],
-  exports: [AuthService, RolesGuard, JwtAuthGuard, OptionalJwtAuthGuard, PassportModule],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleStrategy,
+    RolesGuard,
+    JwtAuthGuard,
+    OptionalJwtAuthGuard,
+  ],
+  exports: [
+    AuthService,
+    RolesGuard,
+    JwtAuthGuard,
+    OptionalJwtAuthGuard,
+    PassportModule,
+  ],
 })
 export class AuthModule {}

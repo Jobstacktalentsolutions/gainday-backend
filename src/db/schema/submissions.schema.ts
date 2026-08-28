@@ -1,4 +1,14 @@
-import { boolean, integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  integer,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
@@ -18,7 +28,8 @@ export const SubmissionStatus = {
   SCORED: 'SCORED',
   DISQUALIFIED: 'DISQUALIFIED',
 } as const;
-export type SubmissionStatus = (typeof SubmissionStatus)[keyof typeof SubmissionStatus];
+export type SubmissionStatus =
+  (typeof SubmissionStatus)[keyof typeof SubmissionStatus];
 
 export interface CandidateAnswer {
   taskId: string;
@@ -53,11 +64,20 @@ export const submissions = pgTable('submissions', {
   simulationId: uuid('simulation_id')
     .notNull()
     .references(() => simulations.id),
-  candidateId: uuid('candidate_id').references(() => users.id, { onDelete: 'set null' }),
+  candidateId: uuid('candidate_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   guestInfo: jsonb('guest_info').$type<GuestInfo>(),
-  status: submissionStatusEnum('status').notNull().default('PENDING').$type<SubmissionStatus>(),
+  status: submissionStatusEnum('status')
+    .notNull()
+    .default('PENDING')
+    .$type<SubmissionStatus>(),
   answers: jsonb('answers').$type<CandidateAnswer[]>().notNull().default([]),
-  overallScore: numeric('overall_score', { precision: 5, scale: 2, mode: 'number' }),
+  overallScore: numeric('overall_score', {
+    precision: 5,
+    scale: 2,
+    mode: 'number',
+  }),
   categoryScores: jsonb('category_scores').$type<CategoryScores>(),
   timeTakenSeconds: integer('time_taken_seconds'),
   isAntiCheatFlagged: boolean('is_anti_cheat_flagged').notNull().default(false),

@@ -35,7 +35,10 @@ export class ScoringProcessor extends WorkerHost {
       throw new Error(`Job not found: ${jobId}`);
     }
 
-    await this.db.update(jobs).set({ status: 'UNDER_REVIEW', updatedAt: new Date() }).where(eq(jobs.id, jobId));
+    await this.db
+      .update(jobs)
+      .set({ status: 'UNDER_REVIEW', updatedAt: new Date() })
+      .where(eq(jobs.id, jobId));
 
     const extraction = await this.db.query.jobExtractions.findFirst({
       where: eq(jobExtractions.jobId, jobId),
@@ -43,11 +46,16 @@ export class ScoringProcessor extends WorkerHost {
     const capabilityDomain = extraction?.category ?? job.roleCategory;
 
     const pendingSubmissions = await this.db.query.submissions.findMany({
-      where: and(eq(submissions.jobId, jobId), eq(submissions.status, 'PENDING')),
+      where: and(
+        eq(submissions.jobId, jobId),
+        eq(submissions.status, 'PENDING'),
+      ),
       with: { simulation: true, candidate: true },
     });
 
-    this.logger.log(`Found ${pendingSubmissions.length} submissions to score for Job ID: ${jobId}`);
+    this.logger.log(
+      `Found ${pendingSubmissions.length} submissions to score for Job ID: ${jobId}`,
+    );
 
     let processedCount = 0;
     for (const submission of pendingSubmissions) {
@@ -57,7 +65,8 @@ export class ScoringProcessor extends WorkerHost {
           .set({ status: 'SCORING', updatedAt: new Date() })
           .where(eq(submissions.id, submission.id));
 
-        const scoreResults = await this.scoringService.scoreSubmission(submission);
+        const scoreResults =
+          await this.scoringService.scoreSubmission(submission);
         const [updatedSubmission] = await this.db
           .update(submissions)
           .set({ ...scoreResults, updatedAt: new Date() })
@@ -71,17 +80,24 @@ export class ScoringProcessor extends WorkerHost {
             {
               score: updatedSubmission.overallScore,
               categories: {
-                problemSolving: updatedSubmission.categoryScores?.problemSolving?.score || 0,
-                judgmentExecution: updatedSubmission.categoryScores?.judgmentExecution?.score || 0,
-                writtenCommunication: updatedSubmission.categoryScores?.writtenCommunication?.score || 0,
+                problemSolving:
+                  updatedSubmission.categoryScores?.problemSolving?.score || 0,
+                judgmentExecution:
+                  updatedSubmission.categoryScores?.judgmentExecution?.score ||
+                  0,
+                writtenCommunication:
+                  updatedSubmission.categoryScores?.writtenCommunication
+                    ?.score || 0,
                 commercialDomainAwareness:
-                  updatedSubmission.categoryScores?.commercialDomainAwareness?.score || 0,
+                  updatedSubmission.categoryScores?.commercialDomainAwareness
+                    ?.score || 0,
               },
             },
           );
         }
 
-        const candidateEmail = submission.candidate?.email || submission.guestInfo?.email;
+        const candidateEmail =
+          submission.candidate?.email || submission.guestInfo?.email;
         if (candidateEmail && updatedSubmission.overallScore != null) {
           await this.notificationsService.sendScoringResultsEmail(
             candidateEmail,
@@ -89,11 +105,17 @@ export class ScoringProcessor extends WorkerHost {
             updatedSubmission.overallScore,
             updatedSubmission.categoryScores
               ? {
-                  problemSolving: updatedSubmission.categoryScores.problemSolving?.score || 0,
-                  judgmentExecution: updatedSubmission.categoryScores.judgmentExecution?.score || 0,
-                  writtenCommunication: updatedSubmission.categoryScores.writtenCommunication?.score || 0,
+                  problemSolving:
+                    updatedSubmission.categoryScores.problemSolving?.score || 0,
+                  judgmentExecution:
+                    updatedSubmission.categoryScores.judgmentExecution?.score ||
+                    0,
+                  writtenCommunication:
+                    updatedSubmission.categoryScores.writtenCommunication
+                      ?.score || 0,
                   commercialDomainAwareness:
-                    updatedSubmission.categoryScores.commercialDomainAwareness?.score || 0,
+                    updatedSubmission.categoryScores.commercialDomainAwareness
+                      ?.score || 0,
                 }
               : undefined,
           );
@@ -105,10 +127,17 @@ export class ScoringProcessor extends WorkerHost {
       }
     }
 
-    await this.db.update(jobs).set({ status: 'SHORTLIST_READY', updatedAt: new Date() }).where(eq(jobs.id, jobId));
+    await this.db
+      .update(jobs)
+      .set({ status: 'SHORTLIST_READY', updatedAt: new Date() })
+      .where(eq(jobs.id, jobId));
 
     if (job.employer?.email && processedCount > 0) {
-      await this.notificationsService.sendBatchNotification(job.employer.email, processedCount, job.title);
+      await this.notificationsService.sendBatchNotification(
+        job.employer.email,
+        processedCount,
+        job.title,
+      );
     }
 
     return { processedCount };

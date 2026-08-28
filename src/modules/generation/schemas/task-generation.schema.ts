@@ -1,8 +1,14 @@
 import { z } from 'zod';
 
 const anchorSchema = z.object({
-  score: z.number().describe('One of the configured anchor score points, e.g. 0, 3, 5, 7, or 10.'),
-  responseText: z.string().describe('A realistic candidate response that would earn this score.'),
+  score: z
+    .number()
+    .describe(
+      'One of the configured anchor score points, e.g. 0, 3, 5, 7, or 10.',
+    ),
+  responseText: z
+    .string()
+    .describe('A realistic candidate response that would earn this score.'),
   criteria: z.object({
     problemSolving: z.string(),
     judgmentExecution: z.string(),

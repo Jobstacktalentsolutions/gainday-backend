@@ -11,7 +11,10 @@ import {
   generationReviewItems,
   GenerationReviewStatus,
 } from '../../db/schema';
-import { AnchorResponse, QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
+import {
+  AnchorResponse,
+  QuestionBankTaskContent,
+} from '../../db/schema/question-bank.schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
 import { Embeddings } from '@langchain/core/embeddings';
@@ -25,11 +28,25 @@ export class AdminService {
   ) {}
 
   async getAdminStats() {
-    const [[{ activeJobs }], [{ totalUsers }], [{ openSubmissions }], [{ jobsFilled }]] = await Promise.all([
-      this.db.select({ activeJobs: count() }).from(jobs).where(eq(jobs.status, 'ACTIVE')),
+    const [
+      [{ activeJobs }],
+      [{ totalUsers }],
+      [{ openSubmissions }],
+      [{ jobsFilled }],
+    ] = await Promise.all([
+      this.db
+        .select({ activeJobs: count() })
+        .from(jobs)
+        .where(eq(jobs.status, 'ACTIVE')),
       this.db.select({ totalUsers: count() }).from(users),
-      this.db.select({ openSubmissions: count() }).from(submissions).where(eq(submissions.status, 'PENDING')),
-      this.db.select({ jobsFilled: count() }).from(jobs).where(eq(jobs.status, 'CLOSED')),
+      this.db
+        .select({ openSubmissions: count() })
+        .from(submissions)
+        .where(eq(submissions.status, 'PENDING')),
+      this.db
+        .select({ jobsFilled: count() })
+        .from(jobs)
+        .where(eq(jobs.status, 'CLOSED')),
     ]);
 
     return { activeJobs, totalUsers, openSubmissions, jobsFilled };
@@ -47,12 +64,16 @@ export class AdminService {
     return user;
   }
 
-  async reviewAntiCheatFlag(submissionId: string, action: 'UPHOLD' | 'OVERTURN') {
+  async reviewAntiCheatFlag(
+    submissionId: string,
+    action: 'UPHOLD' | 'OVERTURN',
+  ) {
     const values =
       action === 'UPHOLD'
         ? {
             status: 'DISQUALIFIED' as const,
-            disqualificationReason: 'Anti-cheat violation confirmed by admin review.',
+            disqualificationReason:
+              'Anti-cheat violation confirmed by admin review.',
           }
         : {
             status: 'PENDING' as const,
@@ -108,7 +129,10 @@ export class AdminService {
       .where(eq(generationReviewItems.id, reviewItemId))
       .returning();
 
-    const embedding = await embedTaskContent(this.embeddings, editedTaskContent);
+    const embedding = await embedTaskContent(
+      this.embeddings,
+      editedTaskContent,
+    );
     await this.db.insert(questionBank).values({
       category: reviewItem.category,
       intent: editedTaskContent.title,

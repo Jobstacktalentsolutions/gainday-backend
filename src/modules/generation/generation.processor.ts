@@ -29,7 +29,10 @@ export class GenerationProcessor extends WorkerHost {
       throw new Error(`Job not found: ${jobId}`);
     }
 
-    await this.db.update(jobs).set({ status: 'GENERATING', updatedAt: new Date() }).where(eq(jobs.id, jobId));
+    await this.db
+      .update(jobs)
+      .set({ status: 'GENERATING', updatedAt: new Date() })
+      .where(eq(jobs.id, jobId));
 
     try {
       const result = await this.generationService.runGeneration(job);
@@ -45,7 +48,10 @@ export class GenerationProcessor extends WorkerHost {
           set: { tasks: result.finalizedTasks, updatedAt: new Date() },
         });
 
-      await this.db.update(jobs).set({ status: 'ACTIVE', updatedAt: new Date() }).where(eq(jobs.id, jobId));
+      await this.db
+        .update(jobs)
+        .set({ status: 'ACTIVE', updatedAt: new Date() })
+        .where(eq(jobs.id, jobId));
 
       this.logger.log(
         `Generation complete for Job ID ${jobId}: ${result.finalizedTasks.length} tasks, ${result.adminReviewItemsPersisted} sent to admin review.`,

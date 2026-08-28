@@ -30,8 +30,14 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const user = await this.authService.validateUser(loginDto.email, loginDto.password);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = await this.authService.validateUser(
+      loginDto.email,
+      loginDto.password,
+    );
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -49,7 +55,10 @@ export class AuthController {
   }
 
   @Post('signup')
-  async signup(@Body() signupDto: SignupEmployerDto, @Res({ passthrough: true }) res: Response) {
+  async signup(
+    @Body() signupDto: SignupEmployerDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.registerEmployer(signupDto);
     this.setAuthCookie(res, result.access_token);
     return {
@@ -59,7 +68,10 @@ export class AuthController {
   }
 
   @Post('register/employer')
-  async registerEmployer(@Body() signupDto: SignupEmployerDto, @Res({ passthrough: true }) res: Response) {
+  async registerEmployer(
+    @Body() signupDto: SignupEmployerDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.registerEmployer(signupDto);
     this.setAuthCookie(res, result.access_token);
     return result;
@@ -67,14 +79,21 @@ export class AuthController {
 
   @Post('register/candidate')
   async registerCandidate(@Body() body: any) {
-    return this.authService.registerJobSeeker(body.email, body.password, body.fullName);
+    return this.authService.registerJobSeeker(
+      body.email,
+      body.password,
+      body.fullName,
+    );
   }
 
   @Post('request-password-reset')
   @HttpCode(HttpStatus.OK)
   async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
     await this.authService.requestPasswordReset(dto.email);
-    return { message: 'If an account with that email exists, a reset link has been sent' };
+    return {
+      message:
+        'If an account with that email exists, a reset link has been sent',
+    };
   }
 
   @Post('reset-password')
@@ -87,7 +106,9 @@ export class AuthController {
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string, @Res() res: Response) {
     if (!token) {
-      return res.redirect(`${this.configService.get('frontendUrl')}/employer/verify-email?error=true`);
+      return res.redirect(
+        `${this.configService.get('frontendUrl')}/employer/verify-email?error=true`,
+      );
     }
 
     const verified = await this.authService.verifyEmail(token);
@@ -102,8 +123,7 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  googleAuth() {
-  }
+  googleAuth() {}
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)

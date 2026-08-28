@@ -1,5 +1,8 @@
 import { GenerationContext } from '../graph/generation-context';
-import { GenerationState, GenerationStateUpdate } from '../state/generation-state';
+import {
+  GenerationState,
+  GenerationStateUpdate,
+} from '../state/generation-state';
 import { questionBank } from '../../../db/schema/question-bank.schema';
 import { embedTaskContent } from '../utils/embedding.util';
 

@@ -1,6 +1,9 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
+import {
+  ChatGoogleGenerativeAI,
+  GoogleGenerativeAIEmbeddings,
+} from '@langchain/google-genai';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Embeddings } from '@langchain/core/embeddings';
 import { CRITIC_MODEL, EMBEDDINGS, GENERATION_MODEL } from './ai.constants';

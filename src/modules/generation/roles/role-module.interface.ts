@@ -1,5 +1,8 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { AnchorResponse, QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
+import {
+  AnchorResponse,
+  QuestionBankTaskContent,
+} from '../../../db/schema/question-bank.schema';
 
 export type ObjectiveComponentType =
   | 'NUMERIC_INPUT'
@@ -92,7 +95,9 @@ export interface RoleModule {
 
 export class RoleModuleNotConfiguredError extends Error {
   constructor(category: string) {
-    super(`Role module for category "${category}" has no allowed task-pattern types configured.`);
+    super(
+      `Role module for category "${category}" has no allowed task-pattern types configured.`,
+    );
     this.name = 'RoleModuleNotConfiguredError';
   }
 }

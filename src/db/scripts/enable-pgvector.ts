@@ -28,7 +28,9 @@ async function main() {
     );
 
     if (rows.length === 0) {
-      throw new Error('pgvector extension was not found after CREATE EXTENSION.');
+      throw new Error(
+        'pgvector extension was not found after CREATE EXTENSION.',
+      );
     }
 
     console.log(`pgvector enabled: ${rows[0].extname}@${rows[0].extversion}`);

@@ -57,17 +57,14 @@
           <% if (categoryScores.problemSolving !== undefined) { %>
             <div class="metric-row"><span class="metric-name">Problem Solving</span><span class="metric-score"><%= categoryScores.problemSolving %></span></div>
           <% } %>
-          <% if (categoryScores.execution !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Execution</span><span class="metric-score"><%= categoryScores.execution %></span></div>
+          <% if (categoryScores.judgmentExecution !== undefined) { %>
+            <div class="metric-row"><span class="metric-name">Judgment / Execution</span><span class="metric-score"><%= categoryScores.judgmentExecution %></span></div>
           <% } %>
           <% if (categoryScores.writtenCommunication !== undefined) { %>
             <div class="metric-row"><span class="metric-name">Written Communication</span><span class="metric-score"><%= categoryScores.writtenCommunication %></span></div>
           <% } %>
-          <% if (categoryScores.domainAwareness !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Domain Awareness</span><span class="metric-score"><%= categoryScores.domainAwareness %></span></div>
-          <% } %>
-          <% if (categoryScores.prioritization !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Prioritization</span><span class="metric-score"><%= categoryScores.prioritization %></span></div>
+          <% if (categoryScores.commercialDomainAwareness !== undefined) { %>
+            <div class="metric-row"><span class="metric-name">Commercial / Domain Awareness</span><span class="metric-score"><%= categoryScores.commercialDomainAwareness %></span></div>
           <% } %>
         </div>
         <% } %>

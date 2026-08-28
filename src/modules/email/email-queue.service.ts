@@ -7,9 +7,7 @@ import { EmailPayload } from './email.service';
 export class EmailQueueService {
   private readonly logger = new Logger(EmailQueueService.name);
 
-  constructor(
-    @InjectQueue('email') private readonly emailQueue: Queue,
-  ) {}
+  constructor(@InjectQueue('email') private readonly emailQueue: Queue) {}
 
   async enqueueEmail(payload: EmailPayload, delayMs?: number): Promise<string> {
     try {
@@ -32,7 +30,13 @@ export class EmailQueueService {
     }
   }
 
-  async enqueueBatchEmail(recipients: string[], subject: string, template: string, context?: Record<string, any>, delayMs?: number): Promise<string> {
+  async enqueueBatchEmail(
+    recipients: string[],
+    subject: string,
+    template: string,
+    context?: Record<string, any>,
+    delayMs?: number,
+  ): Promise<string> {
     try {
       const job = await this.emailQueue.add(
         'batch',
@@ -51,10 +55,12 @@ export class EmailQueueService {
           delay: delayMs,
           removeOnComplete: true,
           removeOnFail: false,
-        }
+        },
       );
 
-      this.logger.log(`Batch email job enqueued with ID: ${job.id} for ${recipients.length} recipients`);
+      this.logger.log(
+        `Batch email job enqueued with ID: ${job.id} for ${recipients.length} recipients`,
+      );
       return (job.id || '').toString();
     } catch (error) {
       this.logger.error(`Failed to enqueue batch email:`, error);

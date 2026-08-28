@@ -39,7 +39,7 @@ Every submission is graded across five core categories to compute a composite sc
 ## 🛠️ Architecture & Tech Stack
 
 *   **Framework**: [NestJS](https://nestjs.com/) (v11)
-*   **Database**: PostgreSQL via [TypeORM](https://typeorm.io/)
+*   **Database**: PostgreSQL via [Drizzle ORM](https://orm.drizzle.team/)
 *   **Task Queues & Async Processing**: [BullMQ](https://docs.bullmq.io/) backed by Redis
 *   **Package Manager**: `pnpm` (v10)
 
@@ -52,7 +52,7 @@ The project code is organized cleanly inside `src/` to support feature modularit
 ```
 src/
 ├── config/                  # Configuration schemas and dynamic env parsing
-├── common/                  # Shared filters, guards, and BaseEntity
+├── db/                      # Drizzle schema, client, and migration runner
 └── modules/
     ├── auth/                # Session and role-based registration/login
     ├── users/               # Candidate/Employer profiles & capability scores
@@ -108,4 +108,18 @@ pnpm test
 
 # e2e tests
 pnpm test:e2e
+```
+
+### 5. Database Migrations (Drizzle)
+Schema changes are made in `src/db/schema/*.ts`, then a migration is generated and applied — never edit generated SQL files or the database by hand.
+
+```bash
+# generate a new SQL migration from schema changes
+pnpm db:generate
+
+# apply pending migrations
+pnpm db:migrate
+
+# browse the database with Drizzle Studio
+pnpm db:studio
 ```

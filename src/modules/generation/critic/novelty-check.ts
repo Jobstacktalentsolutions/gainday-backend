@@ -20,7 +20,11 @@ export async function findSimilarQuestions(
 ): Promise<NoveltyMatch[]> {
   const vectorLiteral = embeddingToPgVectorLiteral(embedding);
 
-  const result = await db.execute<{ id: string; task_type: string; distance: number }>(sql`
+  const result = await db.execute<{
+    id: string;
+    task_type: string;
+    distance: number;
+  }>(sql`
     SELECT id, task_type, (embedding <=> ${vectorLiteral}::vector) AS distance
     FROM ${questionBank}
     WHERE category = ${category}

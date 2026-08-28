@@ -1,9 +1,20 @@
-import { integer, jsonb, pgEnum, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  timestamp,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
 import { users } from './users.schema';
-import { AnchorResponse, QuestionBankTaskContent } from './question-bank.schema';
+import {
+  AnchorResponse,
+  QuestionBankTaskContent,
+} from './question-bank.schema';
 
 export const generationReviewStatusEnum = pgEnum('generation_review_status', [
   'PENDING',
@@ -16,7 +27,8 @@ export const GenerationReviewStatus = {
   APPROVED_WITH_EDITS: 'APPROVED_WITH_EDITS',
   REJECTED: 'REJECTED',
 } as const;
-export type GenerationReviewStatus = (typeof GenerationReviewStatus)[keyof typeof GenerationReviewStatus];
+export type GenerationReviewStatus =
+  (typeof GenerationReviewStatus)[keyof typeof GenerationReviewStatus];
 
 export interface FailedGenerationAttempt {
   attemptNumber: number;
@@ -34,23 +46,33 @@ export const generationReviewItems = pgTable('generation_review_items', {
   slotIndex: integer('slot_index').notNull(),
   category: varchar('category', { length: 255 }).notNull(),
   attempts: jsonb('attempts').$type<FailedGenerationAttempt[]>().notNull(),
-  status: generationReviewStatusEnum('status').notNull().default('PENDING').$type<GenerationReviewStatus>(),
-  resolvedTaskContent: jsonb('resolved_task_content').$type<QuestionBankTaskContent | null>(),
+  status: generationReviewStatusEnum('status')
+    .notNull()
+    .default('PENDING')
+    .$type<GenerationReviewStatus>(),
+  resolvedTaskContent: jsonb(
+    'resolved_task_content',
+  ).$type<QuestionBankTaskContent | null>(),
   resolvedAnchors: jsonb('resolved_anchors').$type<AnchorResponse[] | null>(),
-  reviewedByAdminId: uuid('reviewed_by_admin_id').references(() => users.id, { onDelete: 'set null' }),
+  reviewedByAdminId: uuid('reviewed_by_admin_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
 });
 
-export const generationReviewItemsRelations = relations(generationReviewItems, ({ one }) => ({
-  job: one(jobs, {
-    fields: [generationReviewItems.jobId],
-    references: [jobs.id],
+export const generationReviewItemsRelations = relations(
+  generationReviewItems,
+  ({ one }) => ({
+    job: one(jobs, {
+      fields: [generationReviewItems.jobId],
+      references: [jobs.id],
+    }),
+    reviewedByAdmin: one(users, {
+      fields: [generationReviewItems.reviewedByAdminId],
+      references: [users.id],
+    }),
   }),
-  reviewedByAdmin: one(users, {
-    fields: [generationReviewItems.reviewedByAdminId],
-    references: [users.id],
-  }),
-}));
+);
 
 export type GenerationReviewItem = typeof generationReviewItems.$inferSelect;
 export type NewGenerationReviewItem = typeof generationReviewItems.$inferInsert;

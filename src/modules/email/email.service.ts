@@ -26,18 +26,32 @@ export class EmailService {
 
   constructor(private configService: ConfigService) {
     this.apiKey = this.configService.get<string>('email.brevoApiKey', '');
-    this.fromEmail = this.configService.get<string>('email.fromEmail', 'noreply@gainday.com');
+    this.fromEmail = this.configService.get<string>(
+      'email.fromEmail',
+      'noreply@gainday.com',
+    );
     this.fromName = this.configService.get<string>('email.fromName', 'Gainday');
-    this.frontendUrl = this.configService.get<string>('frontendUrl', 'http://localhost:5173');
+    this.frontendUrl = this.configService.get<string>(
+      'frontendUrl',
+      'http://localhost:5173',
+    );
 
     if (!this.apiKey) {
       this.logger.warn('Brevo API key not configured');
     }
   }
 
-  async renderTemplate(templateName: string, context: Record<string, any> = {}): Promise<string> {
+  async renderTemplate(
+    templateName: string,
+    context: Record<string, any> = {},
+  ): Promise<string> {
     try {
-      const templatesDir = path.join(process.cwd(), 'src', 'templates', 'emails');
+      const templatesDir = path.join(
+        process.cwd(),
+        'src',
+        'templates',
+        'emails',
+      );
       const templatePath = path.join(templatesDir, `${templateName}.ejs`);
 
       if (!fs.existsSync(templatePath)) {
@@ -104,7 +118,9 @@ export class EmailService {
         },
       });
 
-      this.logger.log(`Email sent successfully to ${Array.isArray(payload.to) ? payload.to.join(', ') : payload.to}`);
+      this.logger.log(
+        `Email sent successfully to ${Array.isArray(payload.to) ? payload.to.join(', ') : payload.to}`,
+      );
     } catch (error: any) {
       if (error.isAxiosError) {
         const status = error.response?.status;
@@ -118,7 +134,12 @@ export class EmailService {
     }
   }
 
-  async sendBatchEmail(recipients: string[], subject: string, template: string, context: Record<string, any> = {}): Promise<void> {
+  async sendBatchEmail(
+    recipients: string[],
+    subject: string,
+    template: string,
+    context: Record<string, any> = {},
+  ): Promise<void> {
     try {
       const html = await this.renderTemplate(template, context);
 
@@ -151,7 +172,9 @@ export class EmailService {
         this.logger.error(errMsg);
         throw new Error(errMsg);
       }
-      this.logger.error(`Failed to send batch email: ${error.message || error}`);
+      this.logger.error(
+        `Failed to send batch email: ${error.message || error}`,
+      );
       throw error;
     }
   }

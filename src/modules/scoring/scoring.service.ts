@@ -9,7 +9,9 @@ type SubmissionWithSimulation = Submission & {
 export class ScoringService {
   private readonly logger = new Logger(ScoringService.name);
 
-  async scoreSubmission(submission: SubmissionWithSimulation): Promise<Record<string, unknown>> {
+  async scoreSubmission(
+    submission: SubmissionWithSimulation,
+  ): Promise<Record<string, unknown>> {
     this.logger.log(`Scoring submission: ${submission.id}`);
 
     // Weights
@@ -38,23 +40,29 @@ export class ScoringService {
       categoryScores: {
         problemSolving: {
           score: problemSolvingScore,
-          rationale: 'Demonstrated strong reasoning and identified core issues correctly.',
-          evidence: 'Identified internal audit discrepancies as critical to team operations.',
+          rationale:
+            'Demonstrated strong reasoning and identified core issues correctly.',
+          evidence:
+            'Identified internal audit discrepancies as critical to team operations.',
         },
         judgmentExecution: {
           score: judgmentExecutionScore,
-          rationale: 'Followed instructions completely, strictly adhering to word limits.',
+          rationale:
+            'Followed instructions completely, strictly adhering to word limits.',
           evidence: 'Word counts were 235 (limit 250) and 130 (limit 150).',
         },
         writtenCommunication: {
           score: writtenCommScore,
           rationale: 'Very clear, structured responses with professional tone.',
-          evidence: 'Proper business greeting, logical paragraphs, clear bullet points.',
+          evidence:
+            'Proper business greeting, logical paragraphs, clear bullet points.',
         },
         commercialDomainAwareness: {
           score: commercialDomainAwarenessScore,
-          rationale: 'Demonstrated good understanding of stakeholder interests and commercial tradeoffs.',
-          evidence: 'Acknowledged partner budget constraints when defending recommendations.',
+          rationale:
+            'Demonstrated good understanding of stakeholder interests and commercial tradeoffs.',
+          evidence:
+            'Acknowledged partner budget constraints when defending recommendations.',
         },
       },
     };

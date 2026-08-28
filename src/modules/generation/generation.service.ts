@@ -37,7 +37,11 @@ export class GenerationService {
 
   async queueGeneration(jobId: string): Promise<void> {
     this.logger.log(`Queueing simulation generation for Job ID ${jobId}`);
-    await this.generationQueue.add('generate-simulation', { jobId }, { jobId: `generate-${jobId}` });
+    await this.generationQueue.add(
+      'generate-simulation',
+      { jobId },
+      { jobId: `generate-${jobId}` },
+    );
   }
 
   /**
@@ -45,7 +49,8 @@ export class GenerationService {
    * simulation tasks, and any admin-review items. Called by GenerationProcessor.
    */
   async runGeneration(job: Job): Promise<GenerationResult> {
-    const config: GenerationConfig = this.configService.getOrThrow('generation');
+    const config: GenerationConfig =
+      this.configService.getOrThrow('generation');
 
     const graph = buildGenerationGraph({
       generationModel: this.generationModel,
@@ -63,7 +68,7 @@ export class GenerationService {
       businessProblemRaw: job.businessProblem || undefined,
     };
 
-    const finalState = (await graph.invoke(initialState)) as GenerationState;
+    const finalState = await graph.invoke(initialState);
 
     await this.db
       .insert(jobExtractions)
@@ -96,18 +101,20 @@ export class GenerationService {
       adminReviewItemsPersisted++;
     }
 
-    const finalizedTasks: SimulationTask[] = finalState.finalizedTasks.map((task, index) => ({
-      id: `${job.id}-task-${index + 1}`,
-      taskType: task.taskType,
-      category: finalState.category,
-      title: task.taskContent.title,
-      scenarioDescription: task.taskContent.scenarioDescription,
-      questionPrompt: task.taskContent.questionPrompt,
-      objectiveComponent: task.taskContent.objectiveComponent,
-      openEndedComponent: task.taskContent.openEndedComponent,
-      businessProblemDerived: task.taskContent.businessProblemDerived,
-      anchors: task.anchors,
-    }));
+    const finalizedTasks: SimulationTask[] = finalState.finalizedTasks.map(
+      (task, index) => ({
+        id: `${job.id}-task-${index + 1}`,
+        taskType: task.taskType,
+        category: finalState.category,
+        title: task.taskContent.title,
+        scenarioDescription: task.taskContent.scenarioDescription,
+        questionPrompt: task.taskContent.questionPrompt,
+        objectiveComponent: task.taskContent.objectiveComponent,
+        openEndedComponent: task.taskContent.openEndedComponent,
+        businessProblemDerived: task.taskContent.businessProblemDerived,
+        anchors: task.anchors,
+      }),
+    );
 
     return { finalizedTasks, adminReviewItemsPersisted };
   }

@@ -13,8 +13,11 @@ export class PaymentsService {
     currency: string;
     isFreeTierActive: boolean;
   }> {
-    const isFreeTierActive = this.configService.get<string>('FREE_TIER_LAUNCH_ACTIVE') !== 'false';
-    const totalAmount = isFreeTierActive ? 0.0 : this.pricePerCandidate * candidateCount;
+    const isFreeTierActive =
+      this.configService.get<string>('FREE_TIER_LAUNCH_ACTIVE') !== 'false';
+    const totalAmount = isFreeTierActive
+      ? 0.0
+      : this.pricePerCandidate * candidateCount;
 
     return {
       unitPrice: this.pricePerCandidate,
@@ -31,7 +34,7 @@ export class PaymentsService {
     unlockedCandidatesCount: number;
   }> {
     const quote = await this.calculateQuote(candidateIds.length);
-    
+
     // In production, integrate Stripe/Adyen/etc. checkout flow.
     // Currently free tier launch is active, or we mock successful payment checkout.
     const transactionId = `txn_${Math.random().toString(36).substring(2, 11)}`;

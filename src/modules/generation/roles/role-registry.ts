@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { RoleModule, UnregisteredRoleCategoryError } from './role-module.interface';
+import {
+  RoleModule,
+  UnregisteredRoleCategoryError,
+} from './role-module.interface';
 import { FinanceRoleModule } from './finance/finance.role-module';
 import { SalesRoleModule } from './sales/sales.role-module';
 

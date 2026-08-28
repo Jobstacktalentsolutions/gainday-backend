@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { SubmissionsService } from './submissions.service';
 import { JobsService } from '../jobs/jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -41,13 +51,18 @@ export class SubmissionsController {
   @Get('job/:jobId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
-  async getSubmissionsByJob(@Param('jobId') jobId: string, @CurrentUser() user: any) {
+  async getSubmissionsByJob(
+    @Param('jobId') jobId: string,
+    @CurrentUser() user: any,
+  ) {
     const job = await this.jobsService.findById(jobId);
     if (!job) {
       throw new NotFoundException('Job not found');
     }
     if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
-      throw new ForbiddenException('You may only view submissions for your own jobs');
+      throw new ForbiddenException(
+        'You may only view submissions for your own jobs',
+      );
     }
     return this.submissionsService.findByJob(jobId);
   }
@@ -61,7 +76,9 @@ export class SubmissionsController {
       throw new NotFoundException('Submission not found');
     }
     if (user.role !== UserRole.ADMIN && submission.job.employerId !== user.id) {
-      throw new ForbiddenException('You may only view submissions for your own jobs');
+      throw new ForbiddenException(
+        'You may only view submissions for your own jobs',
+      );
     }
     return submission;
   }
@@ -75,7 +92,9 @@ export class SubmissionsController {
       throw new NotFoundException('Submission not found');
     }
     if (user.role !== UserRole.ADMIN && submission.job.employerId !== user.id) {
-      throw new ForbiddenException('You may only unlock submissions for your own jobs');
+      throw new ForbiddenException(
+        'You may only unlock submissions for your own jobs',
+      );
     }
     return this.submissionsService.unlockCandidate(id);
   }
