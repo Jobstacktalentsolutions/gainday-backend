@@ -31,6 +31,11 @@ export interface QuestionBankTaskContent {
   objectiveComponent?: Record<string, unknown>;
   openEndedComponent?: Record<string, unknown>;
   businessProblemDerived: boolean;
+  /** Tells the frontend how to render this task (doc Section 2.5). */
+  interfaceType: string;
+  /** Data conforming to INTERFACE_SCHEMAS[interfaceType] (or a role-specific schema for a
+   *  role-defined interface type) — the concrete render contract for the frontend. */
+  interfacePayload: Record<string, unknown>;
 }
 
 export const questionBank = pgTable(

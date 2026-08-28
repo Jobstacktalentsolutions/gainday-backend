@@ -112,6 +112,8 @@ export class GenerationService {
         objectiveComponent: task.taskContent.objectiveComponent,
         openEndedComponent: task.taskContent.openEndedComponent,
         businessProblemDerived: task.taskContent.businessProblemDerived,
+        interfaceType: task.taskContent.interfaceType,
+        interfacePayload: task.taskContent.interfacePayload,
         anchors: task.anchors,
       }),
     );

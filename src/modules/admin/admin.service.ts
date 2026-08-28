@@ -158,6 +158,8 @@ export class AdminService {
         objectiveComponent: editedTaskContent.objectiveComponent,
         openEndedComponent: editedTaskContent.openEndedComponent,
         businessProblemDerived: editedTaskContent.businessProblemDerived,
+        interfaceType: editedTaskContent.interfaceType,
+        interfacePayload: editedTaskContent.interfacePayload,
         anchors: editedAnchors,
       };
       await this.db

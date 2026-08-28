@@ -7,6 +7,23 @@ import {
 } from '../state/generation-state';
 import { taskGenerationSchema } from '../schemas/task-generation.schema';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
+import {
+  BASE_INTERFACE_TYPES,
+  BaseInterfaceType,
+  INTERFACE_SCHEMAS,
+} from '../roles/interface-type';
+
+const fallbackInterfacePayloadSchema = z.record(z.string(), z.unknown());
+
+function resolveInterfacePayloadSchema(interfaceType: string) {
+  if ((BASE_INTERFACE_TYPES as readonly string[]).includes(interfaceType)) {
+    return INTERFACE_SCHEMAS[interfaceType as BaseInterfaceType];
+  }
+  // Role-defined interface type with no registered schema yet — accept any object shape
+  // rather than failing generation; the role module should register a real schema when its
+  // presentation spec is finalized (doc Section 2.5's extensibility note).
+  return fallbackInterfacePayloadSchema;
+}
 
 const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simulation task,
 matching the given candidate's taskType. Produce a scenario, the task components appropriate to
@@ -66,6 +83,17 @@ export function taskGenerationNode(ctx: GenerationContext) {
       (t) => t.key,
     ) as [string, ...string[]];
 
+    const patternTypeDef = roleModule.allowedTaskPatternTypes.find(
+      (t) => t.key === candidate.taskType,
+    );
+    if (!patternTypeDef) {
+      throw new Error(
+        `No task-pattern-type definition found for candidate taskType "${candidate.taskType}" in role module for category "${state.category}"`,
+      );
+    }
+    const interfaceType = patternTypeDef.interfaceType;
+    const interfacePayloadSchema = resolveInterfacePayloadSchema(interfaceType);
+
     const promptText = TASK_GENERATION_PROMPT_BASE.replace(
       '{{problemSolving}}',
       roleModule.anchorCriteriaFraming.problemSolving,
@@ -83,13 +111,17 @@ export function taskGenerationNode(ctx: GenerationContext) {
         roleModule.anchorCriteriaFraming.commercialDomainAwareness,
       );
 
-    const schema = taskGenerationSchema(allowedTypeKeys);
+    const schema = taskGenerationSchema(
+      allowedTypeKeys,
+      interfacePayloadSchema,
+    );
     const model =
       ctx.generationModel.withStructuredOutput<z.infer<typeof schema>>(schema);
 
     const result = await model.invoke([
       new SystemMessage(
-        `${promptText}\n\nGenerate anchors at these score points: ${ctx.config.anchorScorePoints.join(', ')}.`,
+        `${promptText}\n\nThis task's interfaceType is "${interfaceType}" — the interfacePayload ` +
+          `you generate must match that render mode.\n\nGenerate anchors at these score points: ${ctx.config.anchorScorePoints.join(', ')}.`,
       ),
       new HumanMessage(
         JSON.stringify({
@@ -120,6 +152,8 @@ export function taskGenerationNode(ctx: GenerationContext) {
           objectiveComponent: result.objectiveComponent,
           openEndedComponent: result.openEndedComponent,
           businessProblemDerived,
+          interfaceType,
+          interfacePayload: result.interfacePayload as Record<string, unknown>,
         },
         anchors: result.anchors,
       },

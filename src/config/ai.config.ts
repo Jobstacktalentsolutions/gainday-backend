@@ -1,4 +1,3 @@
-
 export const aiConfig = {
   provider: 'gemini' as const,
 

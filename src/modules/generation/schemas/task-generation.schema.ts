@@ -17,7 +17,10 @@ const anchorSchema = z.object({
   }),
 });
 
-export const taskGenerationSchema = (allowedTypeKeys: [string, ...string[]]) =>
+export const taskGenerationSchema = (
+  allowedTypeKeys: [string, ...string[]],
+  interfacePayloadSchema: z.ZodTypeAny,
+) =>
   z.object({
     taskType: z.enum(allowedTypeKeys),
     title: z.string(),
@@ -26,6 +29,9 @@ export const taskGenerationSchema = (allowedTypeKeys: [string, ...string[]]) =>
     businessProblemDerived: z.boolean(),
     objectiveComponent: z.record(z.string(), z.unknown()).optional(),
     openEndedComponent: z.record(z.string(), z.unknown()).optional(),
+    interfacePayload: interfacePayloadSchema.describe(
+      "Data matching the render contract for this task's interfaceType — e.g. table rows/columns for TABLE_VIEW_RESPONSE_PANEL, or the read-only context text for TEXT_AREA.",
+    ),
     anchors: z
       .array(anchorSchema)
       .min(4)

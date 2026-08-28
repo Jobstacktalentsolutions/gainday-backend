@@ -3,6 +3,7 @@ import {
   AnchorResponse,
   QuestionBankTaskContent,
 } from '../../../db/schema/question-bank.schema';
+import { InterfaceType } from './interface-type';
 
 export type ObjectiveComponentType =
   | 'NUMERIC_INPUT'
@@ -23,6 +24,9 @@ export interface TaskPatternTypeDefinition {
   objectiveComponentType?: ObjectiveComponentType;
   openEndedComponentType?: OpenEndedComponentType;
   description: string;
+  /** Tells the frontend how to render tasks of this type (doc Section 2.5). Declarative per
+   *  task-pattern type, not chosen by the LLM at generation time — deterministic and auditable. */
+  interfaceType: InterfaceType;
 }
 
 export interface ExtractionResult {

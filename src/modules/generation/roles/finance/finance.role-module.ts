@@ -7,6 +7,9 @@ import {
   TaskPatternTypeDefinition,
 } from '../role-module.interface';
 import { FINANCE_ANCHOR_CORRECTNESS_PROMPT } from './finance.prompts';
+// TODO(finance-interface-types): doc Section 10 — finance needs dedicated interface types for
+// charts/computed figures; none of the 3 current sales-derived types are designed for that.
+// Using TABLE_VIEW_RESPONSE_PANEL/TEXT_AREA/RICH_TEXT_COMPOSER as an interim best fit.
 
 const anchorCorrectnessSchema = z.object({
   sound: z.boolean(),
@@ -19,24 +22,28 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
     label: 'Numeric input',
     objectiveComponentType: 'NUMERIC_INPUT',
     description: 'Calculate a value, checked against a tolerance range.',
+    interfaceType: 'TABLE_VIEW_RESPONSE_PANEL',
   },
   {
     key: 'CLASSIFICATION',
     label: 'Classification',
     objectiveComponentType: 'CLASSIFICATION',
     description: 'Sort items into correct buckets.',
+    interfaceType: 'TABLE_VIEW_RESPONSE_PANEL',
   },
   {
     key: 'PROCEDURAL_SEQUENCING',
     label: 'Procedural sequencing',
     objectiveComponentType: 'PROCEDURAL_SEQUENCING',
     description: 'Order steps that have a genuinely correct process order.',
+    interfaceType: 'TEXT_AREA',
   },
   {
     key: 'SINGLE_BEST_ACTION',
     label: 'Single-best-action selection',
     objectiveComponentType: 'SINGLE_BEST_ACTION',
     description: 'Pick the one correct action among plausible distractors.',
+    interfaceType: 'TEXT_AREA',
   },
   {
     key: 'MULTI_SELECT_UNDER_CONSTRAINT',
@@ -44,30 +51,35 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
     objectiveComponentType: 'MULTI_SELECT_UNDER_CONSTRAINT',
     description:
       'E.g. "choose 2 of 3," graded against an ideal set membership.',
+    interfaceType: 'TABLE_VIEW_RESPONSE_PANEL',
   },
   {
     key: 'WRITTEN_JUSTIFICATION',
     label: 'Written justification',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
     description: 'Written justification of a decision already made.',
+    interfaceType: 'TEXT_AREA',
   },
   {
     key: 'DRAFTED_COMMUNICATION',
     label: 'Drafted communication',
     openEndedComponentType: 'DRAFTED_COMMUNICATION',
     description: 'Message/summary to a stakeholder.',
+    interfaceType: 'RICH_TEXT_COMPOSER',
   },
   {
     key: 'INTERPRETATION_ANALYSIS',
     label: 'Interpretation / analysis',
     openEndedComponentType: 'INTERPRETATION_ANALYSIS',
     description: 'Interpretation/analysis of data.',
+    interfaceType: 'TABLE_VIEW_RESPONSE_PANEL',
   },
   {
     key: 'STAKEHOLDER_PUSHBACK_RESPONSE',
     label: 'Stakeholder pushback response',
     openEndedComponentType: 'STAKEHOLDER_PUSHBACK_RESPONSE',
     description: 'Response to stakeholder pushback.',
+    interfaceType: 'TEXT_AREA',
   },
   {
     key: 'NUMERIC_INPUT_WITH_JUSTIFICATION',
@@ -76,6 +88,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
     description:
       'Paired objective + open-ended component, used when the objective answer alone would not reveal whether the candidate understands why it is correct.',
+    interfaceType: 'TABLE_VIEW_RESPONSE_PANEL',
   },
 ];
 
