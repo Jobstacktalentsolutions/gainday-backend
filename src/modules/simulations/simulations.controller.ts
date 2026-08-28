@@ -1,6 +1,11 @@
-import { Controller, Get, Param, Post, Put, Body } from '@nestjs/common';
+import { Controller, Get, Param, Post, Put, Body, UseGuards, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SimulationsService } from './simulations.service';
 import { JobsService } from '../jobs/jobs.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @Controller('simulations')
 export class SimulationsController {
@@ -15,16 +20,38 @@ export class SimulationsController {
   }
 
   @Post('job/:jobId/generate')
-  async generateForJob(@Param('jobId') jobId: string) {
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
+  async generateForJob(@Param('jobId') jobId: string, @CurrentUser() user: any) {
     const job = await this.jobsService.findById(jobId);
     if (!job) {
-      throw new Error('Job not found');
+      throw new NotFoundException('Job not found');
+    }
+    if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
+      throw new ForbiddenException('You may only generate simulations for your own jobs');
     }
     return this.simulationsService.generateSimulation(job);
   }
 
   @Put(':id')
-  async updateTasks(@Param('id') id: string, @Body() body: { tasks: any[] }) {
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
+  async updateTasks(
+    @Param('id') id: string,
+    @Body() body: { tasks: any[] },
+    @CurrentUser() user: any,
+  ) {
+    const simulation = await this.simulationsService.findById(id);
+    if (!simulation) {
+      throw new NotFoundException('Simulation not found');
+    }
+    const job = await this.jobsService.findById(simulation.jobId);
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
+      throw new ForbiddenException('You may only edit simulations for your own jobs');
+    }
     return this.simulationsService.updateSimulationTasks(id, body.tasks);
   }
 }

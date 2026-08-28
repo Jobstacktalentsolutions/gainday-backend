@@ -1,7 +1,9 @@
 import { PaymentsService } from './payments.service';
+import { SubmissionsService } from '../submissions/submissions.service';
 export declare class PaymentsController {
     private readonly paymentsService;
-    constructor(paymentsService: PaymentsService);
+    private readonly submissionsService;
+    constructor(paymentsService: PaymentsService, submissionsService: SubmissionsService);
     getQuote(count: string): Promise<{
         unitPrice: number;
         totalAmount: number;
@@ -10,7 +12,7 @@ export declare class PaymentsController {
     }>;
     checkout(body: {
         candidateIds: string[];
-    }): Promise<{
+    }, user: any): Promise<{
         success: boolean;
         transactionId?: string;
         amountPaid: number;

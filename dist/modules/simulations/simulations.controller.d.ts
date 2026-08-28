@@ -5,8 +5,8 @@ export declare class SimulationsController {
     private readonly jobsService;
     constructor(simulationsService: SimulationsService, jobsService: JobsService);
     getByJob(jobId: string): Promise<import("./entities/simulation.entity").Simulation | null>;
-    generateForJob(jobId: string): Promise<import("./entities/simulation.entity").Simulation>;
+    generateForJob(jobId: string, user: any): Promise<import("./entities/simulation.entity").Simulation>;
     updateTasks(id: string, body: {
         tasks: any[];
-    }): Promise<import("./entities/simulation.entity").Simulation>;
+    }, user: any): Promise<import("./entities/simulation.entity").Simulation>;
 }

@@ -13,6 +13,8 @@ const submission_entity_1 = require("./entities/submission.entity");
 const submissions_service_1 = require("./submissions.service");
 const submissions_controller_1 = require("./submissions.controller");
 const bullmq_1 = require("@nestjs/bullmq");
+const auth_module_1 = require("../auth/auth.module");
+const jobs_module_1 = require("../jobs/jobs.module");
 let SubmissionsModule = class SubmissionsModule {
 };
 exports.SubmissionsModule = SubmissionsModule;
@@ -23,6 +25,8 @@ exports.SubmissionsModule = SubmissionsModule = __decorate([
             bullmq_1.BullModule.registerQueue({
                 name: 'scoring',
             }),
+            auth_module_1.AuthModule,
+            jobs_module_1.JobsModule,
         ],
         controllers: [submissions_controller_1.SubmissionsController],
         providers: [submissions_service_1.SubmissionsService],

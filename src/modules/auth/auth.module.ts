@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtModuleAsyncOptions, JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -9,6 +9,8 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { RolesGuard } from './guards/roles.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
 
 const jwtModuleOptions: JwtModuleAsyncOptions = {
   imports: [ConfigModule],
@@ -24,13 +26,13 @@ const jwtModuleOptions: JwtModuleAsyncOptions = {
 
 @Module({
   imports: [
-    UsersModule,
+    forwardRef(() => UsersModule),
     NotificationsModule,
     PassportModule,
     JwtModule.registerAsync(jwtModuleOptions),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, RolesGuard],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, RolesGuard, JwtAuthGuard, OptionalJwtAuthGuard],
+  exports: [AuthService, RolesGuard, JwtAuthGuard, OptionalJwtAuthGuard, PassportModule],
 })
 export class AuthModule {}

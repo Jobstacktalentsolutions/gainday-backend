@@ -18,6 +18,8 @@ const auth_controller_1 = require("./auth.controller");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const google_strategy_1 = require("./strategies/google.strategy");
 const roles_guard_1 = require("./guards/roles.guard");
+const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
+const optional_jwt_auth_guard_1 = require("./guards/optional-jwt-auth.guard");
 const jwtModuleOptions = {
     imports: [config_1.ConfigModule],
     inject: [config_1.ConfigService],
@@ -35,14 +37,14 @@ exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            users_module_1.UsersModule,
+            (0, common_1.forwardRef)(() => users_module_1.UsersModule),
             notifications_module_1.NotificationsModule,
             passport_1.PassportModule,
             jwt_1.JwtModule.registerAsync(jwtModuleOptions),
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, google_strategy_1.GoogleStrategy, roles_guard_1.RolesGuard],
-        exports: [auth_service_1.AuthService],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, google_strategy_1.GoogleStrategy, roles_guard_1.RolesGuard, jwt_auth_guard_1.JwtAuthGuard, optional_jwt_auth_guard_1.OptionalJwtAuthGuard],
+        exports: [auth_service_1.AuthService, roles_guard_1.RolesGuard, jwt_auth_guard_1.JwtAuthGuard, optional_jwt_auth_guard_1.OptionalJwtAuthGuard, passport_1.PassportModule],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

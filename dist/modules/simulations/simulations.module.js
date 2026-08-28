@@ -13,12 +13,13 @@ const simulation_entity_1 = require("./entities/simulation.entity");
 const simulations_service_1 = require("./simulations.service");
 const simulations_controller_1 = require("./simulations.controller");
 const jobs_module_1 = require("../jobs/jobs.module");
+const auth_module_1 = require("../auth/auth.module");
 let SimulationsModule = class SimulationsModule {
 };
 exports.SimulationsModule = SimulationsModule;
 exports.SimulationsModule = SimulationsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([simulation_entity_1.Simulation]), jobs_module_1.JobsModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([simulation_entity_1.Simulation]), jobs_module_1.JobsModule, auth_module_1.AuthModule],
         controllers: [simulations_controller_1.SimulationsController],
         providers: [simulations_service_1.SimulationsService],
         exports: [simulations_service_1.SimulationsService],

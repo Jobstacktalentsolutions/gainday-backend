@@ -15,6 +15,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminController = void 0;
 const common_1 = require("@nestjs/common");
 const admin_service_1 = require("./admin.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
+const user_entity_1 = require("../users/entities/user.entity");
 let AdminController = class AdminController {
     adminService;
     constructor(adminService) {
@@ -65,6 +69,8 @@ __decorate([
 ], AdminController.prototype, "deleteJob", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(user_entity_1.UserRole.ADMIN),
     __metadata("design:paramtypes", [admin_service_1.AdminService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

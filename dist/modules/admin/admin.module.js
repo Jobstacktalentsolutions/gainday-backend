@@ -14,12 +14,13 @@ const admin_controller_1 = require("./admin.controller");
 const user_entity_1 = require("../users/entities/user.entity");
 const job_entity_1 = require("../jobs/entities/job.entity");
 const submission_entity_1 = require("../submissions/entities/submission.entity");
+const auth_module_1 = require("../auth/auth.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
 exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, job_entity_1.Job, submission_entity_1.Submission])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, job_entity_1.Job, submission_entity_1.Submission]), auth_module_1.AuthModule],
         controllers: [admin_controller_1.AdminController],
         providers: [admin_service_1.AdminService],
         exports: [admin_service_1.AdminService],

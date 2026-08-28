@@ -6,5 +6,6 @@ export declare class SimulationsService {
     constructor(simulationRepository: Repository<Simulation>);
     generateSimulation(job: Job): Promise<Simulation>;
     findByJobId(jobId: string): Promise<Simulation | null>;
+    findById(id: string): Promise<Simulation | null>;
     updateSimulationTasks(simulationId: string, tasks: SimulationTask[]): Promise<Simulation>;
 }

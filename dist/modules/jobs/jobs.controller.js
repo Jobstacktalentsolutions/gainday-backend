@@ -15,6 +15,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.JobsController = void 0;
 const common_1 = require("@nestjs/common");
 const jobs_service_1 = require("./jobs.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
+const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
+const user_entity_1 = require("../users/entities/user.entity");
 let JobsController = class JobsController {
     jobsService;
     constructor(jobsService) {
@@ -26,11 +31,17 @@ let JobsController = class JobsController {
     async getJobById(id) {
         return this.jobsService.findById(id);
     }
-    async createJob(req, body) {
-        const employerId = req.user?.id || 'dev-employer-id';
-        return this.jobsService.createJob(employerId, body);
+    async createJob(user, body) {
+        return this.jobsService.createJob(user.id, body);
     }
-    async publishJob(id) {
+    async publishJob(id, user) {
+        const job = await this.jobsService.findById(id);
+        if (!job) {
+            throw new common_1.NotFoundException('Job not found');
+        }
+        if (user.role !== user_entity_1.UserRole.ADMIN && job.employerId !== user.id) {
+            throw new common_1.ForbiddenException('You may only publish your own jobs');
+        }
         return this.jobsService.publishJob(id);
     }
 };
@@ -50,7 +61,9 @@ __decorate([
 ], JobsController.prototype, "getJobById", null);
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, common_1.Request)()),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(user_entity_1.UserRole.EMPLOYER),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
@@ -58,9 +71,12 @@ __decorate([
 ], JobsController.prototype, "createJob", null);
 __decorate([
     (0, common_1.Put)(':id/publish'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(user_entity_1.UserRole.EMPLOYER, user_entity_1.UserRole.ADMIN),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], JobsController.prototype, "publishJob", null);
 exports.JobsController = JobsController = __decorate([

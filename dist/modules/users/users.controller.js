@@ -15,22 +15,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
 const users_service_1 = require("./users.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
+const user_entity_1 = require("./entities/user.entity");
 let UsersController = class UsersController {
     usersService;
     constructor(usersService) {
         this.usersService = usersService;
     }
-    async getProfile(req) {
-        return req.user;
+    async getProfile(user) {
+        return user;
     }
-    async getUserById(id) {
-        return this.usersService.findById(id);
+    async getUserById(id, currentUser) {
+        if (currentUser.role !== user_entity_1.UserRole.ADMIN && currentUser.id !== id) {
+            throw new common_1.ForbiddenException('You may only access your own user record');
+        }
+        const user = await this.usersService.findById(id);
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
     }
 };
 exports.UsersController = UsersController;
 __decorate([
     (0, common_1.Get)('profile'),
-    __param(0, (0, common_1.Request)()),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
@@ -38,12 +48,14 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getUserById", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [users_service_1.UsersService])
 ], UsersController);
 //# sourceMappingURL=users.controller.js.map

@@ -61,6 +61,10 @@ export class SimulationsService {
     return this.simulationRepository.findOne({ where: { jobId } });
   }
 
+  async findById(id: string): Promise<Simulation | null> {
+    return this.simulationRepository.findOne({ where: { id } });
+  }
+
   async updateSimulationTasks(simulationId: string, tasks: SimulationTask[]): Promise<Simulation> {
     const simulation = await this.simulationRepository.findOne({ where: { id: simulationId } });
     if (!simulation) {

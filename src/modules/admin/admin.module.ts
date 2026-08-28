@@ -5,9 +5,10 @@ import { AdminController } from './admin.controller';
 import { User } from '../users/entities/user.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { Submission } from '../submissions/entities/submission.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Job, Submission])],
+  imports: [TypeOrmModule.forFeature([User, Job, Submission]), AuthModule],
   controllers: [AdminController],
   providers: [AdminService],
   exports: [AdminService],
