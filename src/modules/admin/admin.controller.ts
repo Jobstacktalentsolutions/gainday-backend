@@ -35,4 +35,23 @@ export class AdminController {
   async deleteJob(@Param('id') id: string) {
     return this.adminService.deleteInappropriateJob(id);
   }
+
+  @Get('generation-reviews')
+  async listGenerationReviews(@Query('status') status?: GenerationReviewStatus) {
+    return this.adminService.listGenerationReviewItems(status);
+  }
+
+  @Put('generation-reviews/:id/approve')
+  async approveGenerationReview(
+    @Param('id') id: string,
+    @Body() body: { taskContent: QuestionBankTaskContent; anchors: AnchorResponse[] },
+    @CurrentUser() admin: any,
+  ) {
+    return this.adminService.approveGenerationReviewWithEdits(id, admin.id, body.taskContent, body.anchors);
+  }
+
+  @Put('generation-reviews/:id/reject')
+  async rejectGenerationReview(@Param('id') id: string, @CurrentUser() admin: any) {
+    return this.adminService.rejectGenerationReview(id, admin.id);
+  }
 }
