@@ -1,4 +1,5 @@
 import { URL } from 'url';
+import { aiConfig, generationConfig } from './ai.config';
 
 export default () => {
   const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -50,52 +51,13 @@ export default () => {
     },
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
     ai: {
-      provider: process.env.AI_PROVIDER || 'gemini',
+      ...aiConfig,
       gemini: {
-        apiKey: process.env.GEMINI_API_KEY || '',
-        generationModel:
-          process.env.GEMINI_GENERATION_MODEL || 'gemini-2.5-pro',
-        criticModel: process.env.GEMINI_CRITIC_MODEL || 'gemini-2.5-flash',
-        embeddingModel:
-          process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001',
-        // @langchain/google-genai's GoogleGenerativeAIEmbeddings does not expose
-        // outputDimensionality — gemini-embedding-001 returns a fixed 3072-dim vector
-        // through this SDK. This must match the pgvector column width exactly.
-        embeddingDimensions: parseInt(
-          process.env.GEMINI_EMBEDDING_DIMENSIONS || '3072',
-          10,
-        ),
+        ...aiConfig.gemini,
+        apiKey: process.env.GOOGLE_API_KEY || '',
       },
-      generationTemperature: parseFloat(
-        process.env.AI_GENERATION_TEMPERATURE || '0.9',
-      ),
-      criticTemperature: parseFloat(process.env.AI_CRITIC_TEMPERATURE || '0'),
+      groqApiKey: process.env.GROQ_API_KEY || '',
     },
-    generation: {
-      candidatePoolSize: parseInt(
-        process.env.GENERATION_CANDIDATE_POOL_SIZE || '15',
-        10,
-      ),
-      selectedTaskCount: parseInt(
-        process.env.GENERATION_SELECTED_COUNT || '4',
-        10,
-      ),
-      maxCriticAttempts: parseInt(
-        process.env.GENERATION_MAX_CRITIC_ATTEMPTS || '3',
-        10,
-      ),
-      duplicateSimilarityThreshold: parseFloat(
-        process.env.GENERATION_DUPLICATE_SIMILARITY_THRESHOLD || '0.92',
-      ),
-      noveltyCheckTopK: parseInt(
-        process.env.GENERATION_NOVELTY_TOP_K || '5',
-        10,
-      ),
-      anchorScorePoints: (
-        process.env.GENERATION_ANCHOR_SCORE_POINTS || '0,3,5,7,10'
-      )
-        .split(',')
-        .map(Number),
-    },
+    generation: generationConfig,
   };
 };
