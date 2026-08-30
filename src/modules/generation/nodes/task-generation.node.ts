@@ -13,6 +13,12 @@ const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simul
 matching the given candidate's taskType. Produce a scenario, the task components appropriate to
 that taskType, and a set of anchor responses.
 
+Free-text fields (scenarioDescription, questionPrompt, and any markdown-documented field in
+interfacePayload) are GitHub-flavored Markdown. Use markdown syntax (bold, italics,
+bullet/numbered lists) only where structure genuinely aids readability — e.g. presenting several
+distinct emails, line items, or steps — never HTML, and never as decoration on plain prose that
+reads fine without it.
+
 Anchor responses are reference points for grading — generate exactly one anchor per configured
 score point, in order, each scored against the four fixed criteria below (framed for this role):
 - Problem-solving: {{problemSolving}}

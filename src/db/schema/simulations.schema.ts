@@ -3,7 +3,7 @@ import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
 import { submissions } from './submissions.schema';
-import { AnchorResponse } from './question-bank.schema';
+import { AnchorResponse, MarkdownString } from './question-bank.schema';
 import { InterfaceType } from '../../modules/generation/roles/interface-type';
 
 export type ObjectiveComponentType =
@@ -24,8 +24,10 @@ export interface SimulationTask {
   taskType: string; // role-module-defined key (see src/modules/generation/roles)
   category: string;
   title: string;
-  scenarioDescription: string;
-  questionPrompt: string;
+  /** Markdown — see {@link MarkdownString}. */
+  scenarioDescription: MarkdownString;
+  /** Markdown — see {@link MarkdownString}. */
+  questionPrompt: MarkdownString;
   objectiveComponent?: Record<string, unknown>;
   openEndedComponent?: Record<string, unknown>;
   businessProblemDerived: boolean;

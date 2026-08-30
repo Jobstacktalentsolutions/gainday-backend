@@ -33,13 +33,26 @@ export const taskGenerationSchema = (
   return z.object({
     taskType: z.enum(allowedTypeKeys),
     title: z.string(),
-    scenarioDescription: z.string(),
-    questionPrompt: z.string(),
+    scenarioDescription: z
+      .string()
+      .describe(
+        'GitHub-flavored Markdown. Use markdown syntax (bold/italic/bullet or numbered ' +
+          'lists/paragraphs) only where structure genuinely aids readability — e.g. several ' +
+          'distinct emails/items that are actually easier to read as a list — never HTML, ' +
+          'and never as decoration on prose that reads fine as plain text.',
+      ),
+    questionPrompt: z
+      .string()
+      .describe(
+        'GitHub-flavored Markdown. Use markdown syntax (bold/italic/bullet or numbered ' +
+          'lists/paragraphs) only where structure genuinely aids readability — never HTML, ' +
+          'and never as decoration on prose that reads fine as plain text.',
+      ),
     businessProblemDerived: z.boolean(),
     objectiveComponent: z.record(z.string(), z.unknown()).optional(),
     openEndedComponent: z.record(z.string(), z.unknown()).optional(),
     interfacePayload: interfacePayloadSchema.describe(
-      "Data matching the render contract for this task's interfaceType — e.g. table rows/columns for TABLE_VIEW_RESPONSE_PANEL, or the read-only context text for TEXT_AREA.",
+      "Data matching the render contract for this task's interfaceType — e.g. table rows/columns for TABLE_VIEW_RESPONSE_PANEL.",
     ),
     anchors: z
       .tuple(
@@ -49,7 +62,7 @@ export const taskGenerationSchema = (
         ],
       )
       .describe(
-        `Exactly ${anchorScorePoints.length} anchors, one per configured score point (${anchorScorePoints.join(', ')}), in that order — not just the two poles. ` +
+        `Exactly ${anchorScorePoints.length} anchors, one per configured score point (${anchorScorePoints.join(', ')}), in that order  ` +
           'The top anchor should be strong but not implausibly perfect across all four criteria simultaneously; ' +
           'real strong answers trade off (e.g. commercially sharp but less polished prose).',
       ),

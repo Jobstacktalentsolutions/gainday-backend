@@ -7,6 +7,13 @@ import { z } from 'zod';
  * AND a matching entry in INTERFACE_SCHEMAS — the enum and its schema map are extended
  * together, one file, so every interface type that exists always has a concrete payload
  * contract (never just a tag string with an unknown shape).
+ *
+ * Convention: free-text fields in these payloads (and the shared `scenarioDescription`/
+ * `questionPrompt` on the task itself — see MarkdownString in question-bank.schema.ts) are
+ * GitHub-flavored Markdown — plain text is valid markdown, so use markdown syntax (bold,
+ * bullets, paragraphs) only where structure genuinely aids readability, never pre-rendered HTML.
+ * The frontend must render this through a renderer that does not interpret raw HTML in the
+ * source (e.g. react-markdown without rehype-raw), so content can never inject arbitrary markup.
  */
 export enum InterfaceType {
   RICH_TEXT_COMPOSER = 'RICH_TEXT_COMPOSER',
@@ -21,12 +28,6 @@ const richTextComposerSchema = z.object({
 
 const textAreaSchema = z.object({
   interfaceType: z.literal(InterfaceType.TEXT_AREA),
-  contextText: z
-    .string()
-    .describe(
-      'The read-only scenario/persona statement shown above the input, if distinct from the main scenario description.',
-    )
-    .optional(),
   placeholder: z.string().optional(),
 });
 

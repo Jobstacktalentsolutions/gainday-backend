@@ -24,11 +24,20 @@ export interface AnchorResponse {
   };
 }
 
+/** GitHub-flavored Markdown source — plain text is valid markdown, so this covers both without
+ *  a separate "plain" mode; use markdown syntax (bold/italic/bullets/paragraphs) only where it
+ *  genuinely aids readability, never pre-rendered HTML. The frontend must render this through a
+ *  renderer that does not interpret raw HTML in the source (e.g. react-markdown without
+ *  rehype-raw), so content can never inject arbitrary markup. */
+export type MarkdownString = string;
+
 export interface QuestionBankTaskContent {
   taskType: string;
   title: string;
-  scenarioDescription: string;
-  questionPrompt: string;
+  /** Markdown — see {@link MarkdownString}. */
+  scenarioDescription: MarkdownString;
+  /** Markdown — see {@link MarkdownString}. */
+  questionPrompt: MarkdownString;
   objectiveComponent?: Record<string, unknown>;
   openEndedComponent?: Record<string, unknown>;
   businessProblemDerived: boolean;
