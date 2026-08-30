@@ -20,6 +20,9 @@ export interface GenerationConfig {
 export interface GenerationContext {
   generationModel: BaseChatModel;
   criticModel: BaseChatModel;
+  /** Used only by task-generation.node.ts — see ai.constants.ts for why this call gets a
+   *  dedicated (typically larger/more reliable) model. */
+  taskGenerationModel: BaseChatModel;
   embeddings: Embeddings;
   db: DrizzleDb;
   roleRegistry: RoleRegistry;

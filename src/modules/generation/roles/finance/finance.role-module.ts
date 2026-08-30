@@ -1,9 +1,7 @@
 import {
   RoleModule,
   TaskPatternTypeDefinition,
-  makeAnchorCorrectnessCheck,
 } from '../role-module.interface';
-import { FINANCE_ANCHOR_CORRECTNESS_PROMPT } from './finance.prompts';
 import { InterfaceType } from '../interface-type';
 import { RoleCategory } from '../role-category.enum';
 // TODO(finance-interface-types): doc Section 10 — finance needs dedicated interface types for
@@ -121,20 +119,5 @@ export const FinanceRoleModule: RoleModule = {
 
   allowedTaskPatternTypes: financeTaskPatternTypes,
 
-  anchorCriteriaFraming: {
-    problemSolving:
-      'Did the candidate correctly identify the financial issue and apply sound quantitative reasoning?',
-    judgmentExecution:
-      'Did the candidate follow correct financial procedure and execute the calculation/analysis without material error?',
-    writtenCommunication:
-      'Is the written analysis/communication clear, precise, and appropriately structured for a finance audience?',
-    commercialDomainAwareness:
-      'Does the response reflect real understanding of financial/commercial implications (e.g. materiality, risk, compliance) rather than mechanical calculation alone?',
-  },
-
-  criticChecks: {
-    checkAnchorCorrectness: makeAnchorCorrectnessCheck(
-      FINANCE_ANCHOR_CORRECTNESS_PROMPT,
-    ),
-  },
+  criticChecks: {},
 };

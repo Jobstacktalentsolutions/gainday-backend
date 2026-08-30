@@ -21,23 +21,38 @@ export enum InterfaceType {
   TABLE_VIEW_RESPONSE_PANEL = 'TABLE_VIEW_RESPONSE_PANEL',
 }
 
+// z.literal() compiles to JSON-Schema `const`, which Gemini's schema parser rejects
+// ("Unknown name 'const'... Cannot find field"). z.enum([x]) with one value compiles to
+// `enum: [x]`, which Gemini does support and which still only accepts that one value.
 const richTextComposerSchema = z.object({
-  interfaceType: z.literal(InterfaceType.RICH_TEXT_COMPOSER),
-  placeholder: z.string().optional(),
+  interfaceType: z.enum([InterfaceType.RICH_TEXT_COMPOSER]),
+  // Required + nullable, not .optional(): structured-output models commonly emit an explicit
+  // `null` for an unfilled field rather than omitting the key, and z.optional().nullable()
+  // compiles to an `anyOf`/`not` shape neither Gemini nor Groq's schema validators accept —
+  // plain .nullable() compiles to a clean `type: [X, "null"]` both providers handle.
+  placeholder: z.string().nullable(),
 });
 
 const textAreaSchema = z.object({
-  interfaceType: z.literal(InterfaceType.TEXT_AREA),
-  placeholder: z.string().optional(),
+  interfaceType: z.enum([InterfaceType.TEXT_AREA]),
+  // Required + nullable, not .optional(): structured-output models commonly emit an explicit
+  // `null` for an unfilled field rather than omitting the key, and z.optional().nullable()
+  // compiles to an `anyOf`/`not` shape neither Gemini nor Groq's schema validators accept —
+  // plain .nullable() compiles to a clean `type: [X, "null"]` both providers handle.
+  placeholder: z.string().nullable(),
 });
 
 const tableViewResponsePanelSchema = z.object({
-  interfaceType: z.literal(InterfaceType.TABLE_VIEW_RESPONSE_PANEL),
+  interfaceType: z.enum([InterfaceType.TABLE_VIEW_RESPONSE_PANEL]),
   table: z.object({
     columns: z.array(z.string()).min(1),
     rows: z.array(z.array(z.string())).min(1),
   }),
-  placeholder: z.string().optional(),
+  // Required + nullable, not .optional(): structured-output models commonly emit an explicit
+  // `null` for an unfilled field rather than omitting the key, and z.optional().nullable()
+  // compiles to an `anyOf`/`not` shape neither Gemini nor Groq's schema validators accept —
+  // plain .nullable() compiles to a clean `type: [X, "null"]` both providers handle.
+  placeholder: z.string().nullable(),
 });
 
 /**

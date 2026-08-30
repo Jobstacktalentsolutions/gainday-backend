@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { Logger } from '@nestjs/common';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { GenerationContext } from '../graph/generation-context';
 import {
@@ -9,6 +9,9 @@ import {
   categoryExtractionSchema,
   intentProblemExtractionSchema,
 } from '../schemas/extraction.schema';
+import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
+
+const logger = new Logger('GenerationPipeline:extraction');
 
 const CATEGORY_EXTRACTION_PROMPT = `You are extracting the job Category from a recruiter's job
 posting input. Category is the domain and sub-domain of the role (e.g. "Finance > Reconciliation",
@@ -17,9 +20,12 @@ is evident from the description, include it after " > ".`;
 
 export function extractionNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
-    const categoryModel = ctx.generationModel.withStructuredOutput<
-      z.infer<typeof categoryExtractionSchema>
-    >(categoryExtractionSchema);
+    logger.log(`Starting extraction for job ${state.jobId}`);
+
+    const categoryModel = withGeminiSafeStructuredOutput(
+      ctx.generationModel,
+      categoryExtractionSchema,
+    );
     const categoryResult = await categoryModel.invoke([
       new SystemMessage(CATEGORY_EXTRACTION_PROMPT),
       new HumanMessage(
@@ -29,8 +35,12 @@ export function extractionNode(ctx: GenerationContext) {
         }),
       ),
     ]);
+    logger.log(`Category extracted: "${categoryResult.category}"`);
 
     const roleModule = ctx.roleRegistry.resolve(categoryResult.category);
+    logger.log(
+      `Resolved role module for "${categoryResult.category}" (${roleModule.allowedTaskPatternTypes.length} allowed task pattern types)`,
+    );
 
     const intentProblemPrompt = `You are extracting Intent and Problem from a recruiter's job
 posting input, for a role in the category "${categoryResult.category}".
@@ -43,9 +53,10 @@ demonstrate. Problem is the specific business problem the employer describes wan
 to help solve — extract it ONLY if it is actually stated in the input. If no business problem is
 stated, return null for problem. Never invent or infer a problem that is not present.`;
 
-    const intentProblemModel = ctx.generationModel.withStructuredOutput<
-      z.infer<typeof intentProblemExtractionSchema>
-    >(intentProblemExtractionSchema);
+    const intentProblemModel = withGeminiSafeStructuredOutput(
+      ctx.generationModel,
+      intentProblemExtractionSchema,
+    );
     const intentProblemResult = await intentProblemModel.invoke([
       new SystemMessage(intentProblemPrompt),
       new HumanMessage(
@@ -56,6 +67,9 @@ stated, return null for problem. Never invent or infer a problem that is not pre
         }),
       ),
     ]);
+    logger.log(
+      `Intent/problem extracted: intent="${intentProblemResult.intent}", problem=${intentProblemResult.problem ? `"${intentProblemResult.problem}"` : 'null'}`,
+    );
 
     return {
       category: categoryResult.category,

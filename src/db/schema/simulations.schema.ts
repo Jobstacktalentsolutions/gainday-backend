@@ -3,7 +3,7 @@ import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
 import { submissions } from './submissions.schema';
-import { AnchorResponse, MarkdownString } from './question-bank.schema';
+import { MarkdownString } from './question-bank.schema';
 import { InterfaceType } from '../../modules/generation/roles/interface-type';
 
 export type ObjectiveComponentType =
@@ -36,7 +36,6 @@ export interface SimulationTask {
   /** Data conforming to INTERFACE_SCHEMAS[interfaceType] — the concrete render contract for
    *  the frontend (never just a tag string with an unvalidated shape). */
   interfacePayload: Record<string, unknown>;
-  anchors: AnchorResponse[];
 }
 
 export const simulations = pgTable('simulations', {

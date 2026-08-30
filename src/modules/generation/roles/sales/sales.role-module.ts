@@ -1,9 +1,7 @@
 import {
   RoleModule,
   TaskPatternTypeDefinition,
-  makeAnchorCorrectnessCheck,
 } from '../role-module.interface';
-import { SALES_ANCHOR_CORRECTNESS_PROMPT } from './sales.prompts';
 import { InterfaceType } from '../interface-type';
 import { RoleCategory } from '../role-category.enum';
 
@@ -99,27 +97,5 @@ export const SalesRoleModule: RoleModule = {
 
   allowedTaskPatternTypes: salesTaskPatternTypes,
 
-  anchorCriteriaFraming: {
-    problemSolving:
-      'Did the candidate correctly read the sales situation (e.g. which lever actually matters — ' +
-      'deal size vs. urgency vs. probability to close; stalling vs. genuine hesitation) and apply ' +
-      'sound sales reasoning rather than a generic playbook response?',
-    judgmentExecution:
-      'Did the candidate make the right sales judgment call — e.g. acknowledging an objection ' +
-      'before countering it, protecting deal value instead of defaulting to a discount, choosing ' +
-      'a single clear call-to-action or next step rather than a vague one?',
-    writtenCommunication:
-      'Is the written email/message/plan clear, appropriately concise, and free of generic ' +
-      'mass-outreach or reassurance-language tells that a real buyer would recognize and discount?',
-    commercialDomainAwareness:
-      'Does the response reflect real understanding of the buyer/deal context — speaking to a ' +
-      'specific pain point rather than product features, correctly identifying stakeholder roles, ' +
-      'or reasoning about deal economics — rather than a generic, could-apply-to-any-deal answer?',
-  },
-
-  criticChecks: {
-    checkAnchorCorrectness: makeAnchorCorrectnessCheck(
-      SALES_ANCHOR_CORRECTNESS_PROMPT,
-    ),
-  },
+  criticChecks: {},
 };

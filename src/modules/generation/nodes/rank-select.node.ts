@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { Logger } from '@nestjs/common';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { GenerationContext } from '../graph/generation-context';
 import {
@@ -10,6 +10,9 @@ import {
   TaskCandidateJudgeScore,
   TaskCandidateRecord,
 } from '../../../db/schema/job-extractions.schema';
+import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
+
+const logger = new Logger('GenerationPipeline:rankSelect');
 
 const JUDGE_PROMPT = `You are scoring a pool of candidate job-simulation tasks against an explicit
 rubric. For each candidate, score:
@@ -33,10 +36,14 @@ function computeComposite(score: {
 
 export function rankSelectNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
-    const model =
-      ctx.criticModel.withStructuredOutput<z.infer<typeof judgeScoreSchema>>(
-        judgeScoreSchema,
-      );
+    logger.log(
+      `Ranking ${state.candidatePool.length} candidates, selecting top ${ctx.config.selectedTaskCount}`,
+    );
+
+    const model = withGeminiSafeStructuredOutput(
+      ctx.criticModel,
+      judgeScoreSchema,
+    );
 
     const result = await model.invoke([
       new SystemMessage(JUDGE_PROMPT),
@@ -89,6 +96,10 @@ export function rankSelectNode(ctx: GenerationContext) {
       selected: selectedIds.has(c.candidateId),
     }));
     const selectedCandidates = candidatePool.filter((c) => c.selected);
+
+    logger.log(
+      `Selected ${selectedCandidates.length} candidates: ${selectedCandidates.map((c) => `${c.candidateId}[${c.taskType}] composite=${c.judgeScore?.composite.toFixed(2)}`).join(', ')}`,
+    );
 
     return { candidatePool, selectedCandidates };
   };

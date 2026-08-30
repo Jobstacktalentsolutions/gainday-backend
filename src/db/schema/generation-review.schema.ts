@@ -34,7 +34,9 @@ export interface FailedGenerationAttempt {
   attemptNumber: number;
   candidateId: string;
   taskDraft: QuestionBankTaskContent;
-  anchors: AnchorResponse[];
+  /** Anchors are a grading-time concern, generated separately from task generation — see
+   *  src/modules/grading/. Null until that pipeline exists. */
+  anchors: AnchorResponse[] | null;
   criticFailureReasons: string[];
 }
 

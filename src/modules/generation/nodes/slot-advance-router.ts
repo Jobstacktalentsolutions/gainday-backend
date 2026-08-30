@@ -1,8 +1,11 @@
+import { Logger } from '@nestjs/common';
 import { GenerationContext } from '../graph/generation-context';
 import {
   GenerationState,
   GenerationStateUpdate,
 } from '../state/generation-state';
+
+const logger = new Logger('GenerationPipeline:slotAdvanceRouter');
 
 export const SLOT_ADVANCE_ROUTE = {
   NEXT_SLOT: 'next_slot',
@@ -15,9 +18,16 @@ export function slotAdvanceRouter(ctx: GenerationContext) {
   return (state: GenerationState): SlotAdvanceRoute => {
     const hasMoreSlots =
       state.currentSlotIndex < ctx.config.selectedTaskCount - 1;
-    return hasMoreSlots
-      ? SLOT_ADVANCE_ROUTE.NEXT_SLOT
-      : SLOT_ADVANCE_ROUTE.DONE;
+    if (hasMoreSlots) {
+      logger.log(
+        `Advancing from slot ${state.currentSlotIndex} to slot ${state.currentSlotIndex + 1} of ${ctx.config.selectedTaskCount}`,
+      );
+      return SLOT_ADVANCE_ROUTE.NEXT_SLOT;
+    }
+    logger.log(
+      `All ${ctx.config.selectedTaskCount} slots processed — generation graph complete`,
+    );
+    return SLOT_ADVANCE_ROUTE.DONE;
   };
 }
 

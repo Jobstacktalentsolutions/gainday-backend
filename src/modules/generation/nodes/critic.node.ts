@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { GenerationContext } from '../graph/generation-context';
 import {
   GenerationState,
@@ -8,6 +9,8 @@ import { findSimilarQuestions } from '../critic/novelty-check';
 import { checkForDuplicate } from '../critic/duplicate-check';
 import { checkRelevance } from '../critic/relevance-check';
 import { embedTaskContent } from '../utils/embedding.util';
+
+const logger = new Logger('GenerationPipeline:critic');
 
 export function criticNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
@@ -35,6 +38,12 @@ export function criticNode(ctx: GenerationContext) {
         `Duplicate: too similar to existing question_bank entry ${duplicateResult.closestMatch?.id} (distance ${duplicateResult.closestMatch?.distance}).`,
       );
     }
+    logger.log(
+      `Slot ${state.currentSlotIndex}: novelty check — ${matches.length} similar match(es) found` +
+        (duplicateResult.closestMatch
+          ? `, closest distance ${duplicateResult.closestMatch.distance.toFixed(4)}`
+          : ''),
+    );
 
     // Relevance check
     const relevanceResult = await checkRelevance(ctx.criticModel, draft, {
@@ -64,28 +73,24 @@ export function criticNode(ctx: GenerationContext) {
       }
     }
 
-    // Anchor-correctness check (role-specific, no external grounding)
-    const anchorCorrectness =
-      await state.roleModule.criticChecks.checkAnchorCorrectness(
-        draft,
-        ctx.criticModel,
-      );
-    if (!anchorCorrectness.sound) {
-      failureReasons.push(...anchorCorrectness.reasons);
-    }
-
     const criticResult: CriticResult = {
       passed:
         !duplicateResult.isDuplicate &&
         relevanceResult.relevant &&
-        additionalRelevanceOk &&
-        anchorCorrectness.sound,
+        additionalRelevanceOk,
       failureReasons,
       noveltyDistance: duplicateResult.closestMatch?.distance ?? null,
+      isDuplicate: duplicateResult.isDuplicate,
       relevant: relevanceResult.relevant && additionalRelevanceOk,
-      anchorsSound: anchorCorrectness.sound,
       embedding,
     };
+
+    logger.log(
+      `Slot ${state.currentSlotIndex}: critic result — passed=${criticResult.passed}` +
+        (failureReasons.length
+          ? `, reasons: ${failureReasons.join('; ')}`
+          : ''),
+    );
 
     return { currentCriticResult: criticResult };
   };

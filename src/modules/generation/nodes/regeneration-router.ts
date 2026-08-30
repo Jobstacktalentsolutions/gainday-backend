@@ -1,5 +1,8 @@
+import { Logger } from '@nestjs/common';
 import { GenerationContext } from '../graph/generation-context';
 import { GenerationState } from '../state/generation-state';
+
+const logger = new Logger('GenerationPipeline:regenerationRouter');
 
 export const REGEN_ROUTE = {
   RETRY: 'retry',
@@ -18,13 +21,20 @@ export function regenerationRouter(ctx: GenerationContext) {
     }
 
     if (result.passed) {
+      logger.log(`Slot ${state.currentSlotIndex}: routing to persist`);
       return REGEN_ROUTE.PERSIST;
     }
 
     if (state.currentAttempt < ctx.config.maxCriticAttempts - 1) {
+      logger.log(
+        `Slot ${state.currentSlotIndex}: routing to retry (attempt ${state.currentAttempt + 1} of ${ctx.config.maxCriticAttempts})`,
+      );
       return REGEN_ROUTE.RETRY;
     }
 
+    logger.log(
+      `Slot ${state.currentSlotIndex}: routing to admin review (retry cap ${ctx.config.maxCriticAttempts} exhausted)`,
+    );
     return REGEN_ROUTE.ADMIN_REVIEW;
   };
 }

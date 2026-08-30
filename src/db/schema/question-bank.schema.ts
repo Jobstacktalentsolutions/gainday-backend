@@ -59,7 +59,9 @@ export const questionBank = pgTable(
     taskContent: jsonb('task_content')
       .$type<QuestionBankTaskContent>()
       .notNull(),
-    anchors: jsonb('anchors').$type<AnchorResponse[]>().notNull(),
+    // Anchors are a grading-time concern, generated separately from task generation — see
+    // src/modules/grading/. Nullable until that pipeline exists and populates this.
+    anchors: jsonb('anchors').$type<AnchorResponse[]>(),
     sourceJobId: uuid('source_job_id').references(() => jobs.id, {
       onDelete: 'set null',
     }),

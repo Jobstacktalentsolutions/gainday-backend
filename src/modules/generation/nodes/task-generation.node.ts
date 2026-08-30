@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { Logger } from '@nestjs/common';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { GenerationContext } from '../graph/generation-context';
 import {
@@ -12,27 +12,19 @@ import {
   OBJECTIVE_COMPONENT_SCHEMAS,
   OPEN_ENDED_COMPONENT_SCHEMAS,
 } from '../roles/component-schemas';
+import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
+
+const logger = new Logger('GenerationPipeline:taskGeneration');
 
 const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simulation task,
-matching the given candidate's taskType. Produce a scenario, the task components appropriate to
-that taskType, and a set of anchor responses.
+matching the given candidate's taskType. Produce a scenario and the task components appropriate
+to that taskType.
 
 Free-text fields (scenarioDescription, questionPrompt, and any markdown-documented field in
 interfacePayload) are GitHub-flavored Markdown. Use markdown syntax (bold, italics,
 bullet/numbered lists) only where structure genuinely aids readability — e.g. presenting several
 distinct emails, line items, or steps — never HTML, and never as decoration on plain prose that
-reads fine without it.
-
-Anchor responses are reference points for grading — generate exactly one anchor per configured
-score point, in order, each scored against the four fixed criteria below (framed for this role):
-- Problem-solving: {{problemSolving}}
-- Judgment/execution: {{judgmentExecution}}
-- Written communication: {{writtenCommunication}}
-- Commercial/domain awareness: {{commercialDomainAwareness}}
-
-The top-scoring anchor should be strong but not implausibly perfect on all four criteria at once —
-avoid manufacturing an artificial "perfect" answer that no real strong candidate response would
-actually resemble; real strong answers often trade off one dimension for another.`;
+reads fine without it.`;
 
 /**
  * Selects the next candidate to attempt for the current slot: on a fresh slot this is the
@@ -72,6 +64,10 @@ function selectCandidateForSlot(state: GenerationState): TaskCandidateRecord {
 export function taskGenerationNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
     const candidate = selectCandidateForSlot(state);
+    logger.log(
+      `Slot ${state.currentSlotIndex}, attempt ${state.currentAttempt + 1}: generating task for candidate ${candidate.candidateId} [${candidate.taskType}]`,
+    );
+
     const roleModule = state.roleModule;
     const allowedTypeKeys = roleModule.allowedTaskPatternTypes.map(
       (t) => t.key,
@@ -94,37 +90,21 @@ export function taskGenerationNode(ctx: GenerationContext) {
       ? OPEN_ENDED_COMPONENT_SCHEMAS[patternTypeDef.openEndedComponentType]
       : null;
 
-    const promptText = TASK_GENERATION_PROMPT_BASE.replace(
-      '{{problemSolving}}',
-      roleModule.anchorCriteriaFraming.problemSolving,
-    )
-      .replace(
-        '{{judgmentExecution}}',
-        roleModule.anchorCriteriaFraming.judgmentExecution,
-      )
-      .replace(
-        '{{writtenCommunication}}',
-        roleModule.anchorCriteriaFraming.writtenCommunication,
-      )
-      .replace(
-        '{{commercialDomainAwareness}}',
-        roleModule.anchorCriteriaFraming.commercialDomainAwareness,
-      );
-
     const schema = taskGenerationSchema(
       allowedTypeKeys,
       interfacePayloadSchema,
-      ctx.config.anchorScorePoints,
       objectiveComponentSchema,
       openEndedComponentSchema,
     );
-    const model =
-      ctx.generationModel.withStructuredOutput<z.infer<typeof schema>>(schema);
+    const model = withGeminiSafeStructuredOutput(
+      ctx.taskGenerationModel,
+      schema,
+    );
 
     const result = await model.invoke([
       new SystemMessage(
-        `${promptText}\n\nThis task's interfaceType is "${interfaceType}" — the interfacePayload ` +
-          `you generate must match that render mode.\n\nGenerate anchors at these score points: ${ctx.config.anchorScorePoints.join(', ')}.`,
+        `${TASK_GENERATION_PROMPT_BASE}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+          `interfacePayload you generate must match that render mode.`,
       ),
       new HumanMessage(
         JSON.stringify({
@@ -142,6 +122,10 @@ export function taskGenerationNode(ctx: GenerationContext) {
     // Hard rule enforcement, not just prompt-trusted: never fabricate a business problem.
     const businessProblemDerived =
       state.problem === null ? false : result.businessProblemDerived;
+
+    logger.log(
+      `Slot ${state.currentSlotIndex}: generated "${result.title}" (interfaceType=${interfaceType})`,
+    );
 
     return {
       currentTaskDraft: {
@@ -162,7 +146,6 @@ export function taskGenerationNode(ctx: GenerationContext) {
           interfaceType,
           interfacePayload: result.interfacePayload as Record<string, unknown>,
         },
-        anchors: result.anchors,
       },
     };
   };

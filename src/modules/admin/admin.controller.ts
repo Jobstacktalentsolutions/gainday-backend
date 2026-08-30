@@ -14,10 +14,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole, GenerationReviewStatus } from '../../db/schema';
-import {
-  AnchorResponse,
-  QuestionBankTaskContent,
-} from '../../db/schema/question-bank.schema';
+import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -62,14 +59,13 @@ export class AdminController {
   async approveGenerationReview(
     @Param('id') id: string,
     @Body()
-    body: { taskContent: QuestionBankTaskContent; anchors: AnchorResponse[] },
+    body: { taskContent: QuestionBankTaskContent },
     @CurrentUser() admin: any,
   ) {
     return this.adminService.approveGenerationReviewWithEdits(
       id,
       admin.id,
       body.taskContent,
-      body.anchors,
     );
   }
 

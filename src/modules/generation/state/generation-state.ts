@@ -1,9 +1,6 @@
 import { Annotation } from '@langchain/langgraph';
 import { RoleModule } from '../roles/role-module.interface';
-import {
-  AnchorResponse,
-  QuestionBankTaskContent,
-} from '../../../db/schema/question-bank.schema';
+import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { FailedGenerationAttempt } from '../../../db/schema/generation-review.schema';
 
@@ -11,15 +8,14 @@ export interface FinalizedTask {
   candidateId: string;
   taskType: string;
   taskContent: QuestionBankTaskContent;
-  anchors: AnchorResponse[];
 }
 
 export interface CriticResult {
   passed: boolean;
   failureReasons: string[];
   noveltyDistance: number | null;
+  isDuplicate: boolean;
   relevant: boolean;
-  anchorsSound: boolean;
   /** Embedding computed for the novelty/duplicate check — carried forward so persist.node.ts
    *  doesn't recompute it for the same unchanged taskContent. */
   embedding: number[];

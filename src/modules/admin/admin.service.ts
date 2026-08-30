@@ -11,10 +11,7 @@ import {
   generationReviewItems,
   GenerationReviewStatus,
 } from '../../db/schema';
-import {
-  AnchorResponse,
-  QuestionBankTaskContent,
-} from '../../db/schema/question-bank.schema';
+import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
 import { Embeddings } from '@langchain/core/embeddings';
@@ -106,7 +103,6 @@ export class AdminService {
     reviewItemId: string,
     adminId: string,
     editedTaskContent: QuestionBankTaskContent,
-    editedAnchors: AnchorResponse[],
   ) {
     const [reviewItem] = await this.db
       .select()
@@ -121,7 +117,6 @@ export class AdminService {
       .set({
         status: 'APPROVED_WITH_EDITS',
         resolvedTaskContent: editedTaskContent,
-        resolvedAnchors: editedAnchors,
         reviewedByAdminId: adminId,
         reviewedAt: new Date(),
         updatedAt: new Date(),
@@ -138,7 +133,6 @@ export class AdminService {
       intent: editedTaskContent.title,
       taskType: editedTaskContent.taskType,
       taskContent: editedTaskContent,
-      anchors: editedAnchors,
       sourceJobId: reviewItem.jobId,
       embedding,
     });
@@ -160,7 +154,6 @@ export class AdminService {
         businessProblemDerived: editedTaskContent.businessProblemDerived,
         interfaceType: editedTaskContent.interfaceType,
         interfacePayload: editedTaskContent.interfacePayload,
-        anchors: editedAnchors,
       };
       await this.db
         .update(simulations)

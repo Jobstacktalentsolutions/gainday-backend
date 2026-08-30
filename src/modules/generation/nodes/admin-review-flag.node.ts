@@ -1,9 +1,12 @@
+import { Logger } from '@nestjs/common';
 import { GenerationContext } from '../graph/generation-context';
 import {
   GenerationState,
   GenerationStateUpdate,
 } from '../state/generation-state';
 import { FailedGenerationAttempt } from '../../../db/schema/generation-review.schema';
+
+const logger = new Logger('GenerationPipeline:adminReviewFlag');
 
 /**
  * Cap-exhaustion fallback (doc Section 7.2/7.3): records the failed slot for admin review
@@ -28,9 +31,14 @@ export function adminReviewFlagNode(ctx: GenerationContext) {
       attemptNumber: state.currentAttempt + 1,
       candidateId: draft.candidateId,
       taskDraft: draft.taskContent,
-      anchors: draft.anchors,
+      // Anchors are a grading-time concern, not generated here — see src/modules/grading/.
+      anchors: null,
       criticFailureReasons: critic.failureReasons,
     };
+
+    logger.warn(
+      `Slot ${state.currentSlotIndex}: exhausted retry attempts, flagging for admin review (last failure: ${critic.failureReasons.join('; ')})`,
+    );
 
     return {
       adminReviewItems: [

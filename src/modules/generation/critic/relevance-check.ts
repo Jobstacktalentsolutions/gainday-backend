@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { relevanceCheckSchema } from '../schemas/critic-result.schema';
@@ -6,6 +5,7 @@ import {
   ExtractionResult,
   GeneratedTaskCandidate,
 } from '../roles/role-module.interface';
+import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
 
 const RELEVANCE_CHECK_PROMPT = `You are validating a generated job-simulation task for genuine
 relevance. Confirm the task actually aligns with the given Category and Intent — not just that
@@ -16,10 +16,10 @@ export async function checkRelevance(
   task: GeneratedTaskCandidate,
   extraction: ExtractionResult,
 ): Promise<{ relevant: boolean; reasons: string[] }> {
-  const structuredModel =
-    criticModel.withStructuredOutput<z.infer<typeof relevanceCheckSchema>>(
-      relevanceCheckSchema,
-    );
+  const structuredModel = withGeminiSafeStructuredOutput(
+    criticModel,
+    relevanceCheckSchema,
+  );
   return structuredModel.invoke([
     new SystemMessage(RELEVANCE_CHECK_PROMPT),
     new HumanMessage(

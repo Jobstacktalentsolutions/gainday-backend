@@ -1,10 +1,5 @@
-import { z } from 'zod';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import {
-  AnchorResponse,
-  QuestionBankTaskContent,
-} from '../../../db/schema/question-bank.schema';
+import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 import { InterfaceType } from './interface-type';
 import { RoleCategory } from './role-category.enum';
 
@@ -40,50 +35,11 @@ export interface ExtractionResult {
 export interface GeneratedTaskCandidate {
   taskType: string;
   taskContent: QuestionBankTaskContent;
-  anchors: AnchorResponse[];
-}
-
-export interface AnchorCorrectnessResult {
-  sound: boolean;
-  reasons: string[];
 }
 
 export interface RelevanceCheckResult {
   relevant: boolean;
   reasons: string[];
-}
-
-const anchorCorrectnessSchema = z.object({
-  sound: z.boolean(),
-  reasons: z.array(z.string()),
-});
-
-/**
- * Every role's `checkAnchorCorrectness` is the same shape — a structured-output LLM call over
- * {taskContent, anchors} against a role-specific system prompt. Role modules provide only the
- * prompt text; this factory builds the actual check, so a new role never re-implements the
- * schema/invoke wiring (doc Section 7.1).
- */
-export function makeAnchorCorrectnessCheck(
-  systemPrompt: string,
-): (
-  task: GeneratedTaskCandidate,
-  criticModel: BaseChatModel,
-) => Promise<AnchorCorrectnessResult> {
-  return async (task, criticModel) => {
-    const structuredModel = criticModel.withStructuredOutput<
-      z.infer<typeof anchorCorrectnessSchema>
-    >(anchorCorrectnessSchema);
-    return structuredModel.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(
-        JSON.stringify({
-          taskContent: task.taskContent,
-          anchors: task.anchors,
-        }),
-      ),
-    ]);
-  };
 }
 
 export interface RoleModule {
@@ -102,22 +58,7 @@ export interface RoleModule {
    *  usable content yet — callers must fail fast rather than silently falling back. */
   readonly allowedTaskPatternTypes: TaskPatternTypeDefinition[];
 
-  /** The 4 anchor-response criteria are fixed and shared across roles (doc Section 6.2);
-   *  only their framing/interpretation is role-specific. */
-  readonly anchorCriteriaFraming: {
-    problemSolving: string;
-    judgmentExecution: string;
-    writtenCommunication: string;
-    commercialDomainAwareness: string;
-  };
-
   readonly criticChecks: {
-    /** Role-specific soundness check on the anchors themselves (doc Section 7.1) —
-     *  there is no external grounding source, so this is a second-pass LLM check. */
-    checkAnchorCorrectness(
-      task: GeneratedTaskCandidate,
-      criticModel: BaseChatModel,
-    ): Promise<AnchorCorrectnessResult>;
     /** Optional role-specific relevance nuance beyond the generic Category/Intent check.
      *  Return null to defer entirely to the generic check. */
     additionalRelevanceCheck?(

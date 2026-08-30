@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { Logger } from '@nestjs/common';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { GenerationContext } from '../graph/generation-context';
 import {
@@ -8,6 +8,9 @@ import {
 import { candidatePoolSchema } from '../schemas/task-candidate.schema';
 import { RoleModuleNotConfiguredError } from '../roles/role-module.interface';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
+import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
+
+const logger = new Logger('GenerationPipeline:overgenerate');
 
 const OVERGENERATE_PROMPT = `Generate a diverse candidate pool of plausible on-the-job tasks for
 this role, using general and industry-specific knowledge. Generate more candidates than will
@@ -16,6 +19,10 @@ Each candidate's taskType MUST be one of the allowed types listed below; do not 
 
 export function overgenerateNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
+    logger.log(
+      `Overgenerating candidate pool for job ${state.jobId} (category="${state.category}", target pool size ${ctx.config.candidatePoolSize})`,
+    );
+
     const allowedTypeKeys = state.roleModule.allowedTaskPatternTypes.map(
       (t) => t.key,
     );
@@ -26,8 +33,7 @@ export function overgenerateNode(ctx: GenerationContext) {
     const schema = candidatePoolSchema(
       allowedTypeKeys as [string, ...string[]],
     );
-    const model =
-      ctx.generationModel.withStructuredOutput<z.infer<typeof schema>>(schema);
+    const model = withGeminiSafeStructuredOutput(ctx.generationModel, schema);
 
     const allowedTypesDescription = state.roleModule.allowedTaskPatternTypes
       .map((t) => `- ${t.key}: ${t.description}`)
@@ -52,6 +58,10 @@ export function overgenerateNode(ctx: GenerationContext) {
       briefDescription: c.briefDescription,
       selected: false,
     }));
+
+    logger.log(
+      `Generated ${candidatePool.length} candidates: ${candidatePool.map((c) => `${c.candidateId}[${c.taskType}]`).join(', ')}`,
+    );
 
     return { candidatePool };
   };

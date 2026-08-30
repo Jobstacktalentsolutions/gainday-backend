@@ -1,0 +1,1 @@
+ALTER TABLE "question_bank" ALTER COLUMN "anchors" DROP NOT NULL;

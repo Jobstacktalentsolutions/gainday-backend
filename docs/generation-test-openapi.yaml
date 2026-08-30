@@ -1,0 +1,298 @@
+openapi: 3.0.3
+info:
+  title: Gainday Generation Pipeline — Test API
+  description: >
+    No-auth manual test endpoint for the AI generation pipeline. Takes a bare job description
+    (+ optional required skills / business problem), runs the real LangGraph pipeline end to
+    end against a throwaway job record, and returns the finalized simulation tasks. Also logs
+    the full result to the server terminal and writes it to a timestamped .txt file under
+    backend/tmp/generation-test-runs/. Not part of the production API surface — for local
+    pipeline testing only.
+  version: "1.0.0"
+servers:
+  - url: http://localhost:3000
+    description: Local dev server (nest start --watch)
+
+paths:
+  /generation-test/generate:
+    post:
+      summary: Run the generation pipeline against ad-hoc input
+      description: >
+        Creates a throwaway `jobs` row (and a shared throwaway employer, if not already
+        present) from the request body, then runs the real generation graph against it —
+        extraction, overgenerate-and-rank, per-task generation with anchors, and critic
+        validation — exercising the actual persistence path (job_extractions, question_bank,
+        generation_review_items). This can take a while (many LLM calls per run) and consumes
+        real API quota against whichever provider is configured in
+        backend/src/config/ai.config.ts (`ai.provider`: "groq" or "gemini").
+      operationId: runTestGeneration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestGenerateRequest'
+            examples:
+              salesSdr:
+                summary: Sales SDR job
+                value:
+                  description: >-
+                    We are hiring a Sales Development Representative to prospect into
+                    mid-market SaaS companies, run cold outreach, and manage a pipeline of
+                    qualified leads.
+                  requiredSkills:
+                    - cold outreach
+                    - objection handling
+                    - pipeline management
+                  businessProblem: >-
+                    Our outbound pipeline has stalled and we need someone who can
+                    consistently book qualified meetings.
+              financeReconciliation:
+                summary: Finance reconciliation job
+                value:
+                  description: >-
+                    We are hiring a Financial Analyst to own month-end reconciliation,
+                    identify discrepancies between the general ledger and bank statements,
+                    and communicate findings to the finance team.
+                  requiredSkills:
+                    - reconciliation
+                    - financial reporting
+                    - attention to detail
+                  businessProblem: >-
+                    Our month-end close is taking too long due to unresolved reconciliation
+                    discrepancies.
+              minimal:
+                summary: Minimal request (description only)
+                value:
+                  description: >-
+                    We are hiring an Account Executive to close new business and manage
+                    contract negotiations with enterprise prospects.
+      responses:
+        '200':
+          description: >
+            Successful generation and completed once graph run — includes all finalized
+            tasks; may include admin-review items if some slots failed critic validation
+            after all retry attempts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationTestResponse'
+        '400':
+          description: Validation error (e.g. missing/empty `description`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '500':
+          description: >
+            Internal error — the pipeline threw before completing (LLM API error, schema
+            error, provider quota exhaustion, unregistered role category, etc). Check the
+            server terminal for the full stack trace and `GenerationPipeline:*` log lines
+            showing which stage failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalErrorResponse'
+
+components:
+  schemas:
+    TestGenerateRequest:
+      type: object
+      required:
+        - description
+      properties:
+        description:
+          type: string
+          minLength: 1
+          description: The job description text (required, non-empty).
+          example: >-
+            We are hiring a Sales Development Representative to prospect into mid-market
+            SaaS companies, run cold outreach, and manage a pipeline of qualified leads.
+        requiredSkills:
+          type: array
+          items:
+            type: string
+          description: Optional list of required skills/competencies. Defaults to an empty array.
+          example: ["cold outreach", "objection handling", "pipeline management"]
+        businessProblem:
+          type: string
+          description: >-
+            Optional specific business problem the employer wants this hire to help solve.
+            If omitted, the pipeline will not fabricate one — tasks are generated without a
+            woven-in business problem.
+          example: >-
+            Our outbound pipeline has stalled and we need someone who can consistently book
+            qualified meetings.
+
+    GenerationTestResponse:
+      type: object
+      required:
+        - category
+        - intent
+        - problem
+        - finalizedTasks
+        - adminReviewItemsPersisted
+        - outputFile
+      properties:
+        category:
+          type: string
+          description: >-
+            Extracted role Category — the router used to select which role module handled
+            generation (e.g. "Finance", "Sales", or with sub-domain "Finance > Reconciliation").
+          example: Sales
+        intent:
+          type: string
+          description: Extracted Intent — the skills/competencies the employer expects the hire to demonstrate.
+          example: >-
+            Ability to prospect effectively, handle objections, and manage a sales pipeline.
+        problem:
+          type: string
+          nullable: true
+          description: >-
+            Extracted business Problem, or null if none was stated in the input (never
+            fabricated).
+          example: >-
+            Our outbound pipeline has stalled and we need someone who can consistently book
+            qualified meetings.
+        finalizedTasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimulationTask'
+        adminReviewItemsPersisted:
+          type: integer
+          description: >-
+            Number of task slots that failed critic validation after exhausting all retry
+            attempts and were routed to admin review instead of being included in
+            finalizedTasks.
+          example: 0
+        outputFile:
+          type: string
+          description: Absolute path to the .txt file the full result was written to on the server.
+          example: /path/to/backend/tmp/generation-test-runs/generation-2026-08-30T15-09-03-123Z.txt
+
+    SimulationTask:
+      type: object
+      required:
+        - id
+        - taskType
+        - category
+        - title
+        - scenarioDescription
+        - questionPrompt
+        - businessProblemDerived
+        - interfaceType
+        - interfacePayload
+        - anchors
+      properties:
+        id:
+          type: string
+          example: 7d641207-a54d-446c-9103-36691207cc39-task-1
+        taskType:
+          type: string
+          description: >-
+            Role-module-defined task-pattern-type key (e.g. "COLD_OUTREACH_EMAIL" for sales,
+            "NUMERIC_INPUT" for finance).
+          example: COLD_OUTREACH_EMAIL
+        category:
+          type: string
+          example: Sales
+        title:
+          type: string
+          example: Cold outreach to a VP of Sales at a mid-market SaaS company
+        scenarioDescription:
+          type: string
+          description: GitHub-flavored Markdown scenario text.
+        questionPrompt:
+          type: string
+          description: GitHub-flavored Markdown prompt/question text.
+        objectiveComponent:
+          type: object
+          nullable: true
+          description: >-
+            Present only for task types with an objective (machine-gradable) component;
+            shape depends on the component type (see component-schemas.ts).
+          additionalProperties: true
+        openEndedComponent:
+          type: object
+          nullable: true
+          description: >-
+            Present only for task types with an open-ended (rubric-graded) component; shape
+            depends on the component type (see component-schemas.ts).
+          additionalProperties: true
+        businessProblemDerived:
+          type: boolean
+          description: Whether this task actually wove in the extracted business Problem.
+        interfaceType:
+          type: string
+          enum: [RICH_TEXT_COMPOSER, TEXT_AREA, TABLE_VIEW_RESPONSE_PANEL]
+          description: Tells the frontend how to render this task.
+        interfacePayload:
+          type: object
+          description: >-
+            Data conforming to the schema for `interfaceType` (see interface-type.ts) — the
+            concrete render contract for the frontend.
+          additionalProperties: true
+        anchors:
+          type: array
+          description: >-
+            Reference responses at each configured score point (default 5: 0, 3, 5, 7, 10),
+            used later for grading.
+          items:
+            $ref: '#/components/schemas/AnchorResponse'
+
+    AnchorResponse:
+      type: object
+      required:
+        - score
+        - responseText
+        - criteria
+      properties:
+        score:
+          type: number
+          example: 7
+        responseText:
+          type: string
+          description: A realistic candidate response that would earn this score.
+        criteria:
+          type: object
+          required:
+            - problemSolving
+            - judgmentExecution
+            - writtenCommunication
+            - commercialDomainAwareness
+          properties:
+            problemSolving:
+              type: string
+            judgmentExecution:
+              type: string
+            writtenCommunication:
+              type: string
+            commercialDomainAwareness:
+              type: string
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+          example: ["description should not be empty"]
+        error:
+          type: string
+          example: Bad Request
+
+    InternalErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 500
+        message:
+          type: string
+          example: Internal server error

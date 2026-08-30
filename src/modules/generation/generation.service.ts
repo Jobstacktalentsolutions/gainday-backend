@@ -14,7 +14,12 @@ import {
   users,
   UserRole,
 } from '../../db/schema';
-import { GENERATION_MODEL, CRITIC_MODEL, EMBEDDINGS } from '../ai/ai.constants';
+import {
+  GENERATION_MODEL,
+  CRITIC_MODEL,
+  TASK_GENERATION_MODEL,
+  EMBEDDINGS,
+} from '../ai/ai.constants';
 import { GENERATION_QUEUE } from './generation.constants';
 import { RoleRegistry } from './roles/role-registry';
 import { buildGenerationGraph } from './graph/generation.graph';
@@ -43,6 +48,8 @@ export class GenerationService {
     @InjectQueue(GENERATION_QUEUE) private readonly generationQueue: Queue,
     @Inject(GENERATION_MODEL) private readonly generationModel: BaseChatModel,
     @Inject(CRITIC_MODEL) private readonly criticModel: BaseChatModel,
+    @Inject(TASK_GENERATION_MODEL)
+    private readonly taskGenerationModel: BaseChatModel,
     @Inject(EMBEDDINGS) private readonly embeddings: Embeddings,
     private readonly roleRegistry: RoleRegistry,
     private readonly configService: ConfigService,
@@ -62,12 +69,16 @@ export class GenerationService {
    * simulation tasks, and any admin-review items. Called by GenerationProcessor.
    */
   async runGeneration(job: Job): Promise<GenerationResult> {
+    this.logger.log(`Starting generation graph for Job ID ${job.id}`);
+    const startedAt = Date.now();
+
     const config: GenerationConfig =
       this.configService.getOrThrow('generation');
 
     const graph = buildGenerationGraph({
       generationModel: this.generationModel,
       criticModel: this.criticModel,
+      taskGenerationModel: this.taskGenerationModel,
       embeddings: this.embeddings,
       db: this.db,
       roleRegistry: this.roleRegistry,
@@ -82,6 +93,11 @@ export class GenerationService {
     };
 
     const finalState = await graph.invoke(initialState);
+
+    this.logger.log(
+      `Graph invoke complete for Job ID ${job.id} in ${((Date.now() - startedAt) / 1000).toFixed(1)}s: ` +
+        `${finalState.finalizedTasks.length} finalized task(s), ${finalState.adminReviewItems.length} admin-review item(s)`,
+    );
 
     await this.db
       .insert(jobExtractions)
@@ -127,7 +143,6 @@ export class GenerationService {
         businessProblemDerived: task.taskContent.businessProblemDerived,
         interfaceType: task.taskContent.interfaceType,
         interfacePayload: task.taskContent.interfacePayload,
-        anchors: task.anchors,
       }),
     );
 

@@ -9,7 +9,9 @@
 title + "\n\n" + scenarioDescription + "\n\n" + questionPrompt
 ```
 
-Not included: `objectiveComponent`, `openEndedComponent`, or `anchors`.
+Not included: `objectiveComponent`, `openEndedComponent`, or `anchors`. (Anchors no longer
+exist at generation time at all as of 2026-08-30 — see `src/modules/grading/` — so this note
+now only applies once/if a future grading pipeline attaches anchors back onto a task.)
 
 ## The gap
 
