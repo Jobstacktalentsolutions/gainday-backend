@@ -2,11 +2,18 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
+import { eq } from 'drizzle-orm';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Embeddings } from '@langchain/core/embeddings';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { jobExtractions, generationReviewItems } from '../../db/schema';
+import {
+  jobExtractions,
+  generationReviewItems,
+  jobs,
+  users,
+  UserRole,
+} from '../../db/schema';
 import { GENERATION_MODEL, CRITIC_MODEL, EMBEDDINGS } from '../ai/ai.constants';
 import { GENERATION_QUEUE } from './generation.constants';
 import { RoleRegistry } from './roles/role-registry';
@@ -15,11 +22,17 @@ import { GenerationConfig } from './graph/generation-context';
 import { GenerationState } from './state/generation-state';
 import { Job } from '../../db/schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
+import { TestGenerateDto } from './dto/test-generate.dto';
 
 export interface GenerationResult {
+  category: string;
+  intent: string;
+  problem: string | null;
   finalizedTasks: SimulationTask[];
   adminReviewItemsPersisted: number;
 }
+
+const TEST_EMPLOYER_EMAIL = 'pipeline-test@gainday.internal';
 
 @Injectable()
 export class GenerationService {
@@ -118,6 +131,75 @@ export class GenerationService {
       }),
     );
 
-    return { finalizedTasks, adminReviewItemsPersisted };
+    return {
+      category: finalState.category,
+      intent: finalState.intent,
+      problem: finalState.problem,
+      finalizedTasks,
+      adminReviewItemsPersisted,
+    };
+  }
+
+  /**
+   * No-auth test entrypoint: creates a throwaway job (and a shared throwaway employer, if not
+   * already present) from ad-hoc input, then runs the real generation pipeline against it —
+   * exercises the actual persistence path (job_extractions, question_bank, admin review) rather
+   * than a shortcut. Intended for local/manual pipeline testing only, not production traffic.
+   */
+  async runTestGeneration(dto: TestGenerateDto): Promise<GenerationResult> {
+    let [testEmployer] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.email, TEST_EMPLOYER_EMAIL));
+
+    if (!testEmployer) {
+      [testEmployer] = await this.db
+        .insert(users)
+        .values({
+          email: TEST_EMPLOYER_EMAIL,
+          role: UserRole.EMPLOYER,
+          authProvider: 'local',
+          fullName: 'Pipeline Test Employer',
+          companyName: 'Pipeline Test Co',
+          isEmailVerified: true,
+        })
+        .returning();
+    }
+
+    const [testJob] = await this.db
+      .insert(jobs)
+      .values({
+        title: 'Pipeline Test Job',
+        description: dto.description,
+        requiredSkills: dto.requiredSkills ?? [],
+        roleCategory: 'Unspecified',
+        location: 'N/A',
+        employmentType: 'N/A',
+        salaryRange: { min: 0, max: 0, currency: 'USD' },
+        applicationDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        businessProblem: dto.businessProblem ?? '',
+        status: 'GENERATING',
+        employerId: testEmployer.id,
+      })
+      .returning();
+
+    this.logger.log(
+      `Running test generation for throwaway Job ID ${testJob.id}`,
+    );
+
+    try {
+      const result = await this.runGeneration(testJob);
+      await this.db
+        .update(jobs)
+        .set({ status: 'ACTIVE', updatedAt: new Date() })
+        .where(eq(jobs.id, testJob.id));
+      return result;
+    } catch (err) {
+      await this.db
+        .update(jobs)
+        .set({ status: 'GENERATION_FAILED', updatedAt: new Date() })
+        .where(eq(jobs.id, testJob.id));
+      throw err;
+    }
   }
 }

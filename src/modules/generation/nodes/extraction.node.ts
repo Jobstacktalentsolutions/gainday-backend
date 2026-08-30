@@ -12,9 +12,8 @@ import {
 
 const CATEGORY_EXTRACTION_PROMPT = `You are extracting the job Category from a recruiter's job
 posting input. Category is the domain and sub-domain of the role (e.g. "Finance > Reconciliation",
-or "Sales"). This value routes to the correct role-specific generation module, so it must be one
-of the following top-level domains where possible: Finance, Sales. If a sub-domain is evident from
-the description, include it after " > ".`;
+or "Sales"). Must be one of these top-level domains where possible: Finance, Sales. If a sub-domain
+is evident from the description, include it after " > ".`;
 
 export function extractionNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {

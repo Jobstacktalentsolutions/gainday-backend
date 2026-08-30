@@ -20,6 +20,9 @@ export interface CriticResult {
   noveltyDistance: number | null;
   relevant: boolean;
   anchorsSound: boolean;
+  /** Embedding computed for the novelty/duplicate check — carried forward so persist.node.ts
+   *  doesn't recompute it for the same unchanged taskContent. */
+  embedding: number[];
 }
 
 export const GenerationStateAnnotation = Annotation.Root({

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import {
   AnchorResponse,
@@ -25,8 +27,7 @@ export interface TaskPatternTypeDefinition {
   objectiveComponentType?: ObjectiveComponentType;
   openEndedComponentType?: OpenEndedComponentType;
   description: string;
-  /** Tells the frontend how to render tasks of this type (doc Section 2.5). Declarative per
-   *  task-pattern type, not chosen by the LLM at generation time — deterministic and auditable. */
+  /** Declarative per task-pattern type, not chosen by the LLM. See InterfaceType in interface-type.ts. */
   interfaceType: InterfaceType;
 }
 
@@ -50,6 +51,39 @@ export interface AnchorCorrectnessResult {
 export interface RelevanceCheckResult {
   relevant: boolean;
   reasons: string[];
+}
+
+const anchorCorrectnessSchema = z.object({
+  sound: z.boolean(),
+  reasons: z.array(z.string()),
+});
+
+/**
+ * Every role's `checkAnchorCorrectness` is the same shape — a structured-output LLM call over
+ * {taskContent, anchors} against a role-specific system prompt. Role modules provide only the
+ * prompt text; this factory builds the actual check, so a new role never re-implements the
+ * schema/invoke wiring (doc Section 7.1).
+ */
+export function makeAnchorCorrectnessCheck(
+  systemPrompt: string,
+): (
+  task: GeneratedTaskCandidate,
+  criticModel: BaseChatModel,
+) => Promise<AnchorCorrectnessResult> {
+  return async (task, criticModel) => {
+    const structuredModel = criticModel.withStructuredOutput<
+      z.infer<typeof anchorCorrectnessSchema>
+    >(anchorCorrectnessSchema);
+    return structuredModel.invoke([
+      new SystemMessage(systemPrompt),
+      new HumanMessage(
+        JSON.stringify({
+          taskContent: task.taskContent,
+          anchors: task.anchors,
+        }),
+      ),
+    ]);
+  };
 }
 
 export interface RoleModule {
@@ -91,11 +125,6 @@ export interface RoleModule {
       extraction: ExtractionResult,
       criticModel: BaseChatModel,
     ): Promise<RelevanceCheckResult | null>;
-  };
-
-  readonly presentationSpec: {
-    rendererHint: string;
-    notes: string;
   };
 }
 

@@ -84,6 +84,7 @@ export function criticNode(ctx: GenerationContext) {
       noveltyDistance: duplicateResult.closestMatch?.distance ?? null,
       relevant: relevanceResult.relevant && additionalRelevanceOk,
       anchorsSound: anchorCorrectness.sound,
+      embedding,
     };
 
     return { currentCriticResult: criticResult };

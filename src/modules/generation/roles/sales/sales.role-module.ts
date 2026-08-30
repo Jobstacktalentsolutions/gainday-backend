@@ -1,19 +1,11 @@
-import { z } from 'zod';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import {
-  AnchorCorrectnessResult,
-  GeneratedTaskCandidate,
   RoleModule,
   TaskPatternTypeDefinition,
+  makeAnchorCorrectnessCheck,
 } from '../role-module.interface';
 import { SALES_ANCHOR_CORRECTNESS_PROMPT } from './sales.prompts';
 import { InterfaceType } from '../interface-type';
 import { RoleCategory } from '../role-category.enum';
-
-const anchorCorrectnessSchema = z.object({
-  sound: z.boolean(),
-  reasons: z.array(z.string()),
-});
 
 /** Sales's task-pattern-type keys, given literal typing here so this module and its call
  *  sites get autocomplete/typo-safety — kept local to sales rather than a shared cross-role
@@ -126,36 +118,8 @@ export const SalesRoleModule: RoleModule = {
   },
 
   criticChecks: {
-    async checkAnchorCorrectness(
-      task: GeneratedTaskCandidate,
-      criticModel,
-    ): Promise<AnchorCorrectnessResult> {
-      const structuredModel = criticModel.withStructuredOutput<
-        z.infer<typeof anchorCorrectnessSchema>
-      >(anchorCorrectnessSchema);
-      const result = await structuredModel.invoke([
-        new SystemMessage(SALES_ANCHOR_CORRECTNESS_PROMPT),
-        new HumanMessage(
-          JSON.stringify({
-            taskContent: task.taskContent,
-            anchors: task.anchors,
-          }),
-        ),
-      ]);
-      return result;
-    },
-  },
-
-  presentationSpec: {
-    rendererHint: 'sales-text-native',
-    notes:
-      'All current sales categories are text-native and use the existing interface types: ' +
-      'Rich Text Composer for standalone written deliverables (cold outreach, account plans), ' +
-      'Text Area for a single response to read-only scenario/persona context (objection handling, ' +
-      'closing/negotiation judgment), and Table View + Response Panel for the mock-CRM pipeline ' +
-      'prioritization task. Live conversational roleplay (cold call, discovery, live objection, ' +
-      'multi-stakeholder negotiation) is explicitly out of scope — it needs a chat/message-thread ' +
-      'interface type and a different multi-turn generation/grading architecture, neither of ' +
-      'which exist yet.',
+    checkAnchorCorrectness: makeAnchorCorrectnessCheck(
+      SALES_ANCHOR_CORRECTNESS_PROMPT,
+    ),
   },
 };

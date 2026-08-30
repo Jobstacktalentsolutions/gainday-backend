@@ -1,10 +1,7 @@
-import { z } from 'zod';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import {
-  AnchorCorrectnessResult,
-  GeneratedTaskCandidate,
   RoleModule,
   TaskPatternTypeDefinition,
+  makeAnchorCorrectnessCheck,
 } from '../role-module.interface';
 import { FINANCE_ANCHOR_CORRECTNESS_PROMPT } from './finance.prompts';
 import { InterfaceType } from '../interface-type';
@@ -28,11 +25,6 @@ export enum FinanceTaskType {
   STAKEHOLDER_PUSHBACK_RESPONSE = 'STAKEHOLDER_PUSHBACK_RESPONSE',
   NUMERIC_INPUT_WITH_JUSTIFICATION = 'NUMERIC_INPUT_WITH_JUSTIFICATION',
 }
-
-const anchorCorrectnessSchema = z.object({
-  sound: z.boolean(),
-  reasons: z.array(z.string()),
-});
 
 const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
   {
@@ -141,30 +133,8 @@ export const FinanceRoleModule: RoleModule = {
   },
 
   criticChecks: {
-    async checkAnchorCorrectness(
-      task: GeneratedTaskCandidate,
-      criticModel,
-    ): Promise<AnchorCorrectnessResult> {
-      const structuredModel = criticModel.withStructuredOutput<
-        z.infer<typeof anchorCorrectnessSchema>
-      >(anchorCorrectnessSchema);
-      const result = await structuredModel.invoke([
-        new SystemMessage(FINANCE_ANCHOR_CORRECTNESS_PROMPT),
-        new HumanMessage(
-          JSON.stringify({
-            taskContent: task.taskContent,
-            anchors: task.anchors,
-          }),
-        ),
-      ]);
-      return result;
-    },
-  },
-
-  presentationSpec: {
-    rendererHint: 'finance-tabular',
-    notes:
-      'Numeric/tabular data must render in a way a finance-literate candidate can actually work ' +
-      'with: tables, figures, and clearly formatted numbers — not plain prose paragraphs.',
+    checkAnchorCorrectness: makeAnchorCorrectnessCheck(
+      FINANCE_ANCHOR_CORRECTNESS_PROMPT,
+    ),
   },
 };

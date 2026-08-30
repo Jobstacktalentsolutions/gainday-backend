@@ -4,11 +4,11 @@ import {
   GenerationStateUpdate,
 } from '../state/generation-state';
 import { questionBank } from '../../../db/schema/question-bank.schema';
-import { embedTaskContent } from '../utils/embedding.util';
 
 /**
- * On critic success (doc Section 7.3): embeds and persists the task to the question bank
- * (pgvector-indexed, for future novelty checks) and appends it to the in-progress simulation.
+ * On critic success (doc Section 7.3): persists the task to the question bank (pgvector-indexed,
+ * for future novelty checks) and appends it to the in-progress simulation. Reuses the embedding
+ * critic.node.ts already computed for this exact taskContent — never recomputed here.
  */
 export function persistNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
@@ -16,8 +16,11 @@ export function persistNode(ctx: GenerationContext) {
     if (!draft) {
       throw new Error('persist node invoked with no currentTaskDraft in state');
     }
+    if (!state.currentCriticResult) {
+      throw new Error('persist node invoked with no currentCriticResult in state');
+    }
 
-    const embedding = await embedTaskContent(ctx.embeddings, draft.taskContent);
+    const { embedding } = state.currentCriticResult;
 
     await ctx.db.insert(questionBank).values({
       category: state.category,
