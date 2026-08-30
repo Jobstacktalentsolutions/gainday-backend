@@ -8,7 +8,11 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  const allowedOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://gainday-app.vercel.app',
+  ];
 
   if (process.env.FRONTEND_URL) {
     allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ''));
