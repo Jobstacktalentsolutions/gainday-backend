@@ -17,6 +17,8 @@ export const taskGenerationSchema = (
   allowedTypeKeys: [string, ...string[]],
   interfacePayloadSchema: z.ZodTypeAny,
   anchorScorePoints: number[],
+  objectiveComponentSchema: z.ZodTypeAny | null,
+  openEndedComponentSchema: z.ZodTypeAny | null,
 ) => {
   const anchorSchemas = anchorScorePoints.map((score) =>
     z.object({
@@ -36,8 +38,12 @@ export const taskGenerationSchema = (
     scenarioDescription: z.string().describe('GitHub-flavored Markdown.'),
     questionPrompt: z.string().describe('GitHub-flavored Markdown.'),
     businessProblemDerived: z.boolean(),
-    objectiveComponent: z.record(z.string(), z.unknown()).optional(),
-    openEndedComponent: z.record(z.string(), z.unknown()).optional(),
+    objectiveComponent: objectiveComponentSchema
+      ? objectiveComponentSchema
+      : z.null().describe('This task type has no objective component.'),
+    openEndedComponent: openEndedComponentSchema
+      ? openEndedComponentSchema
+      : z.null().describe('This task type has no open-ended component.'),
     interfacePayload: interfacePayloadSchema.describe(
       "Data matching the render contract for this task's interfaceType — e.g. table rows/columns for TABLE_VIEW_RESPONSE_PANEL.",
     ),

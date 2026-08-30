@@ -3,8 +3,8 @@ export const aiConfig = {
 
   gemini: {
     // gemini-2.5-pro was retired for new users by Google (404 as of 2026-08-30).
-    generationModel: 'gemini-2.5-flash',
-    criticModel: 'gemini-2.5-flash',
+    generationModel: 'gemini-3.5-flash',
+    criticModel: 'gemini-3.5-flash',
     embeddingModel: 'gemini-embedding-001',
     // @langchain/google-genai's GoogleGenerativeAIEmbeddings does not expose
     // outputDimensionality — gemini-embedding-001 returns a fixed 3072-dim vector

@@ -8,6 +8,10 @@ import {
 import { taskGenerationSchema } from '../schemas/task-generation.schema';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { INTERFACE_SCHEMAS } from '../roles/interface-type';
+import {
+  OBJECTIVE_COMPONENT_SCHEMAS,
+  OPEN_ENDED_COMPONENT_SCHEMAS,
+} from '../roles/component-schemas';
 
 const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simulation task,
 matching the given candidate's taskType. Produce a scenario, the task components appropriate to
@@ -83,6 +87,12 @@ export function taskGenerationNode(ctx: GenerationContext) {
     }
     const interfaceType = patternTypeDef.interfaceType;
     const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
+    const objectiveComponentSchema = patternTypeDef.objectiveComponentType
+      ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
+      : null;
+    const openEndedComponentSchema = patternTypeDef.openEndedComponentType
+      ? OPEN_ENDED_COMPONENT_SCHEMAS[patternTypeDef.openEndedComponentType]
+      : null;
 
     const promptText = TASK_GENERATION_PROMPT_BASE.replace(
       '{{problemSolving}}',
@@ -105,6 +115,8 @@ export function taskGenerationNode(ctx: GenerationContext) {
       allowedTypeKeys,
       interfacePayloadSchema,
       ctx.config.anchorScorePoints,
+      objectiveComponentSchema,
+      openEndedComponentSchema,
     );
     const model =
       ctx.generationModel.withStructuredOutput<z.infer<typeof schema>>(schema);
@@ -140,8 +152,12 @@ export function taskGenerationNode(ctx: GenerationContext) {
           title: result.title,
           scenarioDescription: result.scenarioDescription,
           questionPrompt: result.questionPrompt,
-          objectiveComponent: result.objectiveComponent,
-          openEndedComponent: result.openEndedComponent,
+          objectiveComponent:
+            (result.objectiveComponent as Record<string, unknown> | null) ??
+            undefined,
+          openEndedComponent:
+            (result.openEndedComponent as Record<string, unknown> | null) ??
+            undefined,
           businessProblemDerived,
           interfaceType,
           interfacePayload: result.interfacePayload as Record<string, unknown>,
