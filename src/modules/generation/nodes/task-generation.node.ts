@@ -7,30 +7,14 @@ import {
 } from '../state/generation-state';
 import { taskGenerationSchema } from '../schemas/task-generation.schema';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
-import {
-  BASE_INTERFACE_TYPES,
-  BaseInterfaceType,
-  INTERFACE_SCHEMAS,
-} from '../roles/interface-type';
-
-const fallbackInterfacePayloadSchema = z.record(z.string(), z.unknown());
-
-function resolveInterfacePayloadSchema(interfaceType: string) {
-  if ((BASE_INTERFACE_TYPES as readonly string[]).includes(interfaceType)) {
-    return INTERFACE_SCHEMAS[interfaceType as BaseInterfaceType];
-  }
-  // Role-defined interface type with no registered schema yet — accept any object shape
-  // rather than failing generation; the role module should register a real schema when its
-  // presentation spec is finalized (doc Section 2.5's extensibility note).
-  return fallbackInterfacePayloadSchema;
-}
+import { INTERFACE_SCHEMAS } from '../roles/interface-type';
 
 const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simulation task,
 matching the given candidate's taskType. Produce a scenario, the task components appropriate to
 that taskType, and a set of anchor responses.
 
-Anchor responses are reference points for grading — generate one anchor per configured score
-point, each scored against the four fixed criteria below (framed for this role):
+Anchor responses are reference points for grading — generate exactly one anchor per configured
+score point, in order, each scored against the four fixed criteria below (framed for this role):
 - Problem-solving: {{problemSolving}}
 - Judgment/execution: {{judgmentExecution}}
 - Written communication: {{writtenCommunication}}
@@ -92,7 +76,7 @@ export function taskGenerationNode(ctx: GenerationContext) {
       );
     }
     const interfaceType = patternTypeDef.interfaceType;
-    const interfacePayloadSchema = resolveInterfacePayloadSchema(interfaceType);
+    const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
 
     const promptText = TASK_GENERATION_PROMPT_BASE.replace(
       '{{problemSolving}}',
@@ -114,6 +98,7 @@ export function taskGenerationNode(ctx: GenerationContext) {
     const schema = taskGenerationSchema(
       allowedTypeKeys,
       interfacePayloadSchema,
+      ctx.config.anchorScorePoints,
     );
     const model =
       ctx.generationModel.withStructuredOutput<z.infer<typeof schema>>(schema);

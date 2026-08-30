@@ -1,27 +1,36 @@
 import { z } from 'zod';
 
-const anchorSchema = z.object({
-  score: z
-    .number()
-    .describe(
-      'One of the configured anchor score points, e.g. 0, 3, 5, 7, or 10.',
-    ),
-  responseText: z
-    .string()
-    .describe('A realistic candidate response that would earn this score.'),
-  criteria: z.object({
-    problemSolving: z.string(),
-    judgmentExecution: z.string(),
-    writtenCommunication: z.string(),
-    commercialDomainAwareness: z.string(),
-  }),
+const anchorCriteriaSchema = z.object({
+  problemSolving: z.string(),
+  judgmentExecution: z.string(),
+  writtenCommunication: z.string(),
+  commercialDomainAwareness: z.string(),
 });
 
+/**
+ * One anchor schema per configured score point, with the score itself fixed via z.literal
+ * rather than left for the model to fill in — this is what forces exactly N anchors, one per
+ * configured point, instead of letting the model guess a count or drift off the configured
+ * points. `anchorScorePoints` comes from generationConfig (src/config/ai.config.ts).
+ */
 export const taskGenerationSchema = (
   allowedTypeKeys: [string, ...string[]],
   interfacePayloadSchema: z.ZodTypeAny,
-) =>
-  z.object({
+  anchorScorePoints: number[],
+) => {
+  const anchorSchemas = anchorScorePoints.map((score) =>
+    z.object({
+      score: z
+        .literal(score)
+        .describe(`Fixed at ${score} — do not use any other value here.`),
+      responseText: z
+        .string()
+        .describe('A realistic candidate response that would earn this score.'),
+      criteria: anchorCriteriaSchema,
+    }),
+  );
+
+  return z.object({
     taskType: z.enum(allowedTypeKeys),
     title: z.string(),
     scenarioDescription: z.string(),
@@ -33,11 +42,16 @@ export const taskGenerationSchema = (
       "Data matching the render contract for this task's interfaceType — e.g. table rows/columns for TABLE_VIEW_RESPONSE_PANEL, or the read-only context text for TEXT_AREA.",
     ),
     anchors: z
-      .array(anchorSchema)
-      .min(4)
+      .tuple(
+        anchorSchemas as [
+          (typeof anchorSchemas)[number],
+          ...(typeof anchorSchemas)[number][],
+        ],
+      )
       .describe(
-        'At least 4-5 anchor points across the score range (e.g. 0, 3, 5, 7, 10) — not just the two poles. ' +
+        `Exactly ${anchorScorePoints.length} anchors, one per configured score point (${anchorScorePoints.join(', ')}), in that order — not just the two poles. ` +
           'The top anchor should be strong but not implausibly perfect across all four criteria simultaneously; ' +
           'real strong answers trade off (e.g. commercially sharp but less polished prose).',
       ),
   });
+};

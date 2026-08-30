@@ -9,6 +9,7 @@ import {
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
 import { halfvec } from './vector.column';
+import { InterfaceType } from '../../modules/generation/roles/interface-type';
 
 const EMBEDDING_DIMENSIONS = 3072; // must match ai.gemini.embeddingDimensions (gemini-embedding-001)
 
@@ -32,9 +33,9 @@ export interface QuestionBankTaskContent {
   openEndedComponent?: Record<string, unknown>;
   businessProblemDerived: boolean;
   /** Tells the frontend how to render this task (doc Section 2.5). */
-  interfaceType: string;
-  /** Data conforming to INTERFACE_SCHEMAS[interfaceType] (or a role-specific schema for a
-   *  role-defined interface type) — the concrete render contract for the frontend. */
+  interfaceType: InterfaceType;
+  /** Data conforming to INTERFACE_SCHEMAS[interfaceType] — the concrete render contract for
+   *  the frontend (never just a tag string with an unvalidated shape). */
   interfacePayload: Record<string, unknown>;
 }
 

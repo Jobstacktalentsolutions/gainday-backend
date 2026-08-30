@@ -7,11 +7,24 @@ import {
   TaskPatternTypeDefinition,
 } from '../role-module.interface';
 import { SALES_ANCHOR_CORRECTNESS_PROMPT } from './sales.prompts';
+import { InterfaceType } from '../interface-type';
+import { RoleCategory } from '../role-category.enum';
 
 const anchorCorrectnessSchema = z.object({
   sound: z.boolean(),
   reasons: z.array(z.string()),
 });
+
+/** Sales's task-pattern-type keys, given literal typing here so this module and its call
+ *  sites get autocomplete/typo-safety — kept local to sales rather than a shared cross-role
+ *  enum, since each role owns and grows its own key set independently (doc Section 2.3). */
+export enum SalesTaskType {
+  COLD_OUTREACH_EMAIL = 'COLD_OUTREACH_EMAIL',
+  OBJECTION_HANDLING_WRITTEN = 'OBJECTION_HANDLING_WRITTEN',
+  PIPELINE_PRIORITIZATION = 'PIPELINE_PRIORITIZATION',
+  CLOSING_NEGOTIATION_SITUATIONAL = 'CLOSING_NEGOTIATION_SITUATIONAL',
+  ACCOUNT_PLANNING = 'ACCOUNT_PLANNING',
+}
 
 /**
  * MVP scope: all 5 text-native categories from the companion Sales doc (Section 5's
@@ -23,25 +36,25 @@ const anchorCorrectnessSchema = z.object({
  */
 const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
   {
-    key: 'COLD_OUTREACH_EMAIL',
+    key: SalesTaskType.COLD_OUTREACH_EMAIL,
     label: 'Cold outreach / prospecting email',
     openEndedComponentType: 'DRAFTED_COMMUNICATION',
     description:
       'Candidate is given a target company/persona profile and product context, and writes a ' +
       'cold outreach email pitching the product.',
-    interfaceType: 'RICH_TEXT_COMPOSER',
+    interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
   },
   {
-    key: 'OBJECTION_HANDLING_WRITTEN',
+    key: SalesTaskType.OBJECTION_HANDLING_WRITTEN,
     label: 'Objection handling (written response)',
     openEndedComponentType: 'STAKEHOLDER_PUSHBACK_RESPONSE',
     description:
       'A specific objection (price, competitor, timing, skepticism) is presented as a message ' +
       'from a persona; candidate drafts a written reply.',
-    interfaceType: 'TEXT_AREA',
+    interfaceType: InterfaceType.TEXT_AREA,
   },
   {
-    key: 'PIPELINE_PRIORITIZATION',
+    key: SalesTaskType.PIPELINE_PRIORITIZATION,
     label: 'Pipeline / lead prioritization',
     objectiveComponentType: 'CLASSIFICATION',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
@@ -50,30 +63,30 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'candidate prioritizes the leads and justifies the order. The underlying data must make ' +
       'some orderings clearly better than others — not an ambiguous set where any order is ' +
       'defensible (this is what keeps it from becoming an excluded pure-ranking mechanic).',
-    interfaceType: 'TABLE_VIEW_RESPONSE_PANEL',
+    interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
   },
   {
-    key: 'CLOSING_NEGOTIATION_SITUATIONAL',
+    key: SalesTaskType.CLOSING_NEGOTIATION_SITUATIONAL,
     label: 'Closing / negotiation situational judgment',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
     description:
       'A hypothetical mid-negotiation situation (e.g. a late discount request, a prospect who ' +
       'goes quiet) is described as narrative context; candidate describes how they would respond.',
-    interfaceType: 'TEXT_AREA',
+    interfaceType: InterfaceType.TEXT_AREA,
   },
   {
-    key: 'ACCOUNT_PLANNING',
+    key: SalesTaskType.ACCOUNT_PLANNING,
     label: 'Account planning / strategic prioritization',
     openEndedComponentType: 'INTERPRETATION_ANALYSIS',
     description:
       'Candidate is given information about a named target account and asked to produce a plan: ' +
       'stakeholders, approach sequencing, and strategy. Most senior/AE-oriented category.',
-    interfaceType: 'RICH_TEXT_COMPOSER',
+    interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
   },
 ];
 
 export const SalesRoleModule: RoleModule = {
-  categoryKeys: ['Sales'],
+  categoryKeys: [RoleCategory.SALES],
 
   extraction: {
     categorySubDomainGuidance:

@@ -4,6 +4,7 @@ import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
 import { submissions } from './submissions.schema';
 import { AnchorResponse } from './question-bank.schema';
+import { InterfaceType } from '../../modules/generation/roles/interface-type';
 
 export type ObjectiveComponentType =
   | 'NUMERIC_INPUT'
@@ -29,9 +30,9 @@ export interface SimulationTask {
   openEndedComponent?: Record<string, unknown>;
   businessProblemDerived: boolean;
   /** Tells the frontend how to render this task (doc Section 2.5). */
-  interfaceType: string;
-  /** Data conforming to INTERFACE_SCHEMAS[interfaceType] (or a role-specific schema for a
-   *  role-defined interface type) — the concrete render contract for the frontend. */
+  interfaceType: InterfaceType;
+  /** Data conforming to INTERFACE_SCHEMAS[interfaceType] — the concrete render contract for
+   *  the frontend (never just a tag string with an unvalidated shape). */
   interfacePayload: Record<string, unknown>;
   anchors: AnchorResponse[];
 }

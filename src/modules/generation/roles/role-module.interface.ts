@@ -4,6 +4,7 @@ import {
   QuestionBankTaskContent,
 } from '../../../db/schema/question-bank.schema';
 import { InterfaceType } from './interface-type';
+import { RoleCategory } from './role-category.enum';
 
 export type ObjectiveComponentType =
   | 'NUMERIC_INPUT'
@@ -52,8 +53,9 @@ export interface RelevanceCheckResult {
 }
 
 export interface RoleModule {
-  /** Category value(s) this module handles. Matched via RoleRegistry (exact, then '>'-prefix fallback). */
-  readonly categoryKeys: string[];
+  /** Top-level Category value(s) this module handles, matched via RoleRegistry (exact, then
+   *  '>'-prefix fallback for sub-domains like "Finance > Reconciliation" or "Sales > SDR"). */
+  readonly categoryKeys: RoleCategory[];
 
   readonly extraction: {
     categorySubDomainGuidance: string;
