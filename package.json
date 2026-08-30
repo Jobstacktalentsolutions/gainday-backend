@@ -21,6 +21,7 @@
     "db:enable-pgvector": "ts-node -r tsconfig-paths/register src/db/scripts/enable-pgvector.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "ts-node -r tsconfig-paths/register src/db/migrate.ts",
+    "db:seed-admin": "ts-node -r tsconfig-paths/register src/db/scripts/seed-admin.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

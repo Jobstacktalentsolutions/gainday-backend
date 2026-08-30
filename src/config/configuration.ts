@@ -19,6 +19,10 @@ export default () => {
 
   return {
     port: parseInt(process.env.PORT || '3000', 10),
+    admin: {
+      email: process.env.ADMIN_EMAIL || 'admin@gainday.com',
+      password: process.env.ADMIN_PASSWORD || 'adminpassword123',
+    },
     database: {
       url:
         process.env.DATABASE_URL ||
