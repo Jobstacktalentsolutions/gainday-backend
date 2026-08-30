@@ -1,55 +1,148 @@
-import { RoleModule } from '../role-module.interface';
+import { z } from 'zod';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import {
+  AnchorCorrectnessResult,
+  GeneratedTaskCandidate,
+  RoleModule,
+  TaskPatternTypeDefinition,
+} from '../role-module.interface';
+import { SALES_ANCHOR_CORRECTNESS_PROMPT } from './sales.prompts';
+
+const anchorCorrectnessSchema = z.object({
+  sound: z.boolean(),
+  reasons: z.array(z.string()),
+});
 
 /**
- * Sales role module stub. Registers under the Category router so extraction can resolve
- * "Sales" jobs, but carries no real content yet — sales content (allowed task-pattern types,
- * anchor-criteria framing, critic checks, presentation spec) is pending the companion
- * "GAINDAY Sales Role: Simulation Categories & Grading" document.
- *
- * `allowedTaskPatternTypes` is deliberately empty. The overgenerate node checks for this and
- * throws RoleModuleNotConfiguredError rather than falling back to finance's taxonomy — sales
- * is conversational/situational, not finance's static data/document shape, so generating
- * finance-shaped tasks for a sales job would be actively wrong, not just incomplete.
- *
- * Sub-role granularity (SDR/AE/CSM) is not yet split out — all "Sales" categories currently
- * fall through to this single stub via the registry's exact-match. When sales content arrives,
- * register additional modules under categoryKeys like "Sales > SDR", "Sales > AE", "Sales > CSM"
- * — the registry's '>'-prefix matching requires no changes to support this.
+ * MVP scope: all 5 text-native categories from the companion Sales doc (Section 5's
+ * recommended scope; "build first" vs. "defer" was a validation-sequencing suggestion, not
+ * an architectural constraint — building all 5 now since they're equally text-native).
+ * Section 3's conversational categories (live cold-call/discovery/negotiation roleplay) are
+ * explicitly out of scope — they need a different, multi-turn generation/grading architecture
+ * and a chat/message-thread interface type that doesn't exist yet.
  */
+const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
+  {
+    key: 'COLD_OUTREACH_EMAIL',
+    label: 'Cold outreach / prospecting email',
+    openEndedComponentType: 'DRAFTED_COMMUNICATION',
+    description:
+      'Candidate is given a target company/persona profile and product context, and writes a ' +
+      'cold outreach email pitching the product.',
+    interfaceType: 'RICH_TEXT_COMPOSER',
+  },
+  {
+    key: 'OBJECTION_HANDLING_WRITTEN',
+    label: 'Objection handling (written response)',
+    openEndedComponentType: 'STAKEHOLDER_PUSHBACK_RESPONSE',
+    description:
+      'A specific objection (price, competitor, timing, skepticism) is presented as a message ' +
+      'from a persona; candidate drafts a written reply.',
+    interfaceType: 'TEXT_AREA',
+  },
+  {
+    key: 'PIPELINE_PRIORITIZATION',
+    label: 'Pipeline / lead prioritization',
+    objectiveComponentType: 'CLASSIFICATION',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description:
+      'A mock CRM lead list (deal stage, last contact, deal size, urgency signals) is given; ' +
+      'candidate prioritizes the leads and justifies the order. The underlying data must make ' +
+      'some orderings clearly better than others — not an ambiguous set where any order is ' +
+      'defensible (this is what keeps it from becoming an excluded pure-ranking mechanic).',
+    interfaceType: 'TABLE_VIEW_RESPONSE_PANEL',
+  },
+  {
+    key: 'CLOSING_NEGOTIATION_SITUATIONAL',
+    label: 'Closing / negotiation situational judgment',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description:
+      'A hypothetical mid-negotiation situation (e.g. a late discount request, a prospect who ' +
+      'goes quiet) is described as narrative context; candidate describes how they would respond.',
+    interfaceType: 'TEXT_AREA',
+  },
+  {
+    key: 'ACCOUNT_PLANNING',
+    label: 'Account planning / strategic prioritization',
+    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
+    description:
+      'Candidate is given information about a named target account and asked to produce a plan: ' +
+      'stakeholders, approach sequencing, and strategy. Most senior/AE-oriented category.',
+    interfaceType: 'RICH_TEXT_COMPOSER',
+  },
+];
+
 export const SalesRoleModule: RoleModule = {
   categoryKeys: ['Sales'],
 
   extraction: {
     categorySubDomainGuidance:
-      'TODO(sales-content): sub-role granularity (SDR/AE/CSM) framing pending companion Sales document.',
+      'Sales sub-domains map to sub-roles — SDR/BDR (prospecting-focused), AE (closing-focused), ' +
+      'or CSM/Account Manager (retention-focused) — extract the specific sub-role implied by the ' +
+      'job description (e.g. "Sales > SDR") when the description supports it, not just "Sales" alone.',
     intentFramingGuidance:
-      'TODO(sales-content): pending companion Sales document.',
+      'Sales intent centers on skills like prospecting and outreach effectiveness, objection ' +
+      'handling, deal/pipeline judgment, negotiation and deal-value protection, and stakeholder ' +
+      'awareness — which of these matters most depends on the sub-role (SDR vs. AE vs. CSM).',
     expectedTaskGuidance:
-      'TODO(sales-content): pending companion Sales document.',
+      'Sales is primarily conversational/situational rather than static/data-based: the candidate ' +
+      'reacts to a persona, an objection, or a live situation. Restrict expected tasks to the ' +
+      'text-native forms this module supports — a written deliverable, a single written response ' +
+      'to described context, or a data table plus written response — never a live, multi-turn ' +
+      'conversational exercise.',
   },
 
-  allowedTaskPatternTypes: [],
+  allowedTaskPatternTypes: salesTaskPatternTypes,
 
   anchorCriteriaFraming: {
-    problemSolving: 'TODO(sales-content)',
-    judgmentExecution: 'TODO(sales-content)',
-    writtenCommunication: 'TODO(sales-content)',
-    commercialDomainAwareness: 'TODO(sales-content)',
+    problemSolving:
+      'Did the candidate correctly read the sales situation (e.g. which lever actually matters — ' +
+      'deal size vs. urgency vs. probability to close; stalling vs. genuine hesitation) and apply ' +
+      'sound sales reasoning rather than a generic playbook response?',
+    judgmentExecution:
+      'Did the candidate make the right sales judgment call — e.g. acknowledging an objection ' +
+      'before countering it, protecting deal value instead of defaulting to a discount, choosing ' +
+      'a single clear call-to-action or next step rather than a vague one?',
+    writtenCommunication:
+      'Is the written email/message/plan clear, appropriately concise, and free of generic ' +
+      'mass-outreach or reassurance-language tells that a real buyer would recognize and discount?',
+    commercialDomainAwareness:
+      'Does the response reflect real understanding of the buyer/deal context — speaking to a ' +
+      'specific pain point rather than product features, correctly identifying stakeholder roles, ' +
+      'or reasoning about deal economics — rather than a generic, could-apply-to-any-deal answer?',
   },
 
   criticChecks: {
-    checkAnchorCorrectness() {
-      return Promise.reject(
-        new Error(
-          'Sales role module has no anchor-correctness check yet — companion Sales content pending.',
+    async checkAnchorCorrectness(
+      task: GeneratedTaskCandidate,
+      criticModel,
+    ): Promise<AnchorCorrectnessResult> {
+      const structuredModel = criticModel.withStructuredOutput<
+        z.infer<typeof anchorCorrectnessSchema>
+      >(anchorCorrectnessSchema);
+      const result = await structuredModel.invoke([
+        new SystemMessage(SALES_ANCHOR_CORRECTNESS_PROMPT),
+        new HumanMessage(
+          JSON.stringify({
+            taskContent: task.taskContent,
+            anchors: task.anchors,
+          }),
         ),
-      );
+      ]);
+      return result;
     },
   },
 
   presentationSpec: {
-    rendererHint: 'sales-conversational',
+    rendererHint: 'sales-text-native',
     notes:
-      'TODO(sales-content): message-thread/persona presentation spec pending.',
+      'All current sales categories are text-native and use the existing interface types: ' +
+      'Rich Text Composer for standalone written deliverables (cold outreach, account plans), ' +
+      'Text Area for a single response to read-only scenario/persona context (objection handling, ' +
+      'closing/negotiation judgment), and Table View + Response Panel for the mock-CRM pipeline ' +
+      'prioritization task. Live conversational roleplay (cold call, discovery, live objection, ' +
+      'multi-stakeholder negotiation) is explicitly out of scope — it needs a chat/message-thread ' +
+      'interface type and a different multi-turn generation/grading architecture, neither of ' +
+      'which exist yet.',
   },
 };
