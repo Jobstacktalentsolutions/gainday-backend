@@ -1,22 +1,24 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Inject, Injectable, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
+import { AuthUsersService } from '../users/auth-users.service';
+import { EmployerProfileService } from '../users/employer-profile.service';
+import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { UserRole, AuthProvider } from '../../db/schema';
+import { UserRole, AuthProvider, users } from '../../db/schema';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { DRIZZLE } from '../../db/db.constants';
+import type { DrizzleDb } from '../../db/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly usersService: UsersService,
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
+    private readonly usersService: AuthUsersService,
+    private readonly employerProfileService: EmployerProfileService,
+    private readonly jobSeekerProfileService: JobSeekerProfileService,
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -42,8 +44,25 @@ export class AuthService {
     return null;
   }
 
+  private async findProfileForRole(userId: string, role: UserRole) {
+    switch (role) {
+      case UserRole.EMPLOYER:
+        return this.employerProfileService.findByUserId(userId);
+      case UserRole.JOB_SEEKER:
+        return this.jobSeekerProfileService.findByUserId(userId);
+      default:
+        return null;
+    }
+  }
+
   async login(user: any) {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const profile = await this.findProfileForRole(user.id, user.role);
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      profileId: profile?.id,
+    };
     const access_token = this.jwtService.sign(payload);
 
     return {
@@ -52,8 +71,9 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
-        fullName: user.fullName,
-        companyName: user.companyName,
+        profileId: profile?.id,
+        fullName: profile?.fullName,
+        companyName: (profile as any)?.companyName,
       },
     };
   }
@@ -74,15 +94,29 @@ export class AuthService {
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const user = await this.usersService.createUser({
-      email,
-      password: hashedPassword,
-      fullName,
-      companyName,
-      role: UserRole.EMPLOYER,
-      authProvider: AuthProvider.LOCAL,
-      emailVerificationToken,
-      emailVerificationExpires,
+    const user = await this.db.transaction(async (tx) => {
+      const [newUser] = await tx
+        .insert(users)
+        .values({
+          email,
+          password: hashedPassword,
+          role: UserRole.EMPLOYER,
+          authProvider: AuthProvider.LOCAL,
+          emailVerificationToken,
+          emailVerificationExpires,
+        })
+        .returning();
+
+      await this.employerProfileService.create(
+        {
+          userId: newUser.id,
+          fullName,
+          companyName,
+        },
+        tx as unknown as DrizzleDb,
+      );
+
+      return newUser;
     });
 
     await this.notificationsService.sendVerificationEmail(
@@ -103,14 +137,28 @@ export class AuthService {
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
     const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const user = await this.usersService.createUser({
-      email,
-      password: hashedPassword,
-      fullName,
-      role: UserRole.JOB_SEEKER,
-      authProvider: AuthProvider.LOCAL,
-      emailVerificationToken,
-      emailVerificationExpires,
+    const user = await this.db.transaction(async (tx) => {
+      const [newUser] = await tx
+        .insert(users)
+        .values({
+          email,
+          password: hashedPassword,
+          role: UserRole.JOB_SEEKER,
+          authProvider: AuthProvider.LOCAL,
+          emailVerificationToken,
+          emailVerificationExpires,
+        })
+        .returning();
+
+      await this.jobSeekerProfileService.create(
+        {
+          userId: newUser.id,
+          fullName,
+        },
+        tx as unknown as DrizzleDb,
+      );
+
+      return newUser;
     });
 
     await this.notificationsService.sendVerificationEmail(
@@ -182,6 +230,11 @@ export class AuthService {
   }
 
   async validateGoogleUser(googleUserData: any) {
+    // NOTE (pre-existing, unrelated to this refactor): this always creates an
+    // EMPLOYER regardless of signup intent, and the "attach googleId to an
+    // existing user found by email" branch below calls createUser with the
+    // existing user's fields, which inserts a *new* row rather than updating
+    // the found one. Left as-is per plan — flagged, not fixed here.
     const { email, googleId, fullName } = googleUserData;
 
     let user = await this.usersService.findByGoogleId(googleId);
@@ -195,13 +248,27 @@ export class AuthService {
           googleId,
         });
       } else {
-        user = await this.usersService.createUser({
-          email,
-          googleId,
-          fullName,
-          role: UserRole.EMPLOYER,
-          authProvider: AuthProvider.GOOGLE,
-          isEmailVerified: true,
+        user = await this.db.transaction(async (tx) => {
+          const [newUser] = await tx
+            .insert(users)
+            .values({
+              email,
+              googleId,
+              role: UserRole.EMPLOYER,
+              authProvider: AuthProvider.GOOGLE,
+              isEmailVerified: true,
+            })
+            .returning();
+
+          await this.employerProfileService.create(
+            {
+              userId: newUser.id,
+              fullName,
+            },
+            tx as unknown as DrizzleDb,
+          );
+
+          return newUser;
         });
       }
     }

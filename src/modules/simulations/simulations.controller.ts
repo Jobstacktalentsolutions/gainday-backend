@@ -42,7 +42,7 @@ export class SimulationsController {
     if (!job) {
       throw new NotFoundException('Job not found');
     }
-    if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
+    if (user.role !== UserRole.ADMIN && job.employerId !== user.profileId) {
       throw new ForbiddenException(
         'You may only generate simulations for your own jobs',
       );
@@ -67,7 +67,7 @@ export class SimulationsController {
     if (!job) {
       throw new NotFoundException('Job not found');
     }
-    if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
+    if (user.role !== UserRole.ADMIN && job.employerId !== user.profileId) {
       throw new ForbiddenException(
         'You may only edit simulations for your own jobs',
       );

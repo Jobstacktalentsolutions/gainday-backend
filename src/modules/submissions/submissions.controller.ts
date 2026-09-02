@@ -35,9 +35,10 @@ export class SubmissionsController {
     return this.submissionsService.createSubmission(
       jobId,
       body.simulationId,
-      user?.id,
+      user?.profileId,
       body.guestInfo,
     );
+
   }
 
   @Put(':id/submit')
@@ -59,7 +60,7 @@ export class SubmissionsController {
     if (!job) {
       throw new NotFoundException('Job not found');
     }
-    if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
+    if (user.role !== UserRole.ADMIN && job.employerId !== user.profileId) {
       throw new ForbiddenException(
         'You may only view submissions for your own jobs',
       );
@@ -75,7 +76,10 @@ export class SubmissionsController {
     if (!submission) {
       throw new NotFoundException('Submission not found');
     }
-    if (user.role !== UserRole.ADMIN && submission.job.employerId !== user.id) {
+    if (
+      user.role !== UserRole.ADMIN &&
+      submission.job.employerId !== user.profileId
+    ) {
       throw new ForbiddenException(
         'You may only view submissions for your own jobs',
       );
@@ -91,7 +95,10 @@ export class SubmissionsController {
     if (!submission) {
       throw new NotFoundException('Submission not found');
     }
-    if (user.role !== UserRole.ADMIN && submission.job.employerId !== user.id) {
+    if (
+      user.role !== UserRole.ADMIN &&
+      submission.job.employerId !== user.profileId
+    ) {
       throw new ForbiddenException(
         'You may only unlock submissions for your own jobs',
       );

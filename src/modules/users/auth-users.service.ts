@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { users, User, NewUser, CapabilityScores } from '../../db/schema';
+import { users, User, NewUser } from '../../db/schema';
 
 const publicColumns = {
   id: users.id,
@@ -12,16 +12,12 @@ const publicColumns = {
   role: users.role,
   authProvider: users.authProvider,
   googleId: users.googleId,
-  fullName: users.fullName,
-  companyName: users.companyName,
-  phoneNumber: users.phoneNumber,
   isEmailVerified: users.isEmailVerified,
-  capabilityScores: users.capabilityScores,
   isActive: users.isActive,
 };
 
 @Injectable()
-export class UsersService {
+export class AuthUsersService {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
   async findByEmail(email: string): Promise<User | null> {
@@ -157,34 +153,5 @@ export class UsersService {
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));
-  }
-
-  async updateUserCapabilityScores(
-    userId: string,
-    domain: string,
-    scoreDetails: any,
-  ): Promise<User> {
-    const [existing] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId));
-    if (!existing) {
-      throw new Error('User not found');
-    }
-
-    const scores: CapabilityScores = existing.capabilityScores || {};
-    scores[domain] = {
-      score: scoreDetails.score,
-      updatedAt: new Date().toISOString(),
-      categories: scoreDetails.categories,
-    };
-
-    const [updated] = await this.db
-      .update(users)
-      .set({ capabilityScores: scores, updatedAt: new Date() })
-      .where(eq(users.id, userId))
-      .returning(publicColumns);
-
-    return updated as User;
   }
 }

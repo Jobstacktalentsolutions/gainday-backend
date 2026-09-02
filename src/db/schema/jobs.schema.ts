@@ -9,9 +9,9 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
-import { users } from './users.schema';
 import { simulations } from './simulations.schema';
 import { submissions } from './submissions.schema';
+import { employerProfiles } from './employer-profiles.schema';
 
 export const jobStatusEnum = pgEnum('job_status', [
   'DRAFT',
@@ -56,13 +56,13 @@ export const jobs = pgTable('jobs', {
   status: jobStatusEnum('status').notNull().default('DRAFT').$type<JobStatus>(),
   employerId: uuid('employer_id')
     .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
+    .references(() => employerProfiles.id, { onDelete: 'cascade' }),
 });
 
 export const jobsRelations = relations(jobs, ({ one, many }) => ({
-  employer: one(users, {
+  employer: one(employerProfiles, {
     fields: [jobs.employerId],
-    references: [users.id],
+    references: [employerProfiles.id],
   }),
   simulation: one(simulations, {
     fields: [jobs.id],

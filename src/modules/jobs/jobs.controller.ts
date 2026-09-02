@@ -34,7 +34,7 @@ export class JobsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER)
   async createJob(@CurrentUser() user: any, @Body() body: any) {
-    return this.jobsService.createJob(user.id, body);
+    return this.jobsService.createJob(user.profileId, body);
   }
 
   @Put(':id/publish')
@@ -45,7 +45,7 @@ export class JobsController {
     if (!job) {
       throw new NotFoundException('Job not found');
     }
-    if (user.role !== UserRole.ADMIN && job.employerId !== user.id) {
+    if (user.role !== UserRole.ADMIN && job.employerId !== user.profileId) {
       throw new ForbiddenException('You may only publish your own jobs');
     }
     return this.jobsService.publishJob(id);

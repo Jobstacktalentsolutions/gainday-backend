@@ -7,7 +7,7 @@ import type { DrizzleDb } from '../../db/client';
 import { jobs, submissions, jobExtractions } from '../../db/schema';
 import { ScoringService } from './scoring.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { UsersService } from '../users/users.service';
+import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
 
 @Processor('scoring')
 @Injectable()
@@ -17,7 +17,7 @@ export class ScoringProcessor extends WorkerHost {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly scoringService: ScoringService,
-    private readonly usersService: UsersService,
+    private readonly jobSeekerProfileService: JobSeekerProfileService,
     private readonly notificationsService: NotificationsService,
   ) {
     super();
@@ -29,7 +29,7 @@ export class ScoringProcessor extends WorkerHost {
 
     const job = await this.db.query.jobs.findFirst({
       where: eq(jobs.id, jobId),
-      with: { employer: true },
+      with: { employer: { with: { user: true } } },
     });
     if (!job) {
       throw new Error(`Job not found: ${jobId}`);
@@ -50,7 +50,7 @@ export class ScoringProcessor extends WorkerHost {
         eq(submissions.jobId, jobId),
         eq(submissions.status, 'PENDING'),
       ),
-      with: { simulation: true, candidate: true },
+      with: { simulation: true, candidate: { with: { user: true } } },
     });
 
     this.logger.log(
@@ -74,7 +74,7 @@ export class ScoringProcessor extends WorkerHost {
           .returning();
 
         if (updatedSubmission.candidateId && updatedSubmission.overallScore) {
-          await this.usersService.updateUserCapabilityScores(
+          await this.jobSeekerProfileService.updateCapabilityScores(
             updatedSubmission.candidateId,
             capabilityDomain,
             {
@@ -97,7 +97,7 @@ export class ScoringProcessor extends WorkerHost {
         }
 
         const candidateEmail =
-          submission.candidate?.email || submission.guestInfo?.email;
+          submission.candidate?.user?.email || submission.guestInfo?.email;
         if (candidateEmail && updatedSubmission.overallScore != null) {
           await this.notificationsService.sendScoringResultsEmail(
             candidateEmail,
@@ -132,9 +132,9 @@ export class ScoringProcessor extends WorkerHost {
       .set({ status: 'SHORTLIST_READY', updatedAt: new Date() })
       .where(eq(jobs.id, jobId));
 
-    if (job.employer?.email && processedCount > 0) {
+    if (job.employer?.user?.email && processedCount > 0) {
       await this.notificationsService.sendBatchNotification(
-        job.employer.email,
+        job.employer.user.email,
         processedCount,
         job.title,
       );

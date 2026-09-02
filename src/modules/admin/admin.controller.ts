@@ -64,7 +64,7 @@ export class AdminController {
   ) {
     return this.adminService.approveGenerationReviewWithEdits(
       id,
-      admin.id,
+      admin.profileId,
       body.taskContent,
     );
   }
@@ -74,6 +74,6 @@ export class AdminController {
     @Param('id') id: string,
     @CurrentUser() admin: any,
   ) {
-    return this.adminService.rejectGenerationReview(id, admin.id);
+    return this.adminService.rejectGenerationReview(id, admin.profileId);
   }
 }

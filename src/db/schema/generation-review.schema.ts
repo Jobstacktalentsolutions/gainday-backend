@@ -10,7 +10,7 @@ import {
 import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
-import { users } from './users.schema';
+import { adminProfiles } from './admin-profiles.schema';
 import {
   AnchorResponse,
   QuestionBankTaskContent,
@@ -56,9 +56,10 @@ export const generationReviewItems = pgTable('generation_review_items', {
     'resolved_task_content',
   ).$type<QuestionBankTaskContent | null>(),
   resolvedAnchors: jsonb('resolved_anchors').$type<AnchorResponse[] | null>(),
-  reviewedByAdminId: uuid('reviewed_by_admin_id').references(() => users.id, {
-    onDelete: 'set null',
-  }),
+  reviewedByAdminId: uuid('reviewed_by_admin_id').references(
+    () => adminProfiles.id,
+    { onDelete: 'set null' },
+  ),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
 });
 
@@ -69,9 +70,9 @@ export const generationReviewItemsRelations = relations(
       fields: [generationReviewItems.jobId],
       references: [jobs.id],
     }),
-    reviewedByAdmin: one(users, {
+    reviewedByAdmin: one(adminProfiles, {
       fields: [generationReviewItems.reviewedByAdminId],
-      references: [users.id],
+      references: [adminProfiles.id],
     }),
   }),
 );

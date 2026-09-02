@@ -101,7 +101,7 @@ export class AdminService {
 
   async approveGenerationReviewWithEdits(
     reviewItemId: string,
-    adminId: string,
+    adminProfileId: string,
     editedTaskContent: QuestionBankTaskContent,
   ) {
     const [reviewItem] = await this.db
@@ -117,7 +117,7 @@ export class AdminService {
       .set({
         status: 'APPROVED_WITH_EDITS',
         resolvedTaskContent: editedTaskContent,
-        reviewedByAdminId: adminId,
+        reviewedByAdminId: adminProfileId,
         reviewedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -166,12 +166,12 @@ export class AdminService {
     return updatedReviewItem;
   }
 
-  async rejectGenerationReview(reviewItemId: string, adminId: string) {
+  async rejectGenerationReview(reviewItemId: string, adminProfileId: string) {
     const [reviewItem] = await this.db
       .update(generationReviewItems)
       .set({
         status: 'REJECTED',
-        reviewedByAdminId: adminId,
+        reviewedByAdminId: adminProfileId,
         reviewedAt: new Date(),
         updatedAt: new Date(),
       })

@@ -7,8 +7,12 @@ import {
   StrategyOptionsWithoutRequest,
 } from 'passport-jwt';
 import type { Request } from 'express';
-import { UsersService } from '../../users/users.service';
+import { AuthUsersService } from '../../users/auth-users.service';
+import { EmployerProfileService } from '../../users/employer-profile.service';
+import { JobSeekerProfileService } from '../../users/job-seeker-profile.service';
+import { AdminProfileService } from '../../users/admin-profile.service';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { UserRole } from '../../../db/schema';
 
 const extractFromCookie = (req: Request): string | null => {
   return req?.cookies?.access_token || null;
@@ -18,7 +22,10 @@ const extractFromCookie = (req: Request): string | null => {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    private readonly usersService: AuthUsersService,
+    private readonly employerProfileService: EmployerProfileService,
+    private readonly jobSeekerProfileService: JobSeekerProfileService,
+    private readonly adminProfileService: AdminProfileService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -37,12 +44,28 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       return null;
     }
 
+    const profile = await this.findProfileForRole(user.id, user.role);
+
     return {
       id: user.id,
       email: user.email,
       role: user.role,
-      fullName: user.fullName,
-      companyName: user.companyName,
+      profileId: profile?.id,
+      fullName: profile?.fullName,
+      companyName: (profile as any)?.companyName,
     };
+  }
+
+  private async findProfileForRole(userId: string, role: UserRole) {
+    switch (role) {
+      case UserRole.EMPLOYER:
+        return this.employerProfileService.findByUserId(userId);
+      case UserRole.JOB_SEEKER:
+        return this.jobSeekerProfileService.findByUserId(userId);
+      case UserRole.ADMIN:
+        return this.adminProfileService.findByUserId(userId);
+      default:
+        return null;
+    }
   }
 }

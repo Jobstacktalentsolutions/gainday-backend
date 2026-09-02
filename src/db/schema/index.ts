@@ -5,3 +5,6 @@ export * from './submissions.schema';
 export * from './question-bank.schema';
 export * from './job-extractions.schema';
 export * from './generation-review.schema';
+export * from './employer-profiles.schema';
+export * from './job-seeker-profiles.schema';
+export * from './admin-profiles.schema';

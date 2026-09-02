@@ -12,6 +12,7 @@ import {
   generationReviewItems,
   jobs,
   users,
+  employerProfiles,
   UserRole,
 } from '../../db/schema';
 import {
@@ -167,18 +168,42 @@ export class GenerationService {
       .from(users)
       .where(eq(users.email, TEST_EMPLOYER_EMAIL));
 
+    let testEmployerProfile: typeof employerProfiles.$inferSelect | undefined;
+
     if (!testEmployer) {
-      [testEmployer] = await this.db
-        .insert(users)
-        .values({
-          email: TEST_EMPLOYER_EMAIL,
-          role: UserRole.EMPLOYER,
-          authProvider: 'local',
-          fullName: 'Pipeline Test Employer',
-          companyName: 'Pipeline Test Co',
-          isEmailVerified: true,
-        })
-        .returning();
+      const created = await this.db.transaction(async (tx) => {
+        const [newUser] = await tx
+          .insert(users)
+          .values({
+            email: TEST_EMPLOYER_EMAIL,
+            role: UserRole.EMPLOYER,
+            authProvider: 'local',
+            isEmailVerified: true,
+          })
+          .returning();
+
+        const [newProfile] = await tx
+          .insert(employerProfiles)
+          .values({
+            userId: newUser.id,
+            fullName: 'Pipeline Test Employer',
+            companyName: 'Pipeline Test Co',
+          })
+          .returning();
+
+        return { newUser, newProfile };
+      });
+      testEmployer = created.newUser;
+      testEmployerProfile = created.newProfile;
+    } else {
+      [testEmployerProfile] = await this.db
+        .select()
+        .from(employerProfiles)
+        .where(eq(employerProfiles.userId, testEmployer.id));
+    }
+
+    if (!testEmployerProfile) {
+      throw new Error('Test employer profile not found');
     }
 
     const [testJob] = await this.db
@@ -194,7 +219,7 @@ export class GenerationService {
         applicationDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         businessProblem: dto.businessProblem ?? '',
         status: 'GENERATING',
-        employerId: testEmployer.id,
+        employerId: testEmployerProfile.id,
       })
       .returning();
 

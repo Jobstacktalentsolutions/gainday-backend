@@ -13,7 +13,7 @@ import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
 import { simulations } from './simulations.schema';
-import { users } from './users.schema';
+import { jobSeekerProfiles } from './job-seeker-profiles.schema';
 
 export const submissionStatusEnum = pgEnum('submission_status', [
   'PENDING',
@@ -64,7 +64,7 @@ export const submissions = pgTable('submissions', {
   simulationId: uuid('simulation_id')
     .notNull()
     .references(() => simulations.id),
-  candidateId: uuid('candidate_id').references(() => users.id, {
+  candidateId: uuid('candidate_id').references(() => jobSeekerProfiles.id, {
     onDelete: 'set null',
   }),
   guestInfo: jsonb('guest_info').$type<GuestInfo>(),
@@ -97,9 +97,9 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
     fields: [submissions.simulationId],
     references: [simulations.id],
   }),
-  candidate: one(users, {
+  candidate: one(jobSeekerProfiles, {
     fields: [submissions.candidateId],
-    references: [users.id],
+    references: [jobSeekerProfiles.id],
   }),
 }));
 

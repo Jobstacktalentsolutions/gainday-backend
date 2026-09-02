@@ -42,7 +42,7 @@ export class PaymentsController {
         if (!submission) {
           throw new NotFoundException(`Submission ${submissionId} not found`);
         }
-        if (submission.job.employerId !== user.id) {
+        if (submission.job.employerId !== user.profileId) {
           throw new ForbiddenException(
             'You may only unlock candidates for your own jobs',
           );

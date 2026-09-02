@@ -22,6 +22,34 @@
       "when": 1788104961189,
       "tag": "0002_worthless_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788365117060,
+      "tag": "0003_heavy_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788365222610,
+      "tag": "0004_calm_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788367685728,
+      "tag": "0005_crazy_darkhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788367725627,
+      "tag": "0006_dark_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }
