@@ -43,7 +43,7 @@ export class AdminService {
       this.db
         .select({ jobsFilled: count() })
         .from(jobs)
-        .where(eq(jobs.status, 'CLOSED')),
+        .where(eq(jobs.status, 'INACTIVE')),
     ]);
 
     return { activeJobs, totalUsers, openSubmissions, jobsFilled };
@@ -187,9 +187,10 @@ export class AdminService {
   }
 
   /**
-   * A job held at UNDER_REVIEW has one or more generation slots pending admin
-   * resolution. Once every review item for that job has been approved or
-   * rejected, the job can safely go ACTIVE again.
+   * Jobs with generation slots pending admin resolution currently stay ACTIVE
+   * rather than being held at a separate review status (deferred for now).
+   * This is a no-op placeholder retained for when that review-hold status
+   * returns.
    */
   private async reactivateJobIfReviewComplete(jobId: string): Promise<void> {
     const [{ pendingCount }] = await this.db
@@ -204,14 +205,6 @@ export class AdminService {
 
     if (pendingCount > 0) {
       return;
-    }
-
-    const [job] = await this.db.select().from(jobs).where(eq(jobs.id, jobId));
-    if (job?.status === 'UNDER_REVIEW') {
-      await this.db
-        .update(jobs)
-        .set({ status: 'ACTIVE', updatedAt: new Date() })
-        .where(eq(jobs.id, jobId));
     }
   }
 }

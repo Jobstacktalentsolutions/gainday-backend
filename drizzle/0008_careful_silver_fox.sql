@@ -1,0 +1,1 @@
+ALTER TABLE "jobs" ALTER COLUMN "business_problem" DROP NOT NULL;

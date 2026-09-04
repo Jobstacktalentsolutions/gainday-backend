@@ -86,6 +86,12 @@ export class GenerationService {
       config,
     });
 
+    if (!job.description) {
+      throw new Error(
+        `Job ${job.id} has no description; cannot run generation on an incomplete draft`,
+      );
+    }
+
     const initialState: Partial<GenerationState> = {
       jobId: job.id,
       jobDescription: job.description,
@@ -212,12 +218,13 @@ export class GenerationService {
         title: 'Pipeline Test Job',
         description: dto.description,
         requiredSkills: dto.requiredSkills ?? [],
-        roleCategory: 'Unspecified',
+        role: 'FINANCE',
+        skillLevel: 'Unspecified',
         location: 'N/A',
         employmentType: 'N/A',
         salaryRange: { min: 0, max: 0, currency: 'USD' },
         applicationDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        businessProblem: dto.businessProblem ?? '',
+        businessProblem: dto.businessProblem,
         status: 'GENERATING',
         employerId: testEmployerProfile.id,
       })

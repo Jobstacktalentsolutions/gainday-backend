@@ -1,4 +1,5 @@
 import {
+  boolean,
   jsonb,
   pgEnum,
   pgTable,
@@ -17,42 +18,54 @@ export const jobStatusEnum = pgEnum('job_status', [
   'DRAFT',
   'GENERATING',
   'ACTIVE',
-  'UNDER_REVIEW',
+  'INACTIVE',
   'SHORTLIST_READY',
-  'CLOSED',
   'GENERATION_FAILED',
+  'TERMINATED',
 ]);
 
 export const JobStatus = {
   DRAFT: 'DRAFT',
   GENERATING: 'GENERATING',
   ACTIVE: 'ACTIVE',
-  UNDER_REVIEW: 'UNDER_REVIEW',
+  INACTIVE: 'INACTIVE',
   SHORTLIST_READY: 'SHORTLIST_READY',
-  CLOSED: 'CLOSED',
   GENERATION_FAILED: 'GENERATION_FAILED',
+  TERMINATED: 'TERMINATED',
 } as const;
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 
+export const jobRoleEnum = pgEnum('job_role', ['FINANCE', 'SALES']);
+
+export const JobRole = {
+  FINANCE: 'FINANCE',
+  SALES: 'SALES',
+} as const;
+export type JobRole = (typeof JobRole)[keyof typeof JobRole];
+
 export interface SalaryRange {
-  min: number;
-  max: number;
+  min: number | null;
+  max: number | null;
   currency: string;
 }
 
 export const jobs = pgTable('jobs', {
   ...baseColumns,
-  title: varchar('title', { length: 255 }).notNull(),
-  description: text('description').notNull(),
-  requiredSkills: text('required_skills').array().notNull(),
-  roleCategory: varchar('role_category', { length: 255 }).notNull(),
-  location: varchar('location', { length: 255 }).notNull(),
-  employmentType: varchar('employment_type', { length: 100 }).notNull(),
-  salaryRange: jsonb('salary_range').$type<SalaryRange>().notNull(),
+  title: varchar('title', { length: 255 }),
+  description: text('description'),
+  requiredSkills: text('required_skills').array().notNull().default([]),
+  role: jobRoleEnum('role').$type<JobRole>(),
+  skillLevel: varchar('skill_level', { length: 100 }),
+  skillCategory: varchar('skill_category', { length: 255 }),
+  companyDescription: text('company_description'),
+  isRemoteFriendly: boolean('is_remote_friendly').notNull().default(false),
+  location: varchar('location', { length: 255 }),
+  employmentType: varchar('employment_type', { length: 100 }),
+  salaryRange: jsonb('salary_range').$type<SalaryRange>(),
   applicationDeadline: timestamp('application_deadline', {
     withTimezone: true,
-  }).notNull(),
-  businessProblem: text('business_problem').notNull(),
+  }),
+  businessProblem: text('business_problem'),
   status: jobStatusEnum('status').notNull().default('DRAFT').$type<JobStatus>(),
   employerId: uuid('employer_id')
     .notNull()

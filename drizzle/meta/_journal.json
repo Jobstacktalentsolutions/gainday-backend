@@ -50,6 +50,27 @@
       "when": 1788367725627,
       "tag": "0006_dark_ma_gnuci",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788454517997,
+      "tag": "0007_spicy_darwin",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788455364609,
+      "tag": "0008_careful_silver_fox",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788455815079,
+      "tag": "0009_ambiguous_mastermind",
+      "breakpoints": true
     }
   ]
 }

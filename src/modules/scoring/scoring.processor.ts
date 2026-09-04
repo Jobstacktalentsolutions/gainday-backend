@@ -35,15 +35,10 @@ export class ScoringProcessor extends WorkerHost {
       throw new Error(`Job not found: ${jobId}`);
     }
 
-    await this.db
-      .update(jobs)
-      .set({ status: 'UNDER_REVIEW', updatedAt: new Date() })
-      .where(eq(jobs.id, jobId));
-
     const extraction = await this.db.query.jobExtractions.findFirst({
       where: eq(jobExtractions.jobId, jobId),
     });
-    const capabilityDomain = extraction?.category ?? job.roleCategory;
+    const capabilityDomain = extraction?.category ?? job.role ?? 'Unspecified';
 
     const pendingSubmissions = await this.db.query.submissions.findMany({
       where: and(
@@ -101,7 +96,7 @@ export class ScoringProcessor extends WorkerHost {
         if (candidateEmail && updatedSubmission.overallScore != null) {
           await this.notificationsService.sendScoringResultsEmail(
             candidateEmail,
-            job.title,
+            job.title ?? 'Untitled role',
             updatedSubmission.overallScore,
             updatedSubmission.categoryScores
               ? {
@@ -136,7 +131,7 @@ export class ScoringProcessor extends WorkerHost {
       await this.notificationsService.sendBatchNotification(
         job.employer.user.email,
         processedCount,
-        job.title,
+        job.title ?? 'Untitled role',
       );
     }
 

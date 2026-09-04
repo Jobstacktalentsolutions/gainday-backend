@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthUsersService } from '../users/auth-users.service';
 import { EmployerProfileService } from '../users/employer-profile.service';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
+import { AdminProfileService } from '../users/admin-profile.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UserRole, AuthProvider, users } from '../../db/schema';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly usersService: AuthUsersService,
     private readonly employerProfileService: EmployerProfileService,
     private readonly jobSeekerProfileService: JobSeekerProfileService,
+    private readonly adminProfileService: AdminProfileService,
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -50,6 +52,8 @@ export class AuthService {
         return this.employerProfileService.findByUserId(userId);
       case UserRole.JOB_SEEKER:
         return this.jobSeekerProfileService.findByUserId(userId);
+      case UserRole.ADMIN:
+        return this.adminProfileService.findByUserId(userId);
       default:
         return null;
     }

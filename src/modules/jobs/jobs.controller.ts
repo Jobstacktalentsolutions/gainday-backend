@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Put,
@@ -15,6 +16,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../db/schema';
+import { CreateJobDto } from './dto/create-job.dto';
+import { SaveDraftJobDto } from './dto/save-draft-job.dto';
 
 @Controller('jobs')
 export class JobsController {
@@ -25,16 +28,52 @@ export class JobsController {
     return this.jobsService.findAllActive();
   }
 
+  @Get('mine')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  async getMyJobs(@CurrentUser() user: any) {
+    return this.jobsService.findByEmployer(user.profileId);
+  }
+
   @Get(':id')
   async getJobById(@Param('id') id: string) {
     return this.jobsService.findById(id);
   }
 
+  @Post('draft')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  async saveDraft(@CurrentUser() user: any, @Body() dto: SaveDraftJobDto) {
+    return this.jobsService.saveDraft(user.profileId, dto);
+  }
+
+  @Patch('draft/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  async updateDraft(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: SaveDraftJobDto,
+  ) {
+    return this.jobsService.saveDraft(user.profileId, dto, id);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER)
-  async createJob(@CurrentUser() user: any, @Body() body: any) {
-    return this.jobsService.createJob(user.profileId, body);
+  async createJob(@CurrentUser() user: any, @Body() dto: CreateJobDto) {
+    return this.jobsService.saveDetails(user.profileId, dto);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  async updateJob(
+    @CurrentUser() user: any,
+    @Param('id') id: string,
+    @Body() dto: CreateJobDto,
+  ) {
+    return this.jobsService.saveDetails(user.profileId, dto, id);
   }
 
   @Put(':id/publish')

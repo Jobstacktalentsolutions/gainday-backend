@@ -53,7 +53,7 @@ export class GenerationProcessor extends WorkerHost {
       await this.db
         .update(jobs)
         .set({
-          status: hasIncompleteSlots ? 'UNDER_REVIEW' : 'ACTIVE',
+          status: 'ACTIVE',
           updatedAt: new Date(),
         })
         .where(eq(jobs.id, jobId));
@@ -61,7 +61,7 @@ export class GenerationProcessor extends WorkerHost {
       this.logger.log(
         `Generation complete for Job ID ${jobId}: ${result.finalizedTasks.length} tasks, ${result.adminReviewItemsPersisted} sent to admin review.` +
           (hasIncompleteSlots
-            ? ' Job held at UNDER_REVIEW pending admin resolution.'
+            ? ' Some generation slots sent to admin review pending resolution.'
             : ''),
       );
 
