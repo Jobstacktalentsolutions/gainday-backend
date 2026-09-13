@@ -17,7 +17,6 @@ export class JobsService {
       title: dto.title,
       role: dto.role,
       skillLevel: dto.skillLevel,
-      skillCategory: dto.skillCategory,
       location: dto.location,
       employmentType: dto.employmentType,
       isRemoteFriendly: dto.isRemoteFriendly,
@@ -99,6 +98,14 @@ export class JobsService {
 
   async findById(id: string): Promise<Job | null> {
     const [job] = await this.db.select().from(jobs).where(eq(jobs.id, id));
+    return job ?? null;
+  }
+
+  async findByIdWithSimulation(id: string) {
+    const job = await this.db.query.jobs.findFirst({
+      where: eq(jobs.id, id),
+      with: { simulation: true },
+    });
     return job ?? null;
   }
 

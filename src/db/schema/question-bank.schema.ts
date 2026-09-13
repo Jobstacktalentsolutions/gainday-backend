@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   jsonb,
   pgTable,
@@ -60,8 +61,13 @@ export const questionBank = pgTable(
       .$type<QuestionBankTaskContent>()
       .notNull(),
     // Anchors are a grading-time concern, generated separately from task generation — see
-    // src/modules/grading/. Nullable until that pipeline exists and populates this.
+    // src/modules/grading/. Nullable until the first submission against this task triggers
+    // AnchorGenerationService.ensureAnchors() (grading.service.ts) to populate it.
     anchors: jsonb('anchors').$type<AnchorResponse[]>(),
+    // Set true when the anchor-generation critic loop exhausts its attempt cap without
+    // approving the anchors (grading/anchors/anchor-generation.service.ts) — `anchors` still
+    // gets the last attempt so grading isn't blocked, but an admin should review it.
+    anchorsNeedReview: boolean('anchors_need_review').notNull().default(false),
     sourceJobId: uuid('source_job_id').references(() => jobs.id, {
       onDelete: 'set null',
     }),

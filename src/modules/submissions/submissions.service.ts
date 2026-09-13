@@ -1,10 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import { submissions, CandidateAnswer } from '../../db/schema';
+import { GradingService } from '../grading/grading.service';
 
 @Injectable()
 export class SubmissionsService {
@@ -12,7 +11,7 @@ export class SubmissionsService {
 
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
-    @InjectQueue('scoring') private readonly scoringQueue: Queue,
+    private readonly gradingService: GradingService,
   ) {}
 
   async createSubmission(
@@ -57,18 +56,11 @@ export class SubmissionsService {
       .where(eq(submissions.id, submissionId))
       .returning();
 
-    return updated;
-  }
+    // Async, off the request path — grading (and, if this is the first submission to reach a
+    // given task, anchor generation for it) happens in the background. See GradingService.
+    await this.gradingService.queueGrading(submissionId);
 
-  async queueBatchScoring(jobId: string, delayMs: number): Promise<void> {
-    this.logger.log(
-      `Queueing batch scoring for Job ID ${jobId} in ${delayMs}ms`,
-    );
-    await this.scoringQueue.add(
-      'batch-score-job',
-      { jobId },
-      { delay: delayMs, jobId: `batch-score-${jobId}` },
-    );
+    return updated;
   }
 
   async findByJob(jobId: string) {
@@ -115,18 +107,6 @@ export class SubmissionsService {
     const [submission] = await this.db
       .update(submissions)
       .set({ status, updatedAt: new Date() })
-      .where(eq(submissions.id, submissionId))
-      .returning();
-    return submission;
-  }
-
-  async saveScoringResult(
-    submissionId: string,
-    scoreResults: Record<string, unknown>,
-  ) {
-    const [submission] = await this.db
-      .update(submissions)
-      .set({ ...scoreResults, updatedAt: new Date() })
       .where(eq(submissions.id, submissionId))
       .returning();
     return submission;

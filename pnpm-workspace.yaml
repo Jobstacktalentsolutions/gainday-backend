@@ -1,0 +1,6 @@
+allowBuilds:
+  bcrypt: true
+  esbuild: false
+  msgpackr-extract: false
+  'true': true
+  unrs-resolver: false

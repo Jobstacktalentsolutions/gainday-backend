@@ -16,13 +16,30 @@ import { SimulationTask } from '../../db/schema/simulations.schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
 import { Embeddings } from '@langchain/core/embeddings';
 import { embedTaskContent } from '../generation/utils/embedding.util';
+import { RoleRegistry } from '../generation/roles/role-registry';
 
 @Injectable()
 export class AdminService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(EMBEDDINGS) private readonly embeddings: Embeddings,
+    private readonly roleRegistry: RoleRegistry,
   ) {}
+
+  /**
+   * Flattened task-pattern-type definitions across every registered role module — lets the
+   * frontend admin edit form know which objectiveComponentType/openEndedComponentType/
+   * interfaceType applies to a given taskType without duplicating the role-module data client
+   * side. Small, static-ish payload; safe to fetch once and cache.
+   */
+  listTaskPatternTypes() {
+    return this.roleRegistry.getAllModules().flatMap((module) =>
+      module.allowedTaskPatternTypes.map((patternType) => ({
+        categoryKeys: module.categoryKeys,
+        ...patternType,
+      })),
+    );
+  }
 
   async getAdminStats() {
     const [
@@ -128,14 +145,17 @@ export class AdminService {
       this.embeddings,
       editedTaskContent,
     );
-    await this.db.insert(questionBank).values({
-      category: reviewItem.category,
-      intent: editedTaskContent.title,
-      taskType: editedTaskContent.taskType,
-      taskContent: editedTaskContent,
-      sourceJobId: reviewItem.jobId,
-      embedding,
-    });
+    const [insertedQuestionBankRow] = await this.db
+      .insert(questionBank)
+      .values({
+        category: reviewItem.category,
+        intent: editedTaskContent.title,
+        taskType: editedTaskContent.taskType,
+        taskContent: editedTaskContent,
+        sourceJobId: reviewItem.jobId,
+        embedding,
+      })
+      .returning({ id: questionBank.id });
 
     const [simulation] = await this.db
       .select()
@@ -144,6 +164,7 @@ export class AdminService {
     if (simulation) {
       const newTask: SimulationTask = {
         id: `${reviewItem.jobId}-review-${reviewItem.id}`,
+        questionBankId: insertedQuestionBankRow.id,
         taskType: editedTaskContent.taskType,
         category: reviewItem.category,
         title: editedTaskContent.title,

@@ -29,6 +29,8 @@ import { GenerationState } from './state/generation-state';
 import { Job } from '../../db/schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { TestGenerateDto } from './dto/test-generate.dto';
+import { generateTaskContent } from './task-content-generator';
+import { randomUUID } from 'crypto';
 
 export interface GenerationResult {
   category: string;
@@ -140,6 +142,7 @@ export class GenerationService {
     const finalizedTasks: SimulationTask[] = finalState.finalizedTasks.map(
       (task, index) => ({
         id: `${job.id}-task-${index + 1}`,
+        questionBankId: task.questionBankId,
         taskType: task.taskType,
         category: finalState.category,
         title: task.taskContent.title,
@@ -159,6 +162,70 @@ export class GenerationService {
       problem: finalState.problem,
       finalizedTasks,
       adminReviewItemsPersisted,
+    };
+  }
+
+  /**
+   * Regenerates a single task for a job outside the main graph: reuses the job's already-
+   * persisted extraction (category/intent/problem — never re-runs extraction.node.ts), picks a
+   * random allowed task-pattern type for the role, and generates content for it, optionally
+   * steered by employer-supplied guidance. Skips the critic entirely (novelty/duplicate/
+   * relevance checks) and does NOT persist anything — the result is ephemeral until the employer
+   * accepts it via PUT /simulations/:id. Used for both "regenerate this task" and "add a task".
+   */
+  async regenerateTask(
+    jobId: string,
+    guidance?: string,
+  ): Promise<SimulationTask> {
+    const [extraction] = await this.db
+      .select()
+      .from(jobExtractions)
+      .where(eq(jobExtractions.jobId, jobId));
+
+    if (!extraction) {
+      throw new Error(
+        `Job ${jobId} has no job_extractions row yet — run full generation before regenerating a single task`,
+      );
+    }
+
+    const roleModule = this.roleRegistry.resolve(extraction.category);
+    if (roleModule.allowedTaskPatternTypes.length === 0) {
+      throw new Error(
+        `Role module for category "${extraction.category}" has no allowed task-pattern types configured`,
+      );
+    }
+
+    const patternTypeDef =
+      roleModule.allowedTaskPatternTypes[
+        Math.floor(Math.random() * roleModule.allowedTaskPatternTypes.length)
+      ];
+
+    const taskContent = await generateTaskContent({
+      model: this.taskGenerationModel,
+      roleModule,
+      category: extraction.category,
+      intent: extraction.intent,
+      problem: extraction.problem,
+      taskType: patternTypeDef.key,
+      briefDescription: patternTypeDef.description,
+      guidance,
+    });
+
+    return {
+      id: randomUUID(),
+      // Not persisted to question_bank here by design (see doc comment above) — no anchors/
+      // grading possible until it's accepted and actually written to question_bank.
+      questionBankId: null,
+      taskType: taskContent.taskType,
+      category: extraction.category,
+      title: taskContent.title,
+      scenarioDescription: taskContent.scenarioDescription,
+      questionPrompt: taskContent.questionPrompt,
+      objectiveComponent: taskContent.objectiveComponent,
+      openEndedComponent: taskContent.openEndedComponent,
+      businessProblemDerived: taskContent.businessProblemDerived,
+      interfaceType: taskContent.interfaceType,
+      interfacePayload: taskContent.interfacePayload,
     };
   }
 

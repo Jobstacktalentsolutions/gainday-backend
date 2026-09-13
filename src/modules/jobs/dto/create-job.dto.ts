@@ -24,10 +24,6 @@ export class CreateJobDto {
   @MinLength(1, { message: 'Skill level is required' })
   skillLevel: string;
 
-  @IsOptional()
-  @IsString()
-  skillCategory?: string;
-
   @IsString()
   @MinLength(1, { message: 'Location is required' })
   location: string;

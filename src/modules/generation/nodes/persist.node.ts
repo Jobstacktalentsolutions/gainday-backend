@@ -27,15 +27,20 @@ export function persistNode(ctx: GenerationContext) {
 
     const { embedding } = state.currentCriticResult;
 
+    let questionBankId: string;
     try {
-      await ctx.db.insert(questionBank).values({
-        category: state.category,
-        intent: state.intent,
-        taskType: draft.taskType,
-        taskContent: draft.taskContent,
-        sourceJobId: state.jobId,
-        embedding,
-      });
+      const [inserted] = await ctx.db
+        .insert(questionBank)
+        .values({
+          category: state.category,
+          intent: state.intent,
+          taskType: draft.taskType,
+          taskContent: draft.taskContent,
+          sourceJobId: state.jobId,
+          embedding,
+        })
+        .returning({ id: questionBank.id });
+      questionBankId = inserted.id;
     } catch (err) {
       // Drizzle's query-error message embeds the full failed insert params, including the
       // raw 3072-float embedding vector — strip that before it hits the logs/error response.
@@ -56,6 +61,7 @@ export function persistNode(ctx: GenerationContext) {
       finalizedTasks: [
         {
           candidateId: draft.candidateId,
+          questionBankId,
           taskType: draft.taskType,
           taskContent: draft.taskContent,
         },

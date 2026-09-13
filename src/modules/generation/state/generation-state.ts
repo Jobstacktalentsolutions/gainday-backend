@@ -4,10 +4,18 @@ import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { FailedGenerationAttempt } from '../../../db/schema/generation-review.schema';
 
-export interface FinalizedTask {
+export interface TaskDraft {
   candidateId: string;
   taskType: string;
   taskContent: QuestionBankTaskContent;
+}
+
+export interface FinalizedTask extends TaskDraft {
+  /** The persisted question_bank row this task was inserted as — grading looks up anchors
+   *  by this id, so it must survive from persist.node.ts through to SimulationTask. Only
+   *  known once persist.node.ts has actually inserted the row, hence the separate TaskDraft
+   *  type for currentTaskDraft (pre-persist, no id yet). */
+  questionBankId: string;
 }
 
 export interface CriticResult {
@@ -72,7 +80,7 @@ export const GenerationStateAnnotation = Annotation.Root({
     default: () => [],
   }),
 
-  currentTaskDraft: Annotation<FinalizedTask | null>({
+  currentTaskDraft: Annotation<TaskDraft | null>({
     reducer: (_left, right) => right,
     default: () => null,
   }),

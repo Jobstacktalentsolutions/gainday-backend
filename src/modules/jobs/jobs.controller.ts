@@ -40,6 +40,11 @@ export class JobsController {
     return this.jobsService.findById(id);
   }
 
+  @Get(':id/with-simulation')
+  async getJobWithSimulation(@Param('id') id: string) {
+    return this.jobsService.findByIdWithSimulation(id);
+  }
+
   @Post('draft')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER)

@@ -21,6 +21,11 @@ export type OpenEndedComponentType =
 
 export interface SimulationTask {
   id: string;
+  /** The question_bank row this task was persisted as — grading looks up anchors by this id.
+   *  Null for a task that only went through regenerateTask() and hasn't been persisted to
+   *  question_bank yet (see SimulationsService.updateSimulationTasks) — such a task cannot be
+   *  graded until that gap is closed. */
+  questionBankId: string | null;
   taskType: string; // role-module-defined key (see src/modules/generation/roles)
   category: string;
   title: string;

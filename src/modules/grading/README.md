@@ -1,88 +1,90 @@
-# Grading — Design Notes (Not Yet Built)
+# Grading — Implemented
 
-There is no grading pipeline yet. This module exists to hold design context so a future build
-doesn't have to re-derive it or dig through git history. It captures what the generation
-pipeline used to do with anchor responses before that work was pulled out of generation
-(2026-08-30) and moved here.
+The grading pipeline described below is built. What's still missing is upstream of this module,
+not in it — see "What's NOT done" at the bottom.
 
-## Why anchors exist at all (pipeline doc Section 6.2)
+## How it's triggered
 
-Grading a candidate's submission means comparing it against reference points. A single
-good/bad pair isn't enough — the hardest grading problem is distinguishing mid-range answers
-(a 6 from a 7), which is exactly where real candidate responses cluster. Two extreme anchors
-give a grading model nothing to calibrate against there.
+`SubmissionsService.submitAnswers()` (`src/modules/submissions/submissions.service.ts`) calls
+`GradingService.queueGrading(submissionId)` right after saving the candidate's answers — this
+enqueues a job on the `grading` BullMQ queue and returns immediately; nothing in the submit
+request path waits on grading or anchor generation.
 
-**Anchors: minimum 4–5 points across the score range** — e.g. 0, 3, 5, 7, 10, not just the two
-poles. This score-point list is still defined in `src/config/ai.config.ts`
-(`generationConfig.anchorScorePoints`) even though nothing consumes it right now — grading will
-need the same list.
+**Anchors are generated lazily, on first need — not eagerly after task generation, not in a
+batch job.** There's no separate "ensure anchors for this job" step. `GradingService.gradeSubmission()`
+processes one task at a time; for each task it calls `AnchorGenerationService.ensureAnchors(row)`,
+which returns the row's anchors if already populated, or generates-and-persists them first if not.
+Concretely: the first submission to reach a given task pays the anchor-generation cost (a few extra
+LLM calls, done in the background either way); every submission after that for the same task finds
+`question_bank.anchors` already populated and skips straight to grading. This was a deliberate
+product decision — jobs that never receive an application never spend tokens generating anchors
+for tasks nobody will answer.
 
-Each anchor is scored against four criteria, shared across roles but with role-specific framing:
-1. **Problem-solving**
-2. **Judgment / execution**
-3. **Written communication**
-4. **Commercial / domain awareness**
+## Anchor generation (`anchors/anchor-generation.service.ts`)
 
-These are the exact same four fields as `CapabilityScores`/`CategoryScores` in
-`src/db/schema/users.schema.ts` / `src/db/schema/submissions.schema.ts` — anchors exist to be
-what a candidate's capability score is ultimately measured against.
+Generate → critique → loop, up to `gradingConfig.maxAnchorAttempts` (3, in `src/config/ai.config.ts`)
+full regenerate-and-recheck attempts (not the abandoned per-anchor self-correction design that
+was in `ANCHOR_ARCHITECTURE.md` — this is the simpler "just regenerate the whole set and recheck"
+loop). Generation uses `TASK_GENERATION_MODEL` (temperature 0.9, the same larger/more reliable
+model used for task-content generation — anchors[] has the same deep-nesting reliability problem
+that model was already chosen for). Critique uses `GRADING_MODEL` (temperature 0, deterministic).
 
-A "10/10" anchor should score maximally on all four criteria, but real strong answers often
-trade off one dimension for another (e.g. commercially sharp but less polished prose) — a
-generation prompt for anchors should avoid manufacturing an artificially "perfect" top anchor
-that doesn't resemble any real answer a grader would encounter.
+If the critic never approves the anchors within the attempt cap, the **last attempt is persisted
+anyway** (`question_bank.anchors`) so grading is never permanently blocked by one bad question,
+and `question_bank.anchorsNeedReview` is set `true` for admin follow-up. There's no admin UI for
+this flag yet — it's just queryable (`WHERE anchors_need_review = true`).
 
-## The `AnchorResponse` shape
+Per-role anchor criteria framing and anchor-correctness prompts live in `roles/` (`finance.anchor-config.ts`,
+`sales.anchor-config.ts`), preserved verbatim from `ANCHOR_ARCHITECTURE.md`, resolved via
+`AnchorRoleRegistry` (deliberately independent from generation's `RoleRegistry` — same exact/`>`-
+prefix-fallback resolution logic, duplicated rather than shared, to keep grading decoupled from
+generation per this module's original design intent).
 
-Still defined in `src/db/schema/question-bank.schema.ts` (unused by generation now, but kept
-as the target contract):
+## Task grading (`task-grading.service.ts`)
 
-```ts
-export interface AnchorResponse {
-  score: number; // e.g. 0, 3, 5, 7, 10
-  responseText: string;
-  criteria: {
-    problemSolving: string;
-    judgmentExecution: string;
-    writtenCommunication: string;
-    commercialDomainAwareness: string;
-  };
-}
-```
+One LLM call per (task, candidate answer, that task's own 5 anchors) — never a batched "grade
+every task in one call." Uses `GRADING_MODEL` at temperature 0. Output: the same 4-axis
+`CategoryScores` shape used everywhere else in the schema (`problemSolving`, `judgmentExecution`,
+`writtenCommunication`, `commercialDomainAwareness`, each `{score, rationale, evidence}`, scored
+0-10 to match the anchor scale), plus a `summary` — one or two candidate-facing sentences
+explaining that specific task's score, written directly to the candidate ("You..."). This is what
+gets shown in the results email per task.
 
-`question_bank.anchors` (jsonb, now nullable) and `generation_review_items.resolvedAnchors`
-(jsonb, already nullable) are where this would be persisted, once something populates them.
+## Roll-up (`roll-up.ts`)
 
-## What generation used to do, and why it moved here
+Deterministic, no LLM call. Per-task `categoryScores` (0-10 scale) are averaged per category
+across all graded tasks into the submission-level `categoryScores` (still 0-10), with a
+synthesized rationale/evidence string (not fabricated by a model) listing each task's score for
+that category. `overallScore` is a weighted sum of the 4 rolled-up category scores
+(`gradingConfig.categoryWeights` — 0.4/0.2/0.2/0.2, carried forward from the old scoring stub)
+scaled to 0-100.
 
-Through 2026-08-30, every task-generation call also generated a full set of anchors, and the
-critic ran a dedicated anchor-correctness check (plus, briefly, a full self-correction loop)
-before a task could be persisted. This was removed because **grading doesn't exist yet** —
-there was nothing consuming anchors, and anchor generation + critique + correction was the
-single most expensive part of every generation run (the deepest nested schema, an extra LLM
-call per task, and — with the correction loop — up to one more call on top of that). Cutting it
-materially reduces tokens/latency per generated task with no loss of anything in current use.
+## Orchestration (`grading.service.ts`, `grading.processor.ts`)
 
-None of this was thrown away — it's preserved in `ANCHOR_ARCHITECTURE.md` in this directory,
-verbatim, as a real starting point for whoever builds grading:
-- The exact anchor-generation prompt instructions that were part of `task-generation.node.ts`.
-- The exact per-role anchor-correctness critic prompts (finance and sales).
-- The Zod schema shape used for the anchors array (and why it's shaped the way it is —
-  Gemini/Groq schema-compatibility constraints that will apply again to any future anchor
-  generation call).
-- The self-correction loop's design: per-anchor structured feedback, the routing decision
-  (only-anchor-failures are correctable, everything else drops and retries with a different
-  candidate), and the 1-attempt cap.
+`GradingProcessor` is the BullMQ worker. `GradingService.gradeSubmission()`: loads the submission
++ its simulation's tasks, grades every answer whose task has a `questionBankId` (see "What's NOT
+done" below for tasks that don't), rolls up the results, persists `submissions.overallScore` /
+`categoryScores` / `taskScores` (status → `SCORED`), updates the candidate's
+`job_seeker_profiles.capabilityScores` via the existing `JobSeekerProfileService`, and emails the
+candidate their results (including the per-task `summary` breakdown) via
+`NotificationsService.sendScoringResultsEmail` / `templates/emails/scoring-results.ejs`.
 
-## Open question for whoever builds this
+This replaced the old `src/modules/scoring/` module entirely (`ScoringService.scoreSubmission()`
+returned hardcoded numbers — see git history if you need to see what it looked like; it's deleted).
 
-**When do anchors get generated?** Three options, undecided:
-1. **Lazily**, on first candidate submission to a task — no cost until a task is actually used.
-2. **Eagerly**, right after a task is persisted to `question_bank` — as an async job off the
-   generation critical path (doesn't slow down `POST /generation-test/generate` or the real
-   `queueGeneration` flow), but every generated task gets anchors whether or not it's ever used.
-3. **Batch**, on some periodic job over `question_bank` entries missing anchors.
+## What's NOT done — the actual blocker to using any of this
 
-This directory's removal from generation doesn't answer this — it just stops blocking
-generation on it. Whichever approach is chosen, the reusable pieces in
-`ANCHOR_ARCHITECTURE.md` are the starting point for the actual generation/critique logic.
+**There is no candidate-facing UI to take a simulation and submit answers.** Nothing in this
+module can run against real data until that exists. Specifically:
+
+- `CandidateAnswer.responseBody` is free text only — fine for open-ended tasks, but there's still
+  no structured way to capture an answer to an objective-component task (numeric input,
+  classification, sequencing, etc.). Objective-component grading (a deterministic correctness
+  check, separate from the LLM-graded 4-axis score) was scoped out of this build for that reason
+  — see git history for the `objectiveResult` design discussion if that gets picked back up.
+- `SimulationsService.updateSimulationTasks` (`PUT /simulations/:id`) doesn't persist an
+  employer-accepted task (from `GenerationService.regenerateTask()`) into `question_bank` — such
+  a task has `questionBankId: null` forever and `GradingService.gradeSubmission()` explicitly
+  skips grading it (logs a warning) rather than failing the whole submission. Fixing this means
+  `updateSimulationTasks` needs to insert any `questionBankId: null` task into `question_bank`
+  (compute its embedding, etc.) before saving it into the simulation.

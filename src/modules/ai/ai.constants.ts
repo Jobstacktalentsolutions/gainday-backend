@@ -6,3 +6,6 @@ export const EMBEDDINGS = Symbol('EMBEDDINGS');
  *  repeated per anchor). Smaller models (e.g. Groq's gpt-oss-20b) reliably break strict-mode JSON
  *  on this specific shape even with retries — see gemini-structured-output.util.ts. */
 export const TASK_GENERATION_MODEL = Symbol('TASK_GENERATION_MODEL');
+/** Zero-temperature model used for candidate-answer grading and anchor critique (see
+ *  src/modules/grading/) — deterministic scoring, not creative generation. */
+export const GRADING_MODEL = Symbol('GRADING_MODEL');

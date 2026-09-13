@@ -11,7 +11,6 @@ import { UsersModule } from './modules/users/users.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { SimulationsModule } from './modules/simulations/simulations.module';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
-import { ScoringModule } from './modules/scoring/scoring.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -54,7 +53,6 @@ import { AppService } from './app.service';
     JobsModule,
     SimulationsModule,
     SubmissionsModule,
-    ScoringModule,
     PaymentsModule,
     AdminModule,
     NotificationsModule,

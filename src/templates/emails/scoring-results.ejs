@@ -55,18 +55,29 @@
         <% if (categoryScores) { %>
         <div class="metrics">
           <% if (categoryScores.problemSolving !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Problem Solving</span><span class="metric-score"><%= categoryScores.problemSolving %></span></div>
+            <div class="metric-row"><span class="metric-name">Problem Solving</span><span class="metric-score"><%= categoryScores.problemSolving %>/10</span></div>
           <% } %>
           <% if (categoryScores.judgmentExecution !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Judgment / Execution</span><span class="metric-score"><%= categoryScores.judgmentExecution %></span></div>
+            <div class="metric-row"><span class="metric-name">Judgment / Execution</span><span class="metric-score"><%= categoryScores.judgmentExecution %>/10</span></div>
           <% } %>
           <% if (categoryScores.writtenCommunication !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Written Communication</span><span class="metric-score"><%= categoryScores.writtenCommunication %></span></div>
+            <div class="metric-row"><span class="metric-name">Written Communication</span><span class="metric-score"><%= categoryScores.writtenCommunication %>/10</span></div>
           <% } %>
           <% if (categoryScores.commercialDomainAwareness !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Commercial / Domain Awareness</span><span class="metric-score"><%= categoryScores.commercialDomainAwareness %></span></div>
+            <div class="metric-row"><span class="metric-name">Commercial / Domain Awareness</span><span class="metric-score"><%= categoryScores.commercialDomainAwareness %>/10</span></div>
           <% } %>
         </div>
+        <% } %>
+
+        <% if (taskBreakdown && taskBreakdown.length) { %>
+        <div class="divider"></div>
+        <p class="intro" style="margin-bottom: 12px;"><strong>Task by task</strong></p>
+        <% taskBreakdown.forEach(function(task) { %>
+          <div style="margin-bottom: 16px;">
+            <p style="font-size: 14px; font-weight: 600; color: #1a202c; margin-bottom: 4px;"><%= task.title %></p>
+            <p style="font-size: 14px; color: #4a5568; margin: 0;"><%= task.summary %></p>
+          </div>
+        <% }); %>
         <% } %>
 
         <center>

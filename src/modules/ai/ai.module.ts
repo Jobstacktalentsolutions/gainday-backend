@@ -11,6 +11,7 @@ import {
   CRITIC_MODEL,
   EMBEDDINGS,
   GENERATION_MODEL,
+  GRADING_MODEL,
   TASK_GENERATION_MODEL,
 } from './ai.constants';
 
@@ -22,8 +23,12 @@ import {
  */
 function buildChatModel(
   config: ConfigService,
-  role: 'generationModel' | 'criticModel' | 'taskGenerationModel',
-  temperatureKey: 'ai.generationTemperature' | 'ai.criticTemperature',
+  role:
+    'generationModel' | 'criticModel' | 'taskGenerationModel' | 'gradingModel',
+  temperatureKey:
+    | 'ai.generationTemperature'
+    | 'ai.criticTemperature'
+    | 'ai.gradingTemperature',
 ): BaseChatModel {
   const provider = config.get<string>('ai.provider');
   if (provider === 'groq') {
@@ -76,6 +81,12 @@ function buildChatModel(
         ),
     },
     {
+      provide: GRADING_MODEL,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService): BaseChatModel =>
+        buildChatModel(config, 'gradingModel', 'ai.gradingTemperature'),
+    },
+    {
       provide: EMBEDDINGS,
       inject: [ConfigService],
       useFactory: (config: ConfigService): Embeddings => {
@@ -86,6 +97,12 @@ function buildChatModel(
       },
     },
   ],
-  exports: [GENERATION_MODEL, CRITIC_MODEL, TASK_GENERATION_MODEL, EMBEDDINGS],
+  exports: [
+    GENERATION_MODEL,
+    CRITIC_MODEL,
+    TASK_GENERATION_MODEL,
+    GRADING_MODEL,
+    EMBEDDINGS,
+  ],
 })
 export class AiModule {}

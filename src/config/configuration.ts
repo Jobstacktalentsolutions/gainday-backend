@@ -1,5 +1,5 @@
 import { URL } from 'url';
-import { aiConfig, generationConfig } from './ai.config';
+import { aiConfig, generationConfig, gradingConfig } from './ai.config';
 
 export default () => {
   const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -66,5 +66,6 @@ export default () => {
       },
     },
     generation: generationConfig,
+    grading: gradingConfig,
   };
 };

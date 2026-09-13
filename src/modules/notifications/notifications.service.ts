@@ -86,6 +86,9 @@ export class NotificationsService {
     jobTitle: string,
     overallScore: number,
     categoryScores?: Record<string, number>,
+    /** Per-task concise reasons (GradingService's TaskGradingResult.summary) — gives the
+     *  candidate a specific "why" per question rather than just the numeric breakdown. */
+    taskBreakdown?: { title: string; summary: string }[],
   ): Promise<void> {
     const appUrl = this.configService.get<string>('email.appUrl');
     const dashboardUrl = `${appUrl}/dashboard`;
@@ -99,6 +102,7 @@ export class NotificationsService {
         jobTitle,
         overallScore,
         categoryScores,
+        taskBreakdown,
         dashboardUrl,
         year,
       },

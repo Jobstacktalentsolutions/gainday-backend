@@ -1,4 +1,13 @@
-# Anchor Generation & Critique — Preserved Architecture
+# Anchor Generation & Critique — Preserved Architecture (implemented)
+
+**This has been implemented** — see `anchors/anchor-generation.service.ts`, `schemas/anchor-generation.schema.ts`,
+`schemas/anchor-critique.schema.ts`, `prompts/anchor-generation.prompt.ts`, and `roles/finance.anchor-config.ts`
+/ `roles/sales.anchor-config.ts`. One deliberate deviation from what's below: the self-correction
+loop in Section 5 was **not** revived — the actual implementation is a simpler full
+regenerate-and-recheck loop (generate all 5 anchors, critique, and on failure regenerate the
+whole set again, up to 3 attempts) rather than patching only the unsound anchors. Everything else
+— the prompts, the schema shapes and their Gemini/Groq compatibility constraints, the per-role
+correctness prompts — was carried forward as-is. Kept below for historical reference.
 
 Everything below was live in the generation pipeline through 2026-08-30 and was removed per
 `README.md`'s explanation. Reproduced verbatim (not paraphrased) so it's directly reusable.

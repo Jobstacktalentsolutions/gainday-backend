@@ -48,6 +48,11 @@ export class AdminController {
     return this.adminService.deleteInappropriateJob(id);
   }
 
+  @Get('task-pattern-types')
+  async listTaskPatternTypes() {
+    return this.adminService.listTaskPatternTypes();
+  }
+
   @Get('generation-reviews')
   async listGenerationReviews(
     @Query('status') status?: GenerationReviewStatus,

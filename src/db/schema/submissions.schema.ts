@@ -50,6 +50,18 @@ export interface CategoryScores {
   commercialDomainAwareness: CategoryScoreDetail;
 }
 
+/** One task's grading result — see src/modules/grading/. Each score in `categoryScores` here is
+ *  on the same 0-10 scale as the anchors it was graded against (not the 0-100 scale of the
+ *  submission-level `overallScore`, which is a separate weighted rollup — see
+ *  grading/roll-up.ts). `summary` is the candidate-facing one-or-two-sentence reason shown/
+ *  emailed to them for this specific task. */
+export interface TaskGradingResult {
+  taskId: string;
+  questionBankId: string;
+  categoryScores: CategoryScores;
+  summary: string;
+}
+
 export interface GuestInfo {
   fullName: string;
   email: string;
@@ -79,6 +91,8 @@ export const submissions = pgTable('submissions', {
     mode: 'number',
   }),
   categoryScores: jsonb('category_scores').$type<CategoryScores>(),
+  // Per-task breakdown behind the rolled-up categoryScores above — see TaskGradingResult.
+  taskScores: jsonb('task_scores').$type<TaskGradingResult[]>(),
   timeTakenSeconds: integer('time_taken_seconds'),
   isAntiCheatFlagged: boolean('is_anti_cheat_flagged').notNull().default(false),
   antiCheatFlags: text('anti_cheat_flags').array(),

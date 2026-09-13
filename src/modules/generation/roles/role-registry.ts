@@ -21,6 +21,12 @@ export class RoleRegistry {
     }
   }
 
+  /** All distinct registered role modules (deduped — a module may be registered under several
+   *  category keys). Used to build a taskType -> component-type lookup table for the frontend. */
+  getAllModules(): RoleModule[] {
+    return [...new Set(this.modules.values())];
+  }
+
   /**
    * Exact match first, then '>'-delimited prefix fallback from most- to least-specific,
    * e.g. "Sales > SDR" falls back to "Sales" if no module is registered for the sub-role.

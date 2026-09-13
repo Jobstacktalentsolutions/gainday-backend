@@ -10,6 +10,6 @@ import { RoleRegistry } from './roles/role-registry';
   imports: [BullModule.registerQueue({ name: GENERATION_QUEUE })],
   controllers: [GenerationTestController],
   providers: [GenerationService, GenerationProcessor, RoleRegistry],
-  exports: [GenerationService],
+  exports: [GenerationService, RoleRegistry],
 })
 export class GenerationModule {}
