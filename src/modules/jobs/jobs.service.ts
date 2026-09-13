@@ -24,7 +24,7 @@ export class JobsService {
       companyDescription: dto.companyDescription,
       requiredSkills: dto.skills,
       description: dto.description,
-      businessProblem: dto.description,
+      businessProblem: dto.businessProblem,
     };
 
     if (dto.applicationDeadline !== undefined) {

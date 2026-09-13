@@ -67,4 +67,9 @@ export class SaveDraftJobDto {
   @IsString()
   @MaxLength(500, { message: 'Keep it under 500 characters' })
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'Keep it under 500 characters' })
+  businessProblem?: string;
 }
