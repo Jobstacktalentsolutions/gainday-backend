@@ -29,7 +29,7 @@ import { GenerationState } from './state/generation-state';
 import { Job } from '../../db/schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { TestGenerateDto } from './dto/test-generate.dto';
-import { generateTaskContent } from './task-content-generator';
+import { generateTaskContent, modifyTaskContent } from './task-content-generator';
 import { randomUUID } from 'crypto';
 
 export interface GenerationResult {
@@ -167,15 +167,23 @@ export class GenerationService {
 
   /**
    * Regenerates a single task for a job outside the main graph: reuses the job's already-
-   * persisted extraction (category/intent/problem — never re-runs extraction.node.ts), picks a
-   * random allowed task-pattern type for the role, and generates content for it, optionally
-   * steered by employer-supplied guidance. Skips the critic entirely (novelty/duplicate/
-   * relevance checks) and does NOT persist anything — the result is ephemeral until the employer
-   * accepts it via PUT /simulations/:id. Used for both "regenerate this task" and "add a task".
+   * persisted extraction (category/intent/problem — never re-runs extraction.node.ts) and skips
+   * the critic entirely (novelty/duplicate/relevance checks). Does NOT persist anything — the
+   * result is ephemeral until the employer accepts it via PUT /simulations/:id.
+   *
+   * Two distinct paths depending on what's provided (this is the "two pipelines" split — not a
+   * single generator with an optional hint):
+   *  - guidance + existingTask both present → EDIT: modifyTaskContent() changes only what the
+   *    employer asked for on the task they already have, keeping taskType/interfaceType and
+   *    everything else fixed. This is "regenerate this task with an instruction."
+   *  - otherwise → FRESH: generateTaskContent() picks a random allowed task-pattern type and
+   *    writes a brand-new task, optionally nudged by guidance if there was no existingTask to
+   *    anchor an edit to. This is "add a task" or "regenerate" with no specific instruction.
    */
   async regenerateTask(
     jobId: string,
     guidance?: string,
+    existingTask?: SimulationTask,
   ): Promise<SimulationTask> {
     const [extraction] = await this.db
       .select()
@@ -195,26 +203,41 @@ export class GenerationService {
       );
     }
 
-    const patternTypeDef =
-      roleModule.allowedTaskPatternTypes[
-        Math.floor(Math.random() * roleModule.allowedTaskPatternTypes.length)
-      ];
+    let taskContent: Awaited<ReturnType<typeof generateTaskContent>>;
 
-    const taskContent = await generateTaskContent({
-      model: this.taskGenerationModel,
-      roleModule,
-      category: extraction.category,
-      intent: extraction.intent,
-      problem: extraction.problem,
-      taskType: patternTypeDef.key,
-      briefDescription: patternTypeDef.description,
-      guidance,
-    });
+    if (guidance && existingTask) {
+      taskContent = await modifyTaskContent({
+        model: this.taskGenerationModel,
+        roleModule,
+        category: extraction.category,
+        intent: extraction.intent,
+        problem: extraction.problem,
+        existingTask,
+        guidance,
+      });
+    } else {
+      const patternTypeDef =
+        roleModule.allowedTaskPatternTypes[
+          Math.floor(Math.random() * roleModule.allowedTaskPatternTypes.length)
+        ];
+      taskContent = await generateTaskContent({
+        model: this.taskGenerationModel,
+        roleModule,
+        category: extraction.category,
+        intent: extraction.intent,
+        problem: extraction.problem,
+        taskType: patternTypeDef.key,
+        briefDescription: patternTypeDef.description,
+        guidance,
+      });
+    }
 
     return {
-      id: randomUUID(),
-      // Not persisted to question_bank here by design (see doc comment above) — no anchors/
-      // grading possible until it's accepted and actually written to question_bank.
+      // An edit keeps the same task identity; a fresh task gets a new one.
+      id: existingTask?.id ?? randomUUID(),
+      // Always null: even on an edit, the content just changed, so any previously-persisted
+      // question_bank entry no longer matches it — no anchors/grading possible until it's
+      // accepted and actually (re-)written to question_bank.
       questionBankId: null,
       taskType: taskContent.taskType,
       category: extraction.category,

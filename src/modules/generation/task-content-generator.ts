@@ -124,3 +124,101 @@ export async function generateTaskContent(
     interfacePayload: result.interfacePayload as Record<string, unknown>,
   };
 }
+
+const TASK_MODIFICATION_PROMPT_BASE = `You are given an existing job-simulation task and a specific
+change an employer wants made to it. Modify the task to reflect that request as directly and
+minimally as possible — this is an edit, not a rewrite: keep the title, scenario, numbers, options,
+and every other detail that the request doesn't touch exactly as they are. Only when the request
+requires it for internal consistency (e.g. a changed number that other fields reference) should you
+adjust a field you weren't directly asked to change.
+
+Free-text fields (scenarioDescription, questionPrompt, and any markdown-documented field in
+interfacePayload) are GitHub-flavored Markdown. Preserve existing markdown structure unless the
+requested change specifically calls for different structure.`;
+
+export interface ModifyTaskContentParams {
+  model: BaseChatModel;
+  roleModule: RoleModule;
+  category: string;
+  intent: string;
+  problem: string | null;
+  existingTask: QuestionBankTaskContent;
+  /** The employer's requested change — required for this path (see GenerationService.regenerateTask,
+   *  which only calls this when both guidance AND an existing task are present). */
+  guidance: string;
+}
+
+/**
+ * Edits an existing task in place per employer-supplied guidance, rather than generating a fresh
+ * one — used when a "regenerate" click carries a specific instruction (e.g. "make the numbers
+ * larger", "change the recipient to legal"), which should modify what's already there rather than
+ * discard it for an unrelated new task. taskType/interfaceType are held fixed to the existing
+ * task's (an edit doesn't change what kind of task this is or how the candidate answers it).
+ */
+export async function modifyTaskContent(
+  params: ModifyTaskContentParams,
+): Promise<QuestionBankTaskContent> {
+  const { model, roleModule, category, intent, problem, existingTask, guidance } = params;
+
+  const patternTypeDef = roleModule.allowedTaskPatternTypes.find(
+    (t) => t.key === existingTask.taskType,
+  );
+  if (!patternTypeDef) {
+    throw new Error(
+      `No task-pattern-type definition found for taskType "${existingTask.taskType}" in role module for category "${category}"`,
+    );
+  }
+  const interfaceType = patternTypeDef.interfaceType;
+  const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
+  const objectiveComponentSchema = patternTypeDef.objectiveComponentType
+    ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
+    : null;
+  const openEndedComponentSchema = patternTypeDef.openEndedComponentType
+    ? OPEN_ENDED_COMPONENT_SCHEMAS[patternTypeDef.openEndedComponentType]
+    : null;
+
+  // Single-value enum: a modify never changes taskType, only the schema-builder's shared shape
+  // requires an enum rather than a literal.
+  const schema = taskGenerationSchema(
+    [existingTask.taskType] as [string, ...string[]],
+    interfacePayloadSchema,
+    objectiveComponentSchema,
+    openEndedComponentSchema,
+  );
+  const structuredModel = withGeminiSafeStructuredOutput(model, schema);
+
+  const result = await structuredModel.invoke([
+    new SystemMessage(
+      `${TASK_MODIFICATION_PROMPT_BASE}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+        `interfacePayload you return must still match that render mode.`,
+    ),
+    new HumanMessage(
+      JSON.stringify({
+        category,
+        intent,
+        problem,
+        existingTask,
+        requestedChange: guidance,
+      }),
+    ),
+  ]);
+
+  const businessProblemDerived =
+    problem === null ? false : result.businessProblemDerived;
+
+  return {
+    taskType: existingTask.taskType,
+    title: result.title,
+    scenarioDescription: result.scenarioDescription,
+    questionPrompt: result.questionPrompt,
+    objectiveComponent:
+      (result.objectiveComponent as Record<string, unknown> | null) ??
+      undefined,
+    openEndedComponent:
+      (result.openEndedComponent as Record<string, unknown> | null) ??
+      undefined,
+    businessProblemDerived,
+    interfaceType,
+    interfacePayload: result.interfacePayload as Record<string, unknown>,
+  };
+}

@@ -169,7 +169,9 @@ Each job posting generates **one simulation, shown identically to every candidat
 
 ## 9. Grading Note (Context Only)
 
-Generation and grading run at different points and use different model settings. Grading (not detailed in this document) uses low/zero temperature for consistency across repeated scoring of the same answer, and compares candidate submissions against the anchor responses stored in Section 6.2. Generation, by contrast, benefits from higher temperature for creativity and variety in producing the task pool. These are separate settings for separate stages — not one shared value.
+Generation and grading run at different points and use different model settings. Grading uses low/zero temperature for consistency across repeated scoring of the same answer, and compares candidate submissions against anchor responses. Generation, by contrast, benefits from higher temperature for creativity and variety in producing the task pool. These are separate settings for separate stages — not one shared value.
+
+**Note on anchors (Section 6.2 above):** anchors are no longer generated as part of per-task generation — that was true only through 2026-08-30. They are now generated lazily by the grading pipeline itself, on the first candidate submission that needs them, not during generation. Full detail — the generate/critique loop, per-role criteria framing, scoring/rollup, and what still blocks this from running end-to-end — is in `docs/gainday-grading-pipeline.md`, not here.
 
 ---
 

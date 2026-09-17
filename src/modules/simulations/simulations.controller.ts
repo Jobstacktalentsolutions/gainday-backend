@@ -80,7 +80,7 @@ export class SimulationsController {
   @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
   regenerateTask(
     @Param('jobId') jobId: string,
-    @Body() body: { guidance?: string },
+    @Body() body: { guidance?: string; existingTask?: unknown },
     @CurrentUser() user: any,
   ): Observable<RegenerateTaskEvent> {
     return new Observable((subscriber) => {
@@ -88,11 +88,19 @@ export class SimulationsController {
         try {
           await this.assertCanEditJob(jobId, user);
 
+          // Validated against the same task-shape contract as PUT /simulations/:id, so a
+          // malformed existingTask payload fails fast with a clear error rather than a confusing
+          // downstream LLM/schema mismatch.
+          const existingTask = body?.existingTask
+            ? validateSimulationTasks([body.existingTask], this.roleRegistry)[0]
+            : undefined;
+
           subscriber.next({ data: { type: 'status', payload: 'generating' } });
 
           const task = await this.generationService.regenerateTask(
             jobId,
             body?.guidance,
+            existingTask,
           );
 
           subscriber.next({ data: { type: 'task', payload: task } });
