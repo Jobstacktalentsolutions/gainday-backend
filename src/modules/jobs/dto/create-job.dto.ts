@@ -63,7 +63,7 @@ export class CreateJobDto {
   @MinLength(40, {
     message: 'Give at least 40 characters so Gainday has enough to work with',
   })
-  @MaxLength(500, { message: 'Keep it under 500 characters' })
+  @MaxLength(5000, { message: 'Keep it under 5000 characters' })
   description: string;
 
   @IsOptional()

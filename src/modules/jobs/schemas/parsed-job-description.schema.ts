@@ -1,0 +1,93 @@
+import { z } from 'zod';
+
+// Structured output for POST /jobs/parse-description — takes a recruiter's raw, unstructured job
+// description text and both (a) extracts the fields the employer job-posting form knows about,
+// normalized directly to the values the frontend expects (no fuzzy-matching needed on that side),
+// and (b) rewrites the description itself into a clean, candidate-facing markdown writeup.
+export const parsedJobDescriptionSchema = z.object({
+  title: z
+    .string()
+    .nullable()
+    .describe(
+      'The job title, if stated or clearly implied. Null if not determinable.',
+    ),
+  role: z
+    .enum(['FINANCE', 'SALES'])
+    .nullable()
+    .describe(
+      'The broad role domain this posting belongs to. Must be exactly "FINANCE" or "SALES" — pick whichever is the closer fit. Null only if genuinely neither.',
+    ),
+  skillLevel: z
+    .enum(['Entry level', 'Mid level', 'Senior level'])
+    .nullable()
+    .describe(
+      'Seniority level implied by the posting (years of experience, title seniority, scope of responsibility). Must be exactly one of "Entry level", "Mid level", or "Senior level". Null if not determinable.',
+    ),
+  skillCategory: z
+    .string()
+    .nullable()
+    .describe(
+      'A short, specific sub-domain or specialism within the role, e.g. "Credit Risk", "Reconciliation", "Enterprise Sales". Null if not evident.',
+    ),
+  location: z
+    .string()
+    .nullable()
+    .describe(
+      'The job location as stated (city/country or "Remote"). Null if not stated.',
+    ),
+  employmentType: z
+    .enum(['Full-time', 'Part-time', 'Contract'])
+    .nullable()
+    .describe(
+      'Must be exactly one of "Full-time", "Part-time", or "Contract". Null if not stated.',
+    ),
+  deadline: z
+    .string()
+    .nullable()
+    .describe(
+      'Application deadline as an ISO 8601 date string (YYYY-MM-DD), only if an explicit date is stated. Null otherwise — never invent one.',
+    ),
+  isRemoteFriendly: z
+    .boolean()
+    .nullable()
+    .describe(
+      'True if the posting explicitly allows remote or hybrid work, false if it explicitly requires on-site, null if not addressed.',
+    ),
+  salaryFrom: z
+    .number()
+    .nullable()
+    .describe(
+      'Lower bound of the stated salary range, as a plain number. Null if not stated.',
+    ),
+  salaryTo: z
+    .number()
+    .nullable()
+    .describe(
+      'Upper bound of the stated salary range, as a plain number. Null if not stated.',
+    ),
+  companyDescription: z
+    .string()
+    .nullable()
+    .describe(
+      'A short description of what the company does, only if the posting actually describes the company. Null otherwise.',
+    ),
+  skills: z
+    .array(z.string())
+    .nullable()
+    .describe(
+      'The specific skills, tools, or competencies the posting calls out as required or preferred, as short tags (e.g. "Excel", "Stakeholder communication"). Null or empty if none are evident.',
+    ),
+  formattedDescription: z
+    .string()
+    .describe(
+      'A cleaned-up, well-structured rewrite of the job description as GitHub-flavored markdown — use headings and bullet lists where they improve readability. Preserve all substantive content from the original text (responsibilities, requirements, context); do not invent new claims. This field is always produced, even if other fields above are null.',
+    ),
+  businessProblem: z
+    .string()
+    .nullable()
+    .describe(
+      'The specific business problem or challenge the posting says this hire should help solve, ONLY if one is explicitly stated in the text (e.g. "reduce onboarding drop-off", "fix a backlog of overdue reconciliations"). Return null — never invent or infer one — if the posting is only a general role description with no specific problem called out.',
+    ),
+});
+
+export type ParsedJobDescription = z.infer<typeof parsedJobDescriptionSchema>;

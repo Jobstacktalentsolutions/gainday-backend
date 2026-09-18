@@ -11,6 +11,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
+import { JobDescriptionParserService } from './job-description-parser.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -18,10 +19,14 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../db/schema';
 import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
+import { ParseJobDescriptionDto } from './dto/parse-job-description.dto';
 
 @Controller('jobs')
 export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+  constructor(
+    private readonly jobsService: JobsService,
+    private readonly jobDescriptionParserService: JobDescriptionParserService,
+  ) {}
 
   @Get()
   async getActiveJobs() {
@@ -43,6 +48,13 @@ export class JobsController {
   @Get(':id/with-simulation')
   async getJobWithSimulation(@Param('id') id: string) {
     return this.jobsService.findByIdWithSimulation(id);
+  }
+
+  @Post('parse-description')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  async parseDescription(@Body() dto: ParseJobDescriptionDto) {
+    return this.jobDescriptionParserService.parse(dto.rawText);
   }
 
   @Post('draft')
