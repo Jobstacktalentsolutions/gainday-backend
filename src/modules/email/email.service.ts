@@ -33,7 +33,7 @@ export class EmailService {
     this.fromName = this.configService.get<string>('email.fromName', 'Gainday');
     this.frontendUrl = this.configService.get<string>(
       'frontendUrl',
-      'http://localhost:5173',
+      'http://localhost:5000',
     );
 
     if (!this.apiKey) {

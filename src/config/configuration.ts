@@ -18,7 +18,7 @@ export default () => {
   }
 
   return {
-    port: parseInt(process.env.PORT || '3000', 10),
+    port: parseInt(process.env.PORT || '5000', 10),
     admin: {
       email: process.env.ADMIN_EMAIL || 'admin@gainday.com',
       password: process.env.ADMIN_PASSWORD || 'adminpassword123',
@@ -53,7 +53,7 @@ export default () => {
         process.env.GOOGLE_CALLBACK_URL ||
         'http://localhost:3000/auth/google/callback',
     },
-    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5000',
     ai: {
       ...aiConfig,
       gemini: {
