@@ -80,7 +80,7 @@ export const parsedJobDescriptionSchema = z.object({
   formattedDescription: z
     .string()
     .describe(
-      'A cleaned-up, well-structured rewrite of the job description as GitHub-flavored markdown — use headings and bullet lists where they improve readability. Preserve all substantive content from the original text (responsibilities, requirements, context); do not invent new claims. This field is always produced, even if other fields above are null.',
+      'A cleaned-up, well-structured rewrite of the job description as GitHub-flavored markdown, rendered by a real markdown parser. Use real "## Heading" syntax for section titles (never bold text as a stand-in for a heading), and real "- item" markdown lists (one item per line, never items strung together inline) for any enumerable content like responsibilities or requirements. Preserve all substantive content from the original text (responsibilities, requirements, context); do not invent new claims. This field is always produced, even if other fields above are null.',
     ),
   businessProblem: z
     .string()

@@ -27,7 +27,19 @@ Rules:
   solve — a generic role description with no such problem stated means null. Don't give the
   business problem its own dedicated section in the rewritten description (it's captured
   separately in the businessProblem field) — just fold any necessary context from it naturally
-  into the responsibilities section instead of restating it verbatim under its own heading.`;
+  into the responsibilities section instead of restating it verbatim under its own heading.
+- Formatting is rendered by a real markdown parser on the candidate-facing page, so use actual
+  markdown syntax, not bold text standing in for it:
+  - Section titles (e.g. "About the role", "Key responsibilities", "Required experience &
+    skills") must be real headings ("## Section title" or "###", not "**Section title**" as a
+    bolded line of body text).
+  - Any enumerable set of items (responsibilities, requirements, benefits, etc.) must be a real
+    markdown list — one "- item" per line — never items strung together inline separated by
+    " - " on a single line or paragraph.
+  - Put a blank line between a heading and the text/list that follows it, and between a list and
+    the next heading or paragraph, so each renders as its own distinct block.
+  - Do not repeat the job title as a top-level "# Heading" inside the description — the title is
+    already shown separately on the page; start the description straight with its content.`;
 
 @Injectable()
 export class JobDescriptionParserService {
