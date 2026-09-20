@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailQueueService } from '../email/email-queue.service';
+import { UserRole } from '../../db/schema/users.schema';
 
 @Injectable()
 export class NotificationsService {
@@ -16,10 +17,14 @@ export class NotificationsService {
     this.logger.log(`Email body: ${body}`);
   }
 
-  async sendVerificationEmail(to: string, token: string): Promise<void> {
+  async sendVerificationEmail(
+    to: string,
+    token: string,
+    role: UserRole = UserRole.EMPLOYER,
+  ): Promise<void> {
     const frontendUrl = this.configService.get('frontendUrl');
     const appUrl = this.configService.get<string>('email.appUrl');
-    const verifyLink = `${appUrl}/auth/verify-email?token=${token}`;
+    const verifyLink = `${appUrl}/auth/verify-email?token=${token}&role=${role}`;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({
@@ -36,9 +41,14 @@ export class NotificationsService {
     this.logger.log(`Email verification email enqueued for ${to}`);
   }
 
-  async sendPasswordResetEmail(to: string, token: string): Promise<void> {
+  async sendPasswordResetEmail(
+    to: string,
+    token: string,
+    role: UserRole = UserRole.EMPLOYER,
+  ): Promise<void> {
     const frontendUrl = this.configService.get('frontendUrl');
-    const link = `${frontendUrl}/employer/reset-password?token=${token}`;
+    const rolePath = role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
+    const link = `${frontendUrl}/${rolePath}/reset-password?token=${token}`;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({

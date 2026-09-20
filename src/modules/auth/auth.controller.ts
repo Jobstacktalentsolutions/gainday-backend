@@ -15,6 +15,7 @@ import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
+import { SignupJobSeekerDto } from './dto/signup-job-seeker.dto';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -78,12 +79,16 @@ export class AuthController {
   }
 
   @Post('register/candidate')
-  async registerCandidate(@Body() body: any) {
-    return this.authService.registerJobSeeker(
-      body.email,
-      body.password,
-      body.fullName,
-    );
+  async registerCandidate(
+    @Body() dto: SignupJobSeekerDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.registerJobSeeker(dto);
+    this.setAuthCookie(res, result.access_token);
+    return {
+      ...result,
+      isEmailVerified: false,
+    };
   }
 
   @Post('request-password-reset')
@@ -104,20 +109,26 @@ export class AuthController {
   }
 
   @Get('verify-email')
-  async verifyEmail(@Query('token') token: string, @Res() res: Response) {
+  async verifyEmail(
+    @Query('token') token: string,
+    @Query('role') role: string,
+    @Res() res: Response,
+  ) {
+    const frontendUrl = this.configService.get('frontendUrl');
+    const rolePath = role === 'JOB_SEEKER' ? 'candidate' : 'employer';
+
     if (!token) {
-      return res.redirect(
-        `${this.configService.get('frontendUrl')}/employer/verify-email?error=true`,
-      );
+      return res.redirect(`${frontendUrl}/${rolePath}/verify-email?error=true`);
     }
 
     const verified = await this.authService.verifyEmail(token);
-    const frontendUrl = this.configService.get('frontendUrl');
 
     if (verified) {
-      return res.redirect(`${frontendUrl}/employer/verify-email?verified=true`);
+      return res.redirect(
+        `${frontendUrl}/${rolePath}/verify-email?verified=true`,
+      );
     } else {
-      return res.redirect(`${frontendUrl}/employer/verify-email?error=true`);
+      return res.redirect(`${frontendUrl}/${rolePath}/verify-email?error=true`);
     }
   }
 

@@ -1,4 +1,9 @@
-import { Inject, Injectable, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthUsersService } from '../users/auth-users.service';
 import { EmployerProfileService } from '../users/employer-profile.service';
@@ -7,6 +12,7 @@ import { AdminProfileService } from '../users/admin-profile.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UserRole, AuthProvider, users } from '../../db/schema';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
+import { SignupJobSeekerDto } from './dto/signup-job-seeker.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -117,7 +123,7 @@ export class AuthService {
           fullName,
           companyName,
         },
-        tx as unknown as DrizzleDb,
+        tx,
       );
 
       return newUser;
@@ -126,15 +132,22 @@ export class AuthService {
     await this.notificationsService.sendVerificationEmail(
       email,
       emailVerificationToken,
+      UserRole.EMPLOYER,
     );
 
     return this.login(user);
   }
 
-  async registerJobSeeker(email: string, password: string, fullName: string) {
+  async registerJobSeeker(dto: SignupJobSeekerDto) {
+    const { email, password, fullName, agreedToTerms } = dto;
+
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
       throw new ConflictException('Email already in use');
+    }
+
+    if (!agreedToTerms) {
+      throw new BadRequestException('Must agree to terms to continue');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -159,7 +172,7 @@ export class AuthService {
           userId: newUser.id,
           fullName,
         },
-        tx as unknown as DrizzleDb,
+        tx,
       );
 
       return newUser;
@@ -168,6 +181,7 @@ export class AuthService {
     await this.notificationsService.sendVerificationEmail(
       email,
       emailVerificationToken,
+      UserRole.JOB_SEEKER,
     );
 
     return this.login(user);
@@ -188,7 +202,11 @@ export class AuthService {
       resetToken,
       resetExpires,
     );
-    await this.notificationsService.sendPasswordResetEmail(email, resetToken);
+    await this.notificationsService.sendPasswordResetEmail(
+      email,
+      resetToken,
+      user.role,
+    );
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
@@ -230,6 +248,7 @@ export class AuthService {
     await this.notificationsService.sendVerificationEmail(
       email,
       emailVerificationToken,
+      user.role,
     );
   }
 
@@ -269,7 +288,7 @@ export class AuthService {
               userId: newUser.id,
               fullName,
             },
-            tx as unknown as DrizzleDb,
+            tx,
           );
 
           return newUser;

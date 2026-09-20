@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gainday AI Engine - Visual Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            background: #f9fafb;
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #3b82f6;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: #6b7280;
+        }
+
+        .section {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 40px;
+            border: 1px solid #e5e7eb;
+            border-top: 4px solid;
+        }
+
+        .section-generation {
+            border-top-color: #0ea5e9;
+        }
+
+        .section-grading {
+            border-top-color: #10b981;
+        }
+
+        .section h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section h2::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .section-subtitle {
+            color: #6b7280;
+            font-size: 1.05em;
+            margin-bottom: 30px;
+        }
+
+        .flow-diagram {
+            margin: 40px 0;
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+
+        .flow-step {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 200px;
+            margin: 0 10px;
+        }
+
+        .flow-box {
+            background: #0ea5e9;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            width: 180px;
+            font-weight: 600;
+            position: relative;
+            margin-bottom: 15px;
+            border: 2px solid #0284c7;
+        }
+
+        .flow-step.grading .flow-box {
+            background: #10b981;
+            border-color: #059669;
+        }
+
+        .flow-step.critical .flow-box {
+            background: #f59e0b;
+            color: #1f2937;
+            border-color: #d97706;
+        }
+
+        .flow-step.decision .flow-box {
+            background: #f97316;
+            color: #1f2937;
+            border-color: #ea580c;
+            clip-path: polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%);
+            width: 200px;
+        }
+
+        .flow-icon {
+            font-size: 2.5em;
+            margin-bottom: 8px;
+        }
+
+        .arrow {
+            font-size: 1.5em;
+            color: #9ca3af;
+            margin: 0 5px;
+        }
+
+        .flow-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 30px 0;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .loop-box {
+            background: #fffbeb;
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+
+        .loop-box h3 {
+            color: #d97706;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loop-content {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.95em;
+            color: #1f2937;
+        }
+
+        .comparison-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #cffafe;
+        }
+
+        .info-box h4 {
+            color: #0369a1;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .info-box p {
+            color: #1e3a8a;
+            font-size: 0.95em;
+        }
+
+        .info-box ul {
+            color: #1e3a8a;
+        }
+
+        .scoring-criteria {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .criteria-card {
+            background: #ecf9ff;
+            border-left: 4px solid #0ea5e9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #cffafe;
+        }
+
+        .criteria-card h4 {
+            color: #0369a1;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .criteria-card p {
+            color: #1e3a8a;
+            font-size: 0.95em;
+        }
+
+        .key-insight {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 500;
+            color: #166534;
+            border: 1px solid #dcfce7;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #dbeafe;
+            color: #0c4a6e;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #6b7280;
+            margin-top: 60px;
+            font-size: 0.9em;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        @media (max-width: 768px) {
+            .section {
+                padding: 25px;
+            }
+
+            .section h2 {
+                font-size: 1.5em;
+            }
+
+            .comparison-row {
+                grid-template-columns: 1fr;
+            }
+
+            .scoring-criteria {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .flow-row {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .flow-step {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .flow-box {
+                width: 100%;
+            }
+
+            .arrow {
+                transform: rotate(90deg);
+            }
+        }
+
+        @page {
+            margin: 0.75in;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 Gainday AI Engine</h1>
+            <p>How the AI Engine Generates and Grades Job Simulations</p>
+        </div>
+
+        <!-- PART 1: GENERATION & REGENERATION -->
+        <div class="section section-generation">
+            <h2 style="color: #0ea5e9;">📝 Part 1: Generation & Regeneration</h2>
+            <p class="section-subtitle">How the AI engine creates realistic job simulation tasks from a recruiter's job posting</p>
+
+            <h3 style="text-align: center; margin: 30px 0 20px 0; color: #1f2937;">The Generation Pipeline</h3>
+
+            <div class="flow-diagram">
+                <div class="flow-row">
+                    <div class="flow-step">
+                        <div class="flow-box">
+                            <div class="flow-icon">📋</div>
+                            Recruiter Input
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step">
+                        <div class="flow-box">
+                            <div class="flow-icon">🔍</div>
+                            Extraction
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step">
+                        <div class="flow-box">
+                            <div class="flow-icon">💡</div>
+                            Task Ideas
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flow-row">
+                    <div class="flow-step">
+                        <div class="flow-box">
+                            <div class="flow-icon">⭐</div>
+                            Ranking
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step">
+                        <div class="flow-box">
+                            <div class="flow-icon">✏️</div>
+                            Generate Task
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step critical">
+                        <div class="flow-box">
+                            <div class="flow-icon">🔬</div>
+                            Critique
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flow-row">
+                    <div class="flow-step decision">
+                        <div class="flow-box">
+                            <div class="flow-icon">✓</div>
+                            Quality OK?
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flow-row">
+                    <div style="flex: 1; text-align: center;">
+                        <div style="color: #10b981; font-weight: 600; margin-bottom: 10px;">✓ Yes: Persist</div>
+                    </div>
+                    <div style="flex: 1; text-align: center;">
+                        <div style="color: #dc2626; font-weight: 600; margin-bottom: 10px;">✗ No: Regenerate</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="color: #1f2937; margin-top: 40px; margin-bottom: 20px;">📌 The Steps Explained</h3>
+
+            <div class="info-box">
+                <h4>📋 Step 1: Recruiter Input</h4>
+                <p>A recruiter provides three things:</p>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li><strong>Job description</strong> - What the role does</li>
+                    <li><strong>Required skills</strong> - What we should test</li>
+                    <li><strong>Business problem</strong> (optional) - A real problem they want solved</li>
+                </ul>
+            </div>
+
+            <div class="info-box">
+                <h4>🔍 Step 2: Extraction</h4>
+                <p>The AI analyzes the input and extracts:</p>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li><strong>Category</strong> - Is this Sales? Finance? (routes to the right module)</li>
+                    <li><strong>Intent</strong> - The specific skills to test</li>
+                    <li><strong>Problem</strong> - The actual business problem (if provided)</li>
+                </ul>
+            </div>
+
+            <div class="info-box">
+                <h4>💡 Step 3: Generate Task Ideas (15 Candidates)</h4>
+                <p>Instead of creating one task, the AI generates <strong>~15 possible task ideas</strong>. This "overgenerate and rank" approach ensures variety and quality. Why? Because picking the best idea from many options is more reliable than trying to create the perfect task immediately.</p>
+            </div>
+
+            <div class="info-box">
+                <h4>⭐ Step 4: Rank & Select Top 4</h4>
+                <p>The AI scores each of the 15 ideas (0-10 points) on three criteria:</p>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li>Does it match the required skills? (Intent alignment)</li>
+                    <li>Is it appropriate for this role? (Category alignment)</li>
+                    <li>Does it incorporate the business problem? (Problem alignment, if provided)</li>
+                </ul>
+                <p style="margin-top: 10px;"><strong>Result:</strong> The top 4 ideas move forward.</p>
+            </div>
+
+            <div class="info-box">
+                <h4>✏️ Step 5: Full Task Generation</h4>
+                <p>For each of the 4 selected ideas, the AI creates:</p>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li><strong>Task title & scenario</strong> - The context and what the candidate must do</li>
+                    <li><strong>Response format</strong> - Whether it's a written answer, a calculation, a ranking, etc.</li>
+                    <li><strong>Metadata</strong> - Labels for how the frontend should display this task</li>
+                </ul>
+            </div>
+
+            <div class="info-box">
+                <h4>🔬 Step 6: Quality Critique</h4>
+                <p>Before a task is shown to candidates, it's automatically checked:</p>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li>✓ <strong>Is it novel?</strong> (Not too similar to existing tasks)</li>
+                    <li>✓ <strong>Is it relevant?</strong> (Actually tests what was requested)</li>
+                    <li>✓ <strong>Is it sound?</strong> (Follows domain best practices)</li>
+                </ul>
+            </div>
+
+            <h3 style="color: #1f2937; margin-top: 40px; margin-bottom: 20px;">🔄 Regeneration Loop (When Quality Fails)</h3>
+
+            <div class="loop-box">
+                <h3>
+                    <span style="font-size: 1.2em;">♻️</span> If a task fails critique...
+                </h3>
+                <div class="loop-content">
+                    <p><strong>The system doesn't start over.</strong></p>
+                    <p style="margin-top: 10px;">Instead, it picks the next-best idea from the original 15 candidates and generates that instead. This happens <strong>up to 3 times.</strong></p>
+                    <p style="margin-top: 10px; font-weight: 600; color: #d97706;">If all 3 attempts fail: The task is flagged for human review. It doesn't get shown to candidates until an admin approves it.</p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                💡 <strong>Why this design?</strong> Generating one task at a time is risky (you might get duplicates or off-topic tasks). Generating 15 and ranking them is much more reliable. If one ranking fails, there are backups waiting.
+            </div>
+        </div>
+
+        <!-- PART 2: GRADING -->
+        <div class="section section-grading">
+            <h2 style="color: #10b981;">📊 Part 2: Grading</h2>
+            <p class="section-subtitle">How the AI engine scores candidates' answers fairly and consistently</p>
+
+            <h3 style="text-align: center; margin: 30px 0 20px 0; color: #1f2937;">The Grading Pipeline</h3>
+
+            <div class="flow-diagram">
+                <div class="flow-row">
+                    <div class="flow-step grading">
+                        <div class="flow-box">
+                            <div class="flow-icon">✍️</div>
+                            Candidate Submits
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step grading">
+                        <div class="flow-box">
+                            <div class="flow-icon">🎯</div>
+                            Anchors Ready
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step grading">
+                        <div class="flow-box">
+                            <div class="flow-icon">📝</div>
+                            Grade Each Task
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flow-row">
+                    <div class="flow-step grading">
+                        <div class="flow-box">
+                            <div class="flow-icon">📈</div>
+                            Roll Up Scores
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step grading">
+                        <div class="flow-box">
+                            <div class="flow-icon">💾</div>
+                            Save Results
+                        </div>
+                    </div>
+                    <div class="arrow">→</div>
+                    <div class="flow-step grading">
+                        <div class="flow-box">
+                            <div class="flow-icon">📧</div>
+                            Email Results
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="color: #1f2937; margin-top: 40px; margin-bottom: 20px;">📌 The Steps Explained</h3>
+
+            <div class="info-box" style="border-left-color: #10b981; background: #f0fdf4; border-color: #dcfce7;">
+                <h4 style="color: #166534;">✍️ Step 1: Candidate Submits Answers</h4>
+                <p style="color: #166534;">A candidate completes all tasks in a simulation and submits their answers. The system receives them and immediately starts grading in the background—the candidate doesn't have to wait.</p>
+            </div>
+
+            <div class="info-box" style="border-left-color: #10b981; background: #f0fdf4; border-color: #dcfce7;">
+                <h4 style="color: #166534;">🎯 Step 2: Prepare Anchor Responses (Reference Standards)</h4>
+                <p style="color: #166534;">Before grading a task, the system needs <strong>reference answers</strong> to calibrate scoring against. Think of these as:</p>
+                <ul style="margin-top: 10px; margin-left: 20px; color: #166534;">
+                    <li><strong>A perfect answer (10/10)</strong></li>
+                    <li><strong>A strong answer (7/10)</strong></li>
+                    <li><strong>An okay answer (5/10)</strong></li>
+                    <li><strong>A weak answer (3/10)</strong></li>
+                    <li><strong>A poor answer (0/10)</strong></li>
+                </ul>
+                <p style="margin-top: 10px; font-weight: 600; color: #166534;">Important: These anchors are created <strong>only the first time</strong> a candidate answers a task. After that, they're reused for all future candidates on the same task. This saves cost and ensures consistency.</p>
+            </div>
+
+            <div class="info-box" style="border-left-color: #10b981; background: #f0fdf4; border-color: #dcfce7;">
+                <h4 style="color: #166534;">📝 Step 3: Grade Each Task</h4>
+                <p style="color: #166534;">For <strong>each task</strong>, the AI compares the candidate's answer against the 5 anchor responses and scores them on 4 dimensions:</p>
+            </div>
+
+            <div class="scoring-criteria">
+                <div class="criteria-card">
+                    <h4>🎯 Problem-Solving</h4>
+                    <p>Did they identify and solve the core problem? Does their approach make sense?</p>
+                </div>
+                <div class="criteria-card">
+                    <h4>💼 Judgment & Execution</h4>
+                    <p>Did they make smart decisions? Were they thorough and methodical?</p>
+                </div>
+                <div class="criteria-card">
+                    <h4>✍️ Written Communication</h4>
+                    <p>Is their answer clear, well-structured, and easy to follow?</p>
+                </div>
+                <div class="criteria-card">
+                    <h4>🏆 Commercial/Domain Awareness</h4>
+                    <p>Do they understand the business or industry context? Is their thinking practical?</p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                💡 <strong>Why 5 anchors, not just 2?</strong> Comparing to only "good" (10) and "bad" (0) doesn't help grade the middle—where most real answers fall. With anchors at 0, 3, 5, 7, and 10, the AI can accurately distinguish between a 6 and a 7 (the hardest and most important distinction in hiring).
+            </div>
+
+            <div class="info-box" style="border-left-color: #10b981; background: #f0fdf4; border-color: #dcfce7; margin-top: 30px;">
+                <h4 style="color: #166534;">📈 Step 4: Roll Up Scores</h4>
+                <p style="color: #166534;">Each task is now scored (0-10) on all 4 dimensions. The system then:</p>
+                <ul style="margin-top: 10px; margin-left: 20px; color: #166534;">
+                    <li><strong>Averages each dimension</strong> across all tasks (e.g., problem-solving scores: 8, 7, 9 → average 8.0)</li>
+                    <li><strong>Weights them</strong> by importance:</li>
+                </ul>
+                <div style="margin-top: 12px; margin-left: 20px; background: #f3f4f6; padding: 12px; border-radius: 6px; font-size: 0.95em; border-left: 3px solid #10b981; color: #166534;">
+                    • Problem-Solving: <strong>40%</strong> (most important)<br>
+                    • Judgment & Execution: <strong>20%</strong><br>
+                    • Written Communication: <strong>20%</strong><br>
+                    • Commercial/Domain Awareness: <strong>20%</strong>
+                </div>
+                <p style="margin-top: 10px; color: #166534;"><strong>Final score:</strong> 0-100 (where 100 is perfect)</p>
+            </div>
+
+            <div class="info-box" style="border-left-color: #10b981; background: #f0fdf4; border-color: #dcfce7;">
+                <h4 style="color: #166534;">💾 Step 5: Save Results</h4>
+                <p style="color: #166534;">The system stores:</p>
+                <ul style="margin-top: 10px; margin-left: 20px; color: #166534;">
+                    <li>The candidate's overall score (0-100)</li>
+                    <li>Their score on each of the 4 dimensions (0-10)</li>
+                    <li>Detailed breakdowns per task</li>
+                    <li>A summary of their strengths and weaknesses</li>
+                </ul>
+            </div>
+
+            <div class="info-box" style="border-left-color: #10b981; background: #f0fdf4; border-color: #dcfce7;">
+                <h4 style="color: #166534;">📧 Step 6: Email Results</h4>
+                <p style="color: #166534;">The candidate receives an email showing:</p>
+                <ul style="margin-top: 10px; margin-left: 20px; color: #166534;">
+                    <li>Their overall score (out of 100)</li>
+                    <li>Breakdown by the 4 dimensions</li>
+                    <li>A summary for each task ("You did well here because...")</li>
+                    <li>Specific feedback grounded in their actual answers</li>
+                </ul>
+            </div>
+
+            <div class="key-insight">
+                💡 <strong>Why this design?</strong> By anchoring to reference answers instead of absolute rules, the system is fair even as tasks change or improve. It's also consistent—every candidate on the same task is compared using the same reference points, regardless of when they submit.
+            </div>
+        </div>
+
+        <!-- COMPARISON -->
+        <div class="section">
+            <h2 style="color: #0284c7;">🔄 Generation vs. Grading: Side by Side</h2>
+
+            <div class="comparison-row">
+                <div>
+                    <h3 style="color: #0ea5e9; margin-bottom: 15px;">⚡ Generation</h3>
+                    <ul style="color: #4b5563; line-height: 2;">
+                        <li>✓ Runs <strong>before</strong> any candidate applies</li>
+                        <li>✓ Recruiter uploads job description</li>
+                        <li>✓ System creates 4 tasks automatically</li>
+                        <li>✓ Quality-checked by critique system</li>
+                        <li>✓ Shown to <strong>all candidates</strong> identically</li>
+                        <li>✓ Goal: Create fair, relevant, quality tasks</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="color: #10b981; margin-bottom: 15px;">🏁 Grading</h3>
+                    <ul style="color: #4b5563; line-height: 2;">
+                        <li>✓ Runs <strong>after</strong> candidate submits</li>
+                        <li>✓ Candidate submits their answers</li>
+                        <li>✓ System grades all 4 tasks automatically</li>
+                        <li>✓ Uses anchor references for consistency</li>
+                        <li>✓ Scored on 4 important dimensions</li>
+                        <li>✓ Goal: Score fairly and give actionable feedback</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- EFFICIENCY & FAIRNESS -->
+        <div class="section">
+            <h2 style="color: #0284c7;">💎 Why This Approach?</h2>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div>
+                    <h3 style="color: #10b981; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        ✨ Quality
+                    </h3>
+                    <ul style="color: #4b5563; line-height: 2; margin-left: 20px;">
+                        <li>• Generate many ideas, pick the best</li>
+                        <li>• Automatic quality checks prevent bad tasks</li>
+                        <li>• Regeneration ensures variety</li>
+                        <li>• Admin review for edge cases</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="color: #10b981; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        ⚖️ Fairness
+                    </h3>
+                    <ul style="color: #4b5563; line-height: 2; margin-left: 20px;">
+                        <li>• All candidates see the same tasks</li>
+                        <li>• Anchor references ensure consistent scoring</li>
+                        <li>• First-time anchor generation ensures fairness</li>
+                        <li>• Weighted dimensions reflect real hiring needs</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                <div>
+                    <h3 style="color: #0ea5e9; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        ⏱️ Efficiency
+                    </h3>
+                    <ul style="color: #4b5563; line-height: 2; margin-left: 20px;">
+                        <li>• No manual task writing by recruiters</li>
+                        <li>• Anchors generated only once (cost savings)</li>
+                        <li>• Fully automated background grading</li>
+                        <li>• Scales to hundreds of candidates</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="color: #0ea5e9; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        📊 Insights
+                    </h3>
+                    <ul style="color: #4b5563; line-height: 2; margin-left: 20px;">
+                        <li>• Candidates get detailed feedback per task</li>
+                        <li>• Recruiters see standardized scoring</li>
+                        <li>• Capability scores track growth over time</li>
+                        <li>• Data-driven hiring decisions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>Gainday AI Engine Documentation</p>
+            <p style="margin-top: 10px; font-size: 0.85em;">For more details, see: gainday-generation-pipeline.md & gainday-grading-pipeline.md</p>
+        </div>
+    </div>
+</body>
+</html>
