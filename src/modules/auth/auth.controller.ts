@@ -16,6 +16,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
 import { SignupJobSeekerDto } from './dto/signup-job-seeker.dto';
+import { UserRole } from '../../db/schema';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -138,14 +139,20 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleCallback(@CurrentUser() user: any, @Res() res: Response) {
-    const result = await this.authService.validateGoogleUser(user);
+  async googleCallback(
+    @CurrentUser() user: any,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
+    const role = state === 'JOB_SEEKER' ? UserRole.JOB_SEEKER : UserRole.EMPLOYER;
+    const result = await this.authService.validateGoogleUser(user, role);
     const frontendUrl = this.configService.get('frontendUrl');
+    const rolePath = result.user.role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
 
     this.setAuthCookie(res, result.access_token);
 
     return res.redirect(
-      `${frontendUrl}/employer/oauth/callback?token=${result.access_token}`,
+      `${frontendUrl}/${rolePath}/oauth/callback?token=${result.access_token}`,
     );
   }
 

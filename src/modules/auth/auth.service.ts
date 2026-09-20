@@ -252,10 +252,12 @@ export class AuthService {
     );
   }
 
-  async validateGoogleUser(googleUserData: any) {
-    // NOTE (pre-existing, unrelated to this refactor): this always creates an
-    // EMPLOYER regardless of signup intent, and the "attach googleId to an
-    // existing user found by email" branch below calls createUser with the
+  async validateGoogleUser(
+    googleUserData: any,
+    role: UserRole = UserRole.EMPLOYER,
+  ) {
+    // NOTE (pre-existing, unrelated to this refactor): the "attach googleId to
+    // an existing user found by email" branch below calls createUser with the
     // existing user's fields, which inserts a *new* row rather than updating
     // the found one. Left as-is per plan — flagged, not fixed here.
     const { email, googleId, fullName } = googleUserData;
@@ -269,6 +271,29 @@ export class AuthService {
         await this.usersService.createUser({
           ...user,
           googleId,
+        });
+      } else if (role === UserRole.JOB_SEEKER) {
+        user = await this.db.transaction(async (tx) => {
+          const [newUser] = await tx
+            .insert(users)
+            .values({
+              email,
+              googleId,
+              role: UserRole.JOB_SEEKER,
+              authProvider: AuthProvider.GOOGLE,
+              isEmailVerified: true,
+            })
+            .returning();
+
+          await this.jobSeekerProfileService.create(
+            {
+              userId: newUser.id,
+              fullName,
+            },
+            tx,
+          );
+
+          return newUser;
         });
       } else {
         user = await this.db.transaction(async (tx) => {
