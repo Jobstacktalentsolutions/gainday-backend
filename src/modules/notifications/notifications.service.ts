@@ -23,8 +23,8 @@ export class NotificationsService {
     role: UserRole = UserRole.EMPLOYER,
   ): Promise<void> {
     const frontendUrl = this.configService.get('frontendUrl');
-    const appUrl = this.configService.get<string>('email.appUrl');
-    const verifyLink = `${appUrl}/auth/verify-email?token=${token}&role=${role}`;
+    const rolePath = role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
+    const verifyLink = `${frontendUrl}/${rolePath}/verify-email?token=${token}`;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({

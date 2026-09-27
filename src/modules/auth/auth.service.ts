@@ -19,6 +19,9 @@ import type { DrizzleDb } from '../../db/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const RESEND_VERIFICATION_COOLDOWN_MS = 60 * 1000;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -102,7 +105,9 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
-    const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const emailVerificationExpires = new Date(
+      Date.now() + EMAIL_VERIFICATION_TTL_MS,
+    );
 
     const user = await this.db.transaction(async (tx) => {
       const [newUser] = await tx
@@ -152,7 +157,9 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
-    const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const emailVerificationExpires = new Date(
+      Date.now() + EMAIL_VERIFICATION_TTL_MS,
+    );
 
     const user = await this.db.transaction(async (tx) => {
       const [newUser] = await tx
@@ -231,23 +238,43 @@ export class AuthService {
     return !!result;
   }
 
+  /**
+   * Silently no-ops for unknown or already-verified emails (so the endpoint
+   * can't be used to probe accounts) and inside the resend cooldown.
+   * A still-valid token is reused so links from earlier emails keep working.
+   */
   async resendVerificationEmail(email: string): Promise<void> {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) {
+    const user = await this.usersService.findVerificationStateByEmail(email);
+    if (!user || user.isEmailVerified) {
       return;
     }
 
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
-    const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const now = Date.now();
+    const { emailVerificationToken, emailVerificationExpires } = user;
+    const liveToken =
+      emailVerificationToken &&
+      emailVerificationExpires &&
+      emailVerificationExpires.getTime() > now
+        ? emailVerificationToken
+        : null;
 
+    if (liveToken && emailVerificationExpires) {
+      // Issue time is derived from the expiry, which is refreshed on each send.
+      const issuedAt = emailVerificationExpires.getTime() - EMAIL_VERIFICATION_TTL_MS;
+      if (now - issuedAt < RESEND_VERIFICATION_COOLDOWN_MS) {
+        return;
+      }
+    }
+
+    const token = liveToken ?? crypto.randomBytes(32).toString('hex');
     await this.usersService.updateVerificationToken(
       user.id,
-      emailVerificationToken,
-      emailVerificationExpires,
+      token,
+      new Date(now + EMAIL_VERIFICATION_TTL_MS),
     );
     await this.notificationsService.sendVerificationEmail(
       email,
-      emailVerificationToken,
+      token,
       user.role,
     );
   }

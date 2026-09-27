@@ -28,6 +28,20 @@ export class AuthUsersService {
     return (user as User) ?? null;
   }
 
+  async findVerificationStateByEmail(email: string) {
+    const [row] = await this.db
+      .select({
+        id: users.id,
+        role: users.role,
+        isEmailVerified: users.isEmailVerified,
+        emailVerificationToken: users.emailVerificationToken,
+        emailVerificationExpires: users.emailVerificationExpires,
+      })
+      .from(users)
+      .where(eq(users.email, email));
+    return row ?? null;
+  }
+
   async findByEmailWithPassword(email: string): Promise<User | null> {
     const [user] = await this.db
       .select()

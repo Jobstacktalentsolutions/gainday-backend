@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   UnauthorizedException,
+  BadRequestException,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -19,6 +20,8 @@ import { SignupJobSeekerDto } from './dto/signup-job-seeker.dto';
 import { UserRole } from '../../db/schema';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -44,10 +47,6 @@ export class AuthController {
       throw new UnauthorizedException('Invalid credentials');
     }
     const result = await this.authService.login(user);
-
-    if (!user.isEmailVerified) {
-      await this.authService.resendVerificationEmail(user.email);
-    }
 
     this.setAuthCookie(res, result.access_token);
     return {
@@ -109,6 +108,28 @@ export class AuthController {
     return { message: 'Password reset successfully' };
   }
 
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async confirmEmail(@Body() dto: VerifyEmailDto) {
+    const verified = await this.authService.verifyEmail(dto.token);
+    if (!verified) {
+      throw new BadRequestException('Invalid or expired verification link');
+    }
+    return { verified: true };
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    await this.authService.resendVerificationEmail(dto.email);
+    return {
+      message:
+        'If that account exists and is unverified, a new link has been sent',
+    };
+  }
+
+  // Legacy redirect flow, kept for verification emails sent before the link
+  // pointed at the frontend page.
   @Get('verify-email')
   async verifyEmail(
     @Query('token') token: string,
