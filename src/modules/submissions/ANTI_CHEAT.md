@@ -141,6 +141,24 @@ querying "every idle event across all submissions for job X" means scanning and 
 `submissions.disqualificationReason: text` exists on the schema but nothing currently sets it —
 events are recorded, nothing acts on them automatically.
 
+**Migration `0013_thankful_maestro.sql`** (`text[]` → `jsonb` for `anti_cheat_flags`) has been
+applied to the real database this backend points at. The plain `ALTER COLUMN TYPE jsonb`
+drizzle-kit generated failed on the first attempt — Postgres has no implicit cast from `text[]`
+to `jsonb`, `USING` or not, and both existing `submissions` rows had `anti_cheat_flags: NULL`
+(the column was nullable before this migration), which would also have failed the `SET NOT NULL`
+step three statements later. Fixed in place, before the migration ever succeeded anywhere, so no
+hash-mismatch risk:
+
+```sql
+ALTER TABLE "submissions" ALTER COLUMN "anti_cheat_flags"
+  SET DATA TYPE jsonb USING COALESCE(to_jsonb("anti_cheat_flags"), '[]'::jsonb);
+```
+
+`to_jsonb()` on a `text[]` converts it to a JSON array of strings (fine — there was no
+non-empty old-format data to preserve the meaning of); `COALESCE(..., '[]'::jsonb)` backfills
+the `NULL` rows to an empty array so the subsequent `SET NOT NULL` succeeds. Verified against
+the real database afterward: `anti_cheat_flags` is `jsonb`, both existing rows now hold `[]`.
+
 ## Answer-key confidentiality (a related but distinct protection)
 
 Not a behavioral signal like the above — this prevents a different kind of cheating: reading the
@@ -169,13 +187,6 @@ real data, since an employer editing a task needs to see its correct answer.
   submission row, not a separate `anti_cheat_events` table — fine for "show me this submission's
   timeline," not for "show me every idle event across all submissions for job X" without an
   application-level scan.
-- **Migration `0013_thankful_maestro.sql` (`text[]` → `jsonb` for `anti_cheat_flags`) hasn't been
-  run against a real database** — this was built and verified against the schema only (no
-  `DATABASE_URL` available in this environment). A plain `ALTER COLUMN TYPE jsonb` has no
-  `USING` clause for `text[]` data; if any submission has already accumulated old-format string
-  flags before this migration runs, that statement will likely fail and need a manual `USING`
-  cast (e.g. converting each string to `{"type": <string>, "taskId": null, "occurredAt": ...}`)
-  rather than running as generated.
 - **The exact idle threshold value is a guess, not a confirmed product decision.** Currently 5
   minutes (`IDLE_THRESHOLD_MS` in `TaskRunner.tsx`) — this came from clarifying an ambiguous
   "5ms" in the original request; the per-spell-duration *mechanism* is confirmed, just not this
