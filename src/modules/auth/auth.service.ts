@@ -3,6 +3,7 @@ import {
   Injectable,
   ConflictException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthUsersService } from '../users/auth-users.service';
@@ -14,6 +15,7 @@ import { UserRole, AuthProvider, users } from '../../db/schema';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
 import { SignupJobSeekerDto } from './dto/signup-job-seeker.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import * as bcrypt from 'bcrypt';
@@ -230,6 +232,40 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    await this.usersService.updatePassword(user.id, hashedPassword);
+  }
+
+  /** Authenticated in-session password change — distinct from resetPassword's emailed-token
+   *  flow, since this requires proving the CURRENT password rather than owning the account's
+   *  inbox. Google-only accounts (no local password set) get a clear error rather than a
+   *  bcrypt.compare crash against a null hash. */
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    const { currentPassword, newPassword, confirmNewPassword } = dto;
+
+    if (newPassword !== confirmNewPassword) {
+      throw new BadRequestException('New passwords do not match');
+    }
+
+    const user = await this.usersService.findByIdWithPassword(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (!user.password) {
+      throw new BadRequestException(
+        'This account signs in with Google and has no password to change',
+      );
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
     await this.usersService.updatePassword(user.id, hashedPassword);
   }
 

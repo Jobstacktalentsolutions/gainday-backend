@@ -38,25 +38,38 @@ Three listeners feed it, all wired up in `pages/TaskRunner.tsx` for the life of 
 
 | Listener | File | Fires on | Flag string |
 |---|---|---|---|
-| Tab visibility | `hooks/useTabVisibilityGuard.ts` | `document.hidden` becoming true, or a `window blur` event | `tab-hidden`, `window-blur` |
-| Fullscreen exit | `hooks/useFullscreenGuard.ts` | `fullscreenchange` transitioning from fullscreen → not | `fullscreen-exit` |
-| Idle time | `hooks/useIdleDetection.ts` | no mouse/keyboard/scroll/touch/wheel activity for `IDLE_THRESHOLD_MS` (currently 5 minutes, set in `TaskRunner.tsx`) | `idle` |
+| Tab visibility | `hooks/useTabVisibilityGuard.ts` | `document.hidden` becoming true, or a `window blur` event | `tab-hidden ×N` |
+| Fullscreen exit | `hooks/useFullscreenGuard.ts` | `fullscreenchange` transitioning from fullscreen → not | `fullscreen-exit ×N` |
+| Idle time | `hooks/useIdleDetection.ts` | see below — a gap between activity events reaching `IDLE_THRESHOLD_MS` (currently 5 minutes, set in `TaskRunner.tsx`) | `idle ×N (total Xm Ys)` |
 
-The idle listener is a repeating timer, not a one-shot: it keeps firing every
-`IDLE_THRESHOLD_MS` for as long as the candidate stays idle, so 12 minutes of silence at a
-5-minute threshold logs 2 occurrences of `idle`, not 1. Any listened activity event resets the
-clock. This mirrors how the other two listeners already count every occurrence rather than
-just presence.
+**Idle time is measured as real per-spell duration, not counted in fixed-size ticks.**
+`useIdleDetection` runs nothing on a timer while idle; instead it watches
+mousemove/mousedown/keydown/scroll/touchstart/wheel, and on *each* such event checks how long
+it's been since the previous one. If that gap is >= `IDLE_THRESHOLD_MS`, the gap's real duration
+is reported as one idle spell (`recordIdleSpell(durationMs)`) and the clock resets. Two idle
+periods separated by even a moment of activity are two independent spells — idle 6 min, active
+10 sec, idle 8 min reports as two spells (6 min, 8 min), never merged into one 14-minute total.
+Below the threshold, a gap isn't reported at all — a 30-second pause is thinking, not idle.
+
+Because a spell is only closed out by an activity event, a candidate who goes idle and never
+returns (walks away for good) would otherwise never trigger a report. `TaskRunner.tsx` calls
+`idle.flush()` as the first step of `finalizeSubmission()` (both the explicit-submit and
+timer-expiry paths) specifically to close out and report whatever spell was still open at that
+moment, before building the flags to send.
 
 `useTabVisibilityGuard` also has a separate use on `pages/EnvironmentCheckPage.tsx` (before the
 simulation starts, prefixed `pre-simulation-*`) — that's a different, pre-run concern (are they
 already switching tabs during the environment check) and writes to the same store but is never
 sent anywhere, since there's no submission yet at that point.
 
-**At submit time**, `TaskRunner.tsx` calls `formatViolationFlags(violationCounts)` (also in
-`useSimulationIntegrityStore.ts`) to turn the count map into the wire format —
-`["tab-hidden ×3", "fullscreen-exit ×1"]` — and sends it as `antiCheatFlags` in the
-`PUT /submissions/:id/submit` body.
+**At submit time**, `TaskRunner.tsx` calls
+`formatViolationFlags(useSimulationIntegrityStore.getState())` (also in
+`useSimulationIntegrityStore.ts`) — reading fresh state directly via zustand's `getState()`
+rather than a render-time selector, so the just-flushed idle spell above is never missed — to
+turn the store into the wire format, e.g. `["tab-hidden ×3", "fullscreen-exit ×1",
+"idle ×2 (total 14m6s)"]`, and sends it as `antiCheatFlags` in the `PUT /submissions/:id/submit`
+body. `idleSpellCount`/`idleTotalMs` are tracked as separate counters from `violationCounts` in
+the store, since a count alone would lose how long each idle spell actually was.
 
 ## Server-observed signal: heartbeat staleness
 
@@ -121,9 +134,10 @@ real data, since an employer editing a task needs to see its correct answer.
 - **No per-event timeline.** `antiCheatFlags` is a flat array of `"type ×count"` strings computed
   once at submit — there's no record of *when* each tab-switch or idle period happened relative
   to which task, only a final total for the whole run.
-- **Idle threshold is a guess, not a confirmed product decision.** Currently 5 minutes
-  (`IDLE_THRESHOLD_MS` in `TaskRunner.tsx`) — this came from clarifying an ambiguous "5ms" in the
-  original request; worth confirming the intended value.
+- **The exact idle threshold value is a guess, not a confirmed product decision.** Currently 5
+  minutes (`IDLE_THRESHOLD_MS` in `TaskRunner.tsx`) — this came from clarifying an ambiguous
+  "5ms" in the original request; the per-spell-duration *mechanism* is confirmed, just not this
+  specific number.
 - **Heartbeat-staleness math assumes the 20s ping interval stays roughly as-is.** If
   `PING_INTERVAL_MS` in `useConnectionMonitor.ts` changes significantly,
   `HEARTBEAT_STALE_THRESHOLD_MS` in `submissions.service.ts` should move with it (kept as two
