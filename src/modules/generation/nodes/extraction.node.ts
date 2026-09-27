@@ -14,9 +14,11 @@ import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-outpu
 const logger = new Logger('GenerationPipeline:extraction');
 
 const CATEGORY_EXTRACTION_PROMPT = `You are extracting the job Category from a recruiter's job
-posting input. Category is the domain and sub-domain of the role (e.g. "Finance > Reconciliation",
-or "Sales"). Must be one of these top-level domains where possible: Finance, Sales. If a sub-domain
-is evident from the description, include it after " > ".`;
+posting input. Category is the true domain and sub-domain of the role (e.g. "Finance >
+Reconciliation", "Sales", "Customer Support > Technical Troubleshooting", "Logistics > Fleet
+Operations"). Extract the domain the role actually belongs to — do not force-fit it into Finance
+or Sales if it clearly belongs elsewhere; we support any domain. If a sub-domain is evident from
+the description, include it after " > ".`;
 
 export function extractionNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {

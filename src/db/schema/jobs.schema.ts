@@ -35,13 +35,11 @@ export const JobStatus = {
 } as const;
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 
-export const jobRoleEnum = pgEnum('job_role', ['FINANCE', 'SALES']);
-
-export const JobRole = {
-  FINANCE: 'FINANCE',
-  SALES: 'SALES',
-} as const;
-export type JobRole = (typeof JobRole)[keyof typeof JobRole];
+// Free text, not an enum: the employer can pick one of the built-in presets (Finance, Sales) or
+// type their own role label ("Add Yours" on the job-posting form) — the AI generation pipeline
+// resolves ANY role text to a role module (a purpose-built one if registered, otherwise a
+// generic fallback — see RoleRegistry.resolve), so this column no longer constrains the value.
+export type JobRole = string;
 
 export interface SalaryRange {
   min: number | null;
@@ -54,7 +52,7 @@ export const jobs = pgTable('jobs', {
   title: varchar('title', { length: 255 }),
   description: text('description'),
   requiredSkills: text('required_skills').array().notNull().default([]),
-  role: jobRoleEnum('role').$type<JobRole>(),
+  role: varchar('role', { length: 100 }),
   skillLevel: varchar('skill_level', { length: 100 }),
   skillCategory: varchar('skill_category', { length: 255 }),
   companyDescription: text('company_description'),

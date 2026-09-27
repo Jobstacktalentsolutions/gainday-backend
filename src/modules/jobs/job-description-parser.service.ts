@@ -18,8 +18,9 @@ GitHub-flavored markdown.
 Rules:
 - Never invent information that is not present in the text — return null for any field you cannot
   determine from the text.
-- Normalize enum-shaped fields (role, skillLevel, employmentType) to exactly one of the allowed
-  values described on each field — do not return any other spelling or value.
+- Normalize enum-shaped fields (skillLevel, employmentType) to exactly one of the allowed values
+  described on each field — do not return any other spelling or value. "role" is free text — use
+  a short label in the posting's own terms rather than forcing it into a fixed list.
 - The rewritten description should preserve all substantive content (responsibilities,
   requirements, context) from the original — it's a cleanup and reformat, not a summary that drops
   information.

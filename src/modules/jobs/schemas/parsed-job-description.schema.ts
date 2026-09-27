@@ -12,10 +12,12 @@ export const parsedJobDescriptionSchema = z.object({
       'The job title, if stated or clearly implied. Null if not determinable.',
     ),
   role: z
-    .enum(['FINANCE', 'SALES'])
+    .string()
     .nullable()
     .describe(
-      'The broad role domain this posting belongs to. Must be exactly "FINANCE" or "SALES" — pick whichever is the closer fit. Null only if genuinely neither.',
+      'A short label (2-4 words) for the broad role domain this posting belongs to, e.g. ' +
+        '"Finance", "Sales", "Customer Support", "Logistics". Use the posting\'s own terms — do ' +
+        'not force it into any fixed list. Null only if genuinely undeterminable.',
     ),
   skillLevel: z
     .enum(['Entry level', 'Mid level', 'Senior level'])

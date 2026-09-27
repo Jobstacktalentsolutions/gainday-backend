@@ -1,7 +1,6 @@
 import {
   IsArray,
   IsBoolean,
-  IsEnum,
   IsISO8601,
   IsInt,
   IsOptional,
@@ -9,16 +8,16 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
-import { JobRole } from '../../../db/schema';
 
 export class SaveDraftJobDto {
   @IsOptional()
   @IsString()
   title?: string;
 
+  // Free text — a built-in preset (Finance, Sales) or an employer-typed custom role label.
   @IsOptional()
-  @IsEnum(JobRole, { message: 'Role must be either FINANCE or SALES' })
-  role?: JobRole;
+  @IsString()
+  role?: string;
 
   @IsOptional()
   @IsString()

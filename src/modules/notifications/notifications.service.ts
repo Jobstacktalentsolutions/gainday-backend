@@ -22,9 +22,9 @@ export class NotificationsService {
     token: string,
     role: UserRole = UserRole.EMPLOYER,
   ): Promise<void> {
-    const frontendUrl = this.configService.get('frontendUrl');
+    const appUrl = this.configService.get<string>('email.appUrl');
     const rolePath = role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
-    const verifyLink = `${frontendUrl}/${rolePath}/verify-email?token=${token}`;
+    const verifyLink = `${appUrl}/${rolePath}/verify-email?token=${token}`;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({
@@ -34,7 +34,6 @@ export class NotificationsService {
       context: {
         verifyLink,
         year,
-        frontendUrl,
       },
     });
 
@@ -46,9 +45,9 @@ export class NotificationsService {
     token: string,
     role: UserRole = UserRole.EMPLOYER,
   ): Promise<void> {
-    const frontendUrl = this.configService.get('frontendUrl');
+    const appUrl = this.configService.get<string>('email.appUrl');
     const rolePath = role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
-    const link = `${frontendUrl}/${rolePath}/reset-password?token=${token}`;
+    const link = `${appUrl}/${rolePath}/reset-password?token=${token}`;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({

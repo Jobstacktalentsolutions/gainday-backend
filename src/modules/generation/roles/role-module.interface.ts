@@ -77,10 +77,3 @@ export class RoleModuleNotConfiguredError extends Error {
     this.name = 'RoleModuleNotConfiguredError';
   }
 }
-
-export class UnregisteredRoleCategoryError extends Error {
-  constructor(category: string) {
-    super(`No role module is registered for category "${category}".`);
-    this.name = 'UnregisteredRoleCategoryError';
-  }
-}

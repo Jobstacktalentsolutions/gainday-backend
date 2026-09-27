@@ -21,7 +21,7 @@ export class EmailService {
   private apiKey: string;
   private fromEmail: string;
   private fromName: string;
-  private frontendUrl: string;
+  private appUrl: string;
   private readonly breevoApiUrl = 'https://api.brevo.com/v3/smtp/email';
 
   constructor(private configService: ConfigService) {
@@ -31,9 +31,9 @@ export class EmailService {
       'noreply@gainday.com',
     );
     this.fromName = this.configService.get<string>('email.fromName', 'Gainday');
-    this.frontendUrl = this.configService.get<string>(
-      'frontendUrl',
-      'http://localhost:5000',
+    this.appUrl = this.configService.get<string>(
+      'email.appUrl',
+      'http://localhost:3000',
     );
 
     if (!this.apiKey) {
@@ -58,11 +58,12 @@ export class EmailService {
         throw new Error(`Email template not found: ${templatePath}`);
       }
 
-      // Add frontend URL and logo to all templates
+      // Add the app URL and logo to every template so no template has to
+      // wire these up itself, and every email points at the same place.
       const enrichedContext = {
         ...context,
-        frontendUrl: this.frontendUrl,
-        logoUrl: `${this.frontendUrl}/gainday.svg`,
+        appUrl: this.appUrl,
+        logoUrl: `${this.appUrl}/gainday-logo.png`,
         year: context.year || new Date().getFullYear(),
       };
 

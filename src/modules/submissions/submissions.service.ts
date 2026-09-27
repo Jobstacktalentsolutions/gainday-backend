@@ -5,6 +5,13 @@ import type { DrizzleDb } from '../../db/client';
 import { submissions, CandidateAnswer } from '../../db/schema';
 import { GradingService } from '../grading/grading.service';
 
+// A heartbeat older than this by the time the candidate submits means the client went quiet
+// (tab closed, machine slept, network down, or deliberately stopped pinging) for longer than a
+// couple of missed beats — auto-flagged alongside whatever the client itself reported. Frontend
+// pings every 20s (useConnectionMonitor's PING_INTERVAL_MS) — this must stay well above that so
+// a single dropped ping doesn't false-positive.
+const HEARTBEAT_STALE_THRESHOLD_MS = 90_000;
+
 @Injectable()
 export class SubmissionsService {
   private readonly logger = new Logger(SubmissionsService.name);
@@ -19,6 +26,7 @@ export class SubmissionsService {
     simulationId: string,
     candidateId: string,
   ) {
+    const now = new Date();
     const [submission] = await this.db
       .insert(submissions)
       .values({
@@ -26,14 +34,39 @@ export class SubmissionsService {
         simulationId,
         candidateId,
         status: 'PENDING',
-        startedAt: new Date(),
+        startedAt: now,
+        // Seeded to the start time rather than left null, so there's no artificial "stale
+        // heartbeat" gap before the client's first ping ever lands (see
+        // HEARTBEAT_STALE_THRESHOLD_MS).
+        lastHeartbeatAt: now,
         answers: [],
       })
       .returning();
     return submission;
   }
 
-  async submitAnswers(submissionId: string, answers: CandidateAnswer[]) {
+  /**
+   * POST /submissions/:id/heartbeat — an authenticated liveness ping from the candidate's
+   * client during an active run. Ownership is enforced by the controller (candidateId must
+   * match the caller's own profile) before this is called.
+   */
+  async recordHeartbeat(submissionId: string) {
+    const [updated] = await this.db
+      .update(submissions)
+      .set({ lastHeartbeatAt: new Date() })
+      .where(eq(submissions.id, submissionId))
+      .returning();
+    if (!updated) {
+      throw new Error('Submission not found');
+    }
+    return { status: updated.status, serverTime: new Date().toISOString() };
+  }
+
+  async submitAnswers(
+    submissionId: string,
+    answers: CandidateAnswer[],
+    clientAntiCheatFlags: string[] = [],
+  ) {
     const submission = await this.db.query.submissions.findFirst({
       where: eq(submissions.id, submissionId),
     });
@@ -48,9 +81,32 @@ export class SubmissionsService {
         1000,
     );
 
+    // Server-observed signal, not just what the client chose to report — a client that
+    // suppresses its own tab-visibility/window-blur flags (e.g. via devtools) can't suppress
+    // this, since it's derived from when heartbeats actually stopped arriving.
+    const heartbeatAgeMs = submission.lastHeartbeatAt
+      ? completedAt.getTime() - submission.lastHeartbeatAt.getTime()
+      : null;
+    const flags = [...clientAntiCheatFlags];
+    if (
+      heartbeatAgeMs !== null &&
+      heartbeatAgeMs > HEARTBEAT_STALE_THRESHOLD_MS
+    ) {
+      flags.push(
+        `server-stale-heartbeat-${Math.round(heartbeatAgeMs / 1000)}s`,
+      );
+    }
+
     const [updated] = await this.db
       .update(submissions)
-      .set({ answers, completedAt, timeTakenSeconds, updatedAt: new Date() })
+      .set({
+        answers,
+        completedAt,
+        timeTakenSeconds,
+        antiCheatFlags: flags,
+        isAntiCheatFlagged: flags.length > 0,
+        updatedAt: new Date(),
+      })
       .where(eq(submissions.id, submissionId))
       .returning();
 

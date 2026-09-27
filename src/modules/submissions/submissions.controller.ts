@@ -8,6 +8,8 @@ import {
   UseGuards,
   ForbiddenException,
   NotFoundException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { SubmissionsService } from './submissions.service';
 import { JobsService } from '../jobs/jobs.service';
@@ -40,11 +42,41 @@ export class SubmissionsController {
   }
 
   @Put(':id/submit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER)
   async submitSimulation(
     @Param('id') id: string,
-    @Body() body: { answers: any[] },
+    @Body() body: { answers: any[]; antiCheatFlags?: string[] },
+    @CurrentUser() user: any,
   ) {
-    return this.submissionsService.submitAnswers(id, body.answers);
+    const submission = await this.assertOwnedByCandidate(id, user);
+    return this.submissionsService.submitAnswers(
+      submission.id,
+      body.answers,
+      body.antiCheatFlags ?? [],
+    );
+  }
+
+  // POST not GET/PUT — a heartbeat is a side-effecting "I'm still here" event, not idempotent
+  // state to fetch or replace.
+  @Post(':id/heartbeat')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER)
+  async heartbeat(@Param('id') id: string, @CurrentUser() user: any) {
+    const submission = await this.assertOwnedByCandidate(id, user);
+    return this.submissionsService.recordHeartbeat(submission.id);
+  }
+
+  private async assertOwnedByCandidate(submissionId: string, user: any) {
+    const submission = await this.submissionsService.findById(submissionId);
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+    if (submission.candidateId !== user.profileId) {
+      throw new ForbiddenException('This submission does not belong to you');
+    }
+    return submission;
   }
 
   @Get('job/:jobId')

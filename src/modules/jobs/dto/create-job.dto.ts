@@ -1,7 +1,6 @@
 import {
   IsArray,
   IsBoolean,
-  IsEnum,
   IsISO8601,
   IsInt,
   IsOptional,
@@ -10,15 +9,16 @@ import {
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { JobRole } from '../../../db/schema';
 
 export class CreateJobDto {
   @IsString()
   @MinLength(3, { message: 'Job title is required' })
   title: string;
 
-  @IsEnum(JobRole, { message: 'Role must be either FINANCE or SALES' })
-  role: JobRole;
+  // Free text — a built-in preset (Finance, Sales) or an employer-typed custom role label.
+  @IsString()
+  @MinLength(1, { message: 'Role is required' })
+  role: string;
 
   @IsString()
   @MinLength(1, { message: 'Skill level is required' })

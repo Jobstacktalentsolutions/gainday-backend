@@ -100,6 +100,10 @@ export const submissions = pgTable('submissions', {
   startedAt: timestamp('started_at', { withTimezone: true }),
   completedAt: timestamp('completed_at', { withTimezone: true }),
   isUnlocked: boolean('is_unlocked').notNull().default(false),
+  // Last POST /submissions/:id/heartbeat received from the candidate's client during the run —
+  // an authenticated liveness ping, not just a raw connectivity check (see
+  // SubmissionsService.recordHeartbeat). A stale value at submit time auto-flags the submission.
+  lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true }),
 });
 
 export const submissionsRelations = relations(submissions, ({ one }) => ({

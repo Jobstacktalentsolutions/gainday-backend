@@ -21,6 +21,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../db/schema';
 import { RoleRegistry } from '../generation/roles/role-registry';
 import { validateSimulationTasks } from './simulation-task.validator';
+import { sanitizeTaskForCandidate } from './candidate-task.util';
 
 interface RegenerateTaskEvent {
   data: { type: 'status' | 'task' | 'done' | 'error'; payload: unknown };
@@ -37,9 +38,19 @@ export class SimulationsController {
     private readonly roleRegistry: RoleRegistry,
   ) {}
 
+  // Public/candidate-facing — no guard, so this must never return an objectiveComponent's
+  // answer-key field (see sanitizeTaskForCandidate). The employer-authoring path uses a
+  // separate route (GET /jobs/:id/with-simulation) that returns tasks unsanitized.
   @Get('job/:jobId')
   async getByJob(@Param('jobId') jobId: string) {
-    return this.simulationsService.findByJobId(jobId);
+    const simulation = await this.simulationsService.findByJobId(jobId);
+    if (!simulation) return null;
+    return {
+      ...simulation,
+      tasks: simulation.tasks.map((task) =>
+        sanitizeTaskForCandidate(task, this.roleRegistry),
+      ),
+    };
   }
 
   @Post('job/:jobId/generate')
