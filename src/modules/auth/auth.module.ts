@@ -14,7 +14,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { RolesGuard } from './guards/roles.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
 
 const jwtModuleOptions: JwtModuleAsyncOptions = {
   imports: [ConfigModule],
@@ -43,14 +42,7 @@ const jwtModuleOptions: JwtModuleAsyncOptions = {
     GoogleStrategy,
     RolesGuard,
     JwtAuthGuard,
-    OptionalJwtAuthGuard,
   ],
-  exports: [
-    AuthService,
-    RolesGuard,
-    JwtAuthGuard,
-    OptionalJwtAuthGuard,
-    PassportModule,
-  ],
+  exports: [AuthService, RolesGuard, JwtAuthGuard, PassportModule],
 })
 export class AuthModule {}

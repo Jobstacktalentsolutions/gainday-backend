@@ -13,7 +13,6 @@ import { SubmissionsService } from './submissions.service';
 import { JobsService } from '../jobs/jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../db/schema';
@@ -26,19 +25,18 @@ export class SubmissionsController {
   ) {}
 
   @Post('job/:jobId/start')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER)
   async startSimulation(
     @Param('jobId') jobId: string,
-    @Body() body: { simulationId: string; guestInfo?: any },
+    @Body() body: { simulationId: string },
     @CurrentUser() user: any,
   ) {
     return this.submissionsService.createSubmission(
       jobId,
       body.simulationId,
-      user?.profileId,
-      body.guestInfo,
+      user.profileId,
     );
-
   }
 
   @Put(':id/submit')

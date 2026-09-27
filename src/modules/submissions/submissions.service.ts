@@ -17,8 +17,7 @@ export class SubmissionsService {
   async createSubmission(
     jobId: string,
     simulationId: string,
-    candidateId?: string,
-    guestInfo?: { fullName: string; email: string; phoneNumber?: string },
+    candidateId: string,
   ) {
     const [submission] = await this.db
       .insert(submissions)
@@ -26,7 +25,6 @@ export class SubmissionsService {
         jobId,
         simulationId,
         candidateId,
-        guestInfo,
         status: 'PENDING',
         startedAt: new Date(),
         answers: [],

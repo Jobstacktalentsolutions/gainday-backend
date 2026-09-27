@@ -92,12 +92,18 @@ export class JobsService {
     return job;
   }
 
-  async findAllActive(): Promise<Job[]> {
-    return this.db.select().from(jobs).where(eq(jobs.status, 'ACTIVE'));
+  async findAllActive() {
+    return this.db.query.jobs.findMany({
+      where: eq(jobs.status, 'ACTIVE'),
+      with: { employer: true },
+    });
   }
 
-  async findById(id: string): Promise<Job | null> {
-    const [job] = await this.db.select().from(jobs).where(eq(jobs.id, id));
+  async findById(id: string) {
+    const job = await this.db.query.jobs.findFirst({
+      where: eq(jobs.id, id),
+      with: { employer: true },
+    });
     return job ?? null;
   }
 
