@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole } from '../../db/schema';
+import { UserRole, AntiCheatEvent } from '../../db/schema';
 
 @Controller('submissions')
 export class SubmissionsController {
@@ -46,7 +46,7 @@ export class SubmissionsController {
   @Roles(UserRole.JOB_SEEKER)
   async submitSimulation(
     @Param('id') id: string,
-    @Body() body: { answers: any[]; antiCheatFlags?: string[] },
+    @Body() body: { answers: any[]; antiCheatFlags?: AntiCheatEvent[] },
     @CurrentUser() user: any,
   ) {
     const submission = await this.assertOwnedByCandidate(id, user);

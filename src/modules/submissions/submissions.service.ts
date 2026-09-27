@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { submissions, CandidateAnswer } from '../../db/schema';
+import { submissions, CandidateAnswer, AntiCheatEvent } from '../../db/schema';
 import { GradingService } from '../grading/grading.service';
 
 // A heartbeat older than this by the time the candidate submits means the client went quiet
@@ -11,6 +11,11 @@ import { GradingService } from '../grading/grading.service';
 // pings every 20s (useConnectionMonitor's PING_INTERVAL_MS) — this must stay well above that so
 // a single dropped ping doesn't false-positive.
 const HEARTBEAT_STALE_THRESHOLD_MS = 90_000;
+
+// Defense in depth against a misbehaving/malicious client sending an unbounded events array —
+// the frontend already caps its own in-memory log at 500 (useSimulationIntegrityStore.ts), this
+// just makes sure the backend never trusts that cap was actually applied client-side.
+const MAX_ANTI_CHEAT_EVENTS = 1000;
 
 @Injectable()
 export class SubmissionsService {
@@ -65,7 +70,7 @@ export class SubmissionsService {
   async submitAnswers(
     submissionId: string,
     answers: CandidateAnswer[],
-    clientAntiCheatFlags: string[] = [],
+    clientAntiCheatEvents: AntiCheatEvent[] = [],
   ) {
     const submission = await this.db.query.submissions.findFirst({
       where: eq(submissions.id, submissionId),
@@ -82,19 +87,23 @@ export class SubmissionsService {
     );
 
     // Server-observed signal, not just what the client chose to report — a client that
-    // suppresses its own tab-visibility/window-blur flags (e.g. via devtools) can't suppress
-    // this, since it's derived from when heartbeats actually stopped arriving.
+    // suppresses its own tab-visibility/window-blur listeners (e.g. via devtools) can't
+    // suppress this, since it's derived from when heartbeats actually stopped arriving, not
+    // from anything the client asserts about itself.
     const heartbeatAgeMs = submission.lastHeartbeatAt
       ? completedAt.getTime() - submission.lastHeartbeatAt.getTime()
       : null;
-    const flags = [...clientAntiCheatFlags];
+    const events = clientAntiCheatEvents.slice(0, MAX_ANTI_CHEAT_EVENTS);
     if (
       heartbeatAgeMs !== null &&
       heartbeatAgeMs > HEARTBEAT_STALE_THRESHOLD_MS
     ) {
-      flags.push(
-        `server-stale-heartbeat-${Math.round(heartbeatAgeMs / 1000)}s`,
-      );
+      events.push({
+        type: 'server-stale-heartbeat',
+        taskId: null,
+        occurredAt: completedAt.toISOString(),
+        durationMs: heartbeatAgeMs,
+      });
     }
 
     const [updated] = await this.db
@@ -103,8 +112,8 @@ export class SubmissionsService {
         answers,
         completedAt,
         timeTakenSeconds,
-        antiCheatFlags: flags,
-        isAntiCheatFlagged: flags.length > 0,
+        antiCheatFlags: events,
+        isAntiCheatFlagged: events.length > 0,
         updatedAt: new Date(),
       })
       .where(eq(submissions.id, submissionId))
