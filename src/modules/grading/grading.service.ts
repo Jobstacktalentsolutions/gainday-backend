@@ -15,7 +15,6 @@ import { GRADING_QUEUE } from './grading.constants';
 import { AnchorGenerationService } from './anchors/anchor-generation.service';
 import { TaskGradingService } from './task-grading.service';
 import { rollUpTaskScores } from './roll-up';
-import { GradingConfig } from './grading.config.interface';
 import { NotificationsService } from '../notifications/notifications.service';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
 
@@ -257,6 +256,9 @@ export class GradingService {
           title: taskTitleById.get(t.taskId) ?? 'Task',
           summary: t.summary,
         })),
+        submissionId,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        submission.job?.employer?.companyName as any,
       );
     }
   }

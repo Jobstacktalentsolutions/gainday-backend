@@ -91,15 +91,29 @@
         <!-- WHAT STOOD OUT Box -->
         <div class="standout-box">
           <div class="standout-title">WHAT STOOD OUT</div>
-          <p>
-            <% if (typeof whatStoodOut !== 'undefined' && whatStoodOut) { %>
-              <%= whatStoodOut %>
-            <% } else if (typeof taskBreakdown !== 'undefined' && taskBreakdown && taskBreakdown.length) { %>
-              <%= taskBreakdown.map(function(t) { return t.summary; }).filter(Boolean).join(' ') %>
-            <% } else { %>
-              You prioritized the client escalation correctly ahead of routine requests in the morning inbox task and explained your reasoning clearly. Your response to the stakeholder pushback was direct and confident. The area with the most room to grow is tying recommendations back to cost trade-offs when time is short.
-            <% } %>
-          </p>
+          <% 
+            var paragraphs = [];
+            if (typeof whatStoodOut !== 'undefined' && whatStoodOut) {
+              paragraphs = typeof whatStoodOut === 'string' 
+                ? whatStoodOut.split(/(?<=\.)\s+(?=You\b)|\n+/g).filter(Boolean)
+                : [whatStoodOut];
+            } else if (typeof taskBreakdown !== 'undefined' && taskBreakdown && taskBreakdown.length) {
+              paragraphs = taskBreakdown.map(function(t) { return t.summary; }).filter(Boolean);
+            }
+
+            if (paragraphs.length === 0) {
+              paragraphs = [
+                'You prioritized the client escalation correctly ahead of routine requests in the morning inbox task and explained your reasoning clearly.',
+                'Your response to the stakeholder pushback was direct and confident.',
+                'The area with the most room to grow is tying recommendations back to cost trade-offs when time is short.'
+              ];
+            }
+          %>
+          <% paragraphs.forEach(function(para, idx) { %>
+            <p style="margin: 0 0 <%= idx === paragraphs.length - 1 ? 0 : 12 %>px 0; font-size: 13px; line-height: 1.6; color: #3a3a4d;">
+              <%= para.trim() %>
+            </p>
+          <% }); %>
         </div>
 
         <!-- Validity Note Box -->

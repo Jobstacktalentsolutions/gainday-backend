@@ -30,7 +30,9 @@ export const aiConfig = {
     // itself (task-grading.service.ts) has a 4-category x {score,rationale,evidence} schema,
     // nested enough to warrant the same larger model rather than risking malformed output on a
     // call that runs unattended in a background worker.
-    gradingModel: 'openai/gpt-oss-120b',
+    // gradingModel: 'openai/gpt-oss-120b'
+    gradingModel: 'openai/gpt-oss-20b'
+
   },
 
   generationTemperature: 0.9,

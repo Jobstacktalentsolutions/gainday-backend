@@ -105,6 +105,28 @@ export class SubmissionsController {
     return this.submissionsService.findByJob(jobId);
   }
 
+  @Get(':id/candidate-result')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER, UserRole.EMPLOYER, UserRole.ADMIN)
+  async getCandidateSubmissionResult(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    const submission = await this.submissionsService.findById(id);
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+    if (
+      user.role === UserRole.JOB_SEEKER &&
+      submission.candidateId !== user.profileId
+    ) {
+      throw new ForbiddenException(
+        'You may only view your own submission results',
+      );
+    }
+    return this.submissionsService.getCandidateResult(submission);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER, UserRole.ADMIN)

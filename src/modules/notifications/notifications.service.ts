@@ -98,9 +98,13 @@ export class NotificationsService {
     /** Per-task concise reasons (GradingService's TaskGradingResult.summary) — gives the
      *  candidate a specific "why" per question rather than just the numeric breakdown. */
     taskBreakdown?: { title: string; summary: string }[],
+    submissionId?: string,
+    companyName?: string,
   ): Promise<void> {
     const appUrl = this.configService.get<string>('email.appUrl');
-    const dashboardUrl = `${appUrl}/dashboard`;
+    const resultUrl = submissionId
+      ? `${appUrl}/job-board/submissions/${submissionId}/result`
+      : `${appUrl}/candidate/profile`;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({
@@ -109,10 +113,12 @@ export class NotificationsService {
       template: 'scoring-results',
       context: {
         jobTitle,
+        companyName,
         overallScore,
         categoryScores,
         taskBreakdown,
-        dashboardUrl,
+        dashboardUrl: resultUrl,
+        resultUrl,
         year,
       },
     });
