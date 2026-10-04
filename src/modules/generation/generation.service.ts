@@ -29,7 +29,10 @@ import { GenerationState } from './state/generation-state';
 import { Job } from '../../db/schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { TestGenerateDto } from './dto/test-generate.dto';
-import { generateTaskContent, modifyTaskContent } from './task-content-generator';
+import {
+  generateTaskContent,
+  modifyTaskContent,
+} from './task-content-generator';
 import { randomUUID } from 'crypto';
 
 export interface GenerationResult {

@@ -177,10 +177,12 @@ export class AuthController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
-    const role = state === 'JOB_SEEKER' ? UserRole.JOB_SEEKER : UserRole.EMPLOYER;
+    const role =
+      state === 'JOB_SEEKER' ? UserRole.JOB_SEEKER : UserRole.EMPLOYER;
     const result = await this.authService.validateGoogleUser(user, role);
     const frontendUrl = this.configService.get('frontendUrl');
-    const rolePath = result.user.role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
+    const rolePath =
+      result.user.role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
 
     this.setAuthCookie(res, result.access_token);
 

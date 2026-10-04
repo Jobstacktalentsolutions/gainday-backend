@@ -296,7 +296,8 @@ export class AuthService {
 
     if (liveToken && emailVerificationExpires) {
       // Issue time is derived from the expiry, which is refreshed on each send.
-      const issuedAt = emailVerificationExpires.getTime() - EMAIL_VERIFICATION_TTL_MS;
+      const issuedAt =
+        emailVerificationExpires.getTime() - EMAIL_VERIFICATION_TTL_MS;
       if (now - issuedAt < RESEND_VERIFICATION_COOLDOWN_MS) {
         return;
       }

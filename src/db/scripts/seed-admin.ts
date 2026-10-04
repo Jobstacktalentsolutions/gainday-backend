@@ -24,7 +24,7 @@ async function main() {
   const db = drizzle(pool);
 
   console.log(`Checking if admin user (${adminEmail}) already exists...`);
-  
+
   const existingUsers = await db
     .select()
     .from(users)

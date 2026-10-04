@@ -24,4 +24,3 @@ export interface RoleAnchorConfig {
   /** Role-specific category weights for score roll-up (must sum to 1.0). */
   categoryWeights: CategoryWeights;
 }
-

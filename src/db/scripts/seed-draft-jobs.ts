@@ -6,7 +6,8 @@ import { Pool } from 'pg';
 import { eq } from 'drizzle-orm';
 import { jobs, employerProfiles, users } from '../schema';
 
-const EMPLOYER_EMAIL = process.env.SEED_EMPLOYER_EMAIL || 'enweremproper2@gmail.com';
+const EMPLOYER_EMAIL =
+  process.env.SEED_EMPLOYER_EMAIL || 'enweremproper2@gmail.com';
 
 const DRAFT_JOBS = [
   {
@@ -111,7 +112,9 @@ async function main() {
     );
   }
 
-  console.log(`Seeding ${DRAFT_JOBS.length} draft jobs for employer_profiles.id=${row.profileId} (${EMPLOYER_EMAIL})...`);
+  console.log(
+    `Seeding ${DRAFT_JOBS.length} draft jobs for employer_profiles.id=${row.profileId} (${EMPLOYER_EMAIL})...`,
+  );
 
   for (const job of DRAFT_JOBS) {
     const { salaryFrom, salaryTo, skills, ...rest } = job;

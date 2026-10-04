@@ -162,7 +162,15 @@ export interface ModifyTaskContentParams {
 export async function modifyTaskContent(
   params: ModifyTaskContentParams,
 ): Promise<QuestionBankTaskContent> {
-  const { model, roleModule, category, intent, problem, existingTask, guidance } = params;
+  const {
+    model,
+    roleModule,
+    category,
+    intent,
+    problem,
+    existingTask,
+    guidance,
+  } = params;
 
   const patternTypeDef = roleModule.allowedTaskPatternTypes.find(
     (t) => t.key === existingTask.taskType,

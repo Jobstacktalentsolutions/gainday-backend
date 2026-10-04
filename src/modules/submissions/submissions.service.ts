@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -200,19 +205,22 @@ export class SubmissionsService {
       }
     }
 
-    const taskEvidence = (submission.taskScores ?? []).map((tScore: any, idx: number) => {
-      const matchingTask = tasks.find(
-        (t: any) =>
-          t.id === tScore.taskId ||
-          (tScore.questionBankId && t.questionBankId === tScore.questionBankId),
-      );
-      return {
-        taskId: tScore.taskId,
-        taskNumber: idx + 1,
-        title: matchingTask?.title ?? `Task ${idx + 1}`,
-        summary: tScore.summary ?? 'Evaluation in progress.',
-      };
-    });
+    const taskEvidence = (submission.taskScores ?? []).map(
+      (tScore: any, idx: number) => {
+        const matchingTask = tasks.find(
+          (t: any) =>
+            t.id === tScore.taskId ||
+            (tScore.questionBankId &&
+              t.questionBankId === tScore.questionBankId),
+        );
+        return {
+          taskId: tScore.taskId,
+          taskNumber: idx + 1,
+          title: matchingTask?.title ?? `Task ${idx + 1}`,
+          summary: tScore.summary ?? 'Evaluation in progress.',
+        };
+      },
+    );
 
     const catScores = submission.categoryScores ?? {};
     const getPct = (val: any, fallback = 75) => {
@@ -224,9 +232,15 @@ export class SubmissionsService {
     const metrics = [
       { label: 'PROBLEM SOLVED', score: getPct(catScores.problemSolving, 82) },
       { label: 'EXECUTION', score: getPct(catScores.judgmentExecution, 76) },
-      { label: 'COMMUNICATION', score: getPct(catScores.writtenCommunication, 88) },
+      {
+        label: 'COMMUNICATION',
+        score: getPct(catScores.writtenCommunication, 88),
+      },
       { label: 'JUDGEMENT', score: getPct(catScores.judgmentExecution, 74) },
-      { label: 'ATTENTION TO DETAIL', score: getPct(catScores.commercialDomainAwareness, 91) },
+      {
+        label: 'ATTENTION TO DETAIL',
+        score: getPct(catScores.commercialDomainAwareness, 91),
+      },
     ];
 
     const overallScore = submission.overallScore

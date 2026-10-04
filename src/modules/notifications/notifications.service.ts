@@ -99,7 +99,7 @@ export class NotificationsService {
      *  candidate a specific "why" per question rather than just the numeric breakdown. */
     taskBreakdown?: { title: string; summary: string }[],
     submissionId?: string,
-    companyName?: string,
+    companyName?: string | null,
   ): Promise<void> {
     const appUrl = this.configService.get<string>('email.appUrl');
     const resultUrl = submissionId

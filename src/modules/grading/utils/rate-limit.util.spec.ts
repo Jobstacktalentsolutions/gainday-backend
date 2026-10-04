@@ -20,7 +20,9 @@ describe('classifyRateLimitError', () => {
   });
 
   it('should identify RESOURCE_EXHAUSTED in error message', () => {
-    const error = new Error('GoogleGenerativeAIError: RESOURCE_EXHAUSTED quota exceeded');
+    const error = new Error(
+      'GoogleGenerativeAIError: RESOURCE_EXHAUSTED quota exceeded',
+    );
     const res = classifyRateLimitError(error);
     expect(res.isRateLimit).toBe(true);
     expect(res.reason).toContain('quota exceeded');

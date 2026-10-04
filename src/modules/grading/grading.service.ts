@@ -55,7 +55,9 @@ export class GradingService {
     const submission = await this.db.query.submissions.findFirst({
       where: eq(submissions.id, submissionId),
       with: {
-        job: true,
+        job: {
+          with: { employer: true },
+        },
         simulation: true,
         candidate: { with: { user: true } },
       },
@@ -257,8 +259,7 @@ export class GradingService {
           summary: t.summary,
         })),
         submissionId,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        submission.job?.employer?.companyName as any,
+        submission.job?.employer?.companyName,
       );
     }
   }

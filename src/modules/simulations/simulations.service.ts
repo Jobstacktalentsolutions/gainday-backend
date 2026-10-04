@@ -3,7 +3,13 @@ import { eq } from 'drizzle-orm';
 import { Embeddings } from '@langchain/core/embeddings';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { simulations, Simulation, SimulationTask, questionBank, QuestionBankTaskContent } from '../../db/schema';
+import {
+  simulations,
+  Simulation,
+  SimulationTask,
+  questionBank,
+  QuestionBankTaskContent,
+} from '../../db/schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
 import { embedTaskContent } from '../generation/utils/embedding.util';
 
@@ -102,4 +108,3 @@ export class SimulationsService {
     return simulation;
   }
 }
-

@@ -1,7 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import { z } from 'zod';
 import { SimulationTask } from '../../db/schema/simulations.schema';
-import { INTERFACE_SCHEMAS, InterfaceType } from '../generation/roles/interface-type';
+import {
+  INTERFACE_SCHEMAS,
+  InterfaceType,
+} from '../generation/roles/interface-type';
 import {
   OBJECTIVE_COMPONENT_SCHEMAS,
   OPEN_ENDED_COMPONENT_SCHEMAS,
@@ -109,6 +112,6 @@ export function validateSimulationTasks(
       }
     }
 
-    return task as SimulationTask;
+    return task;
   });
 }

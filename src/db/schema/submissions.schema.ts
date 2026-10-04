@@ -95,51 +95,57 @@ export interface AntiCheatEvent {
   durationMs?: number;
 }
 
-export const submissions = pgTable('submissions', {
-  ...baseColumns,
-  jobId: uuid('job_id')
-    .notNull()
-    .references(() => jobs.id, { onDelete: 'cascade' }),
-  simulationId: uuid('simulation_id')
-    .notNull()
-    .references(() => simulations.id),
-  candidateId: uuid('candidate_id').references(() => jobSeekerProfiles.id, {
-    onDelete: 'set null',
-  }),
-  guestInfo: jsonb('guest_info').$type<GuestInfo>(),
-  status: submissionStatusEnum('status')
-    .notNull()
-    .default('PENDING')
-    .$type<SubmissionStatus>(),
-  answers: jsonb('answers').$type<CandidateAnswer[]>().notNull().default([]),
-  overallScore: numeric('overall_score', {
-    precision: 5,
-    scale: 2,
-    mode: 'number',
-  }),
-  categoryScores: jsonb('category_scores').$type<CategoryScores>(),
-  // Per-task breakdown behind the rolled-up categoryScores above — see TaskGradingResult.
-  taskScores: jsonb('task_scores').$type<TaskGradingResult[]>(),
-  timeTakenSeconds: integer('time_taken_seconds'),
-  isAntiCheatFlagged: boolean('is_anti_cheat_flagged').notNull().default(false),
-  // A per-event log (see AntiCheatEvent), not a flat summary-string array — was
-  // text('anti_cheat_flags').array() before, which could only hold "type ×count" totals for the
-  // whole run with no per-event timing or task association.
-  antiCheatFlags: jsonb('anti_cheat_flags')
-    .$type<AntiCheatEvent[]>()
-    .notNull()
-    .default([]),
-  disqualificationReason: text('disqualification_reason'),
-  startedAt: timestamp('started_at', { withTimezone: true }),
-  completedAt: timestamp('completed_at', { withTimezone: true }),
-  isUnlocked: boolean('is_unlocked').notNull().default(false),
-  // Last POST /submissions/:id/heartbeat received from the candidate's client during the run —
-  // an authenticated liveness ping, not just a raw connectivity check (see
-  // SubmissionsService.recordHeartbeat). A stale value at submit time auto-flags the submission.
-  lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true }),
-}, (table) => [
-  index('submissions_candidate_job_idx').on(table.candidateId, table.jobId),
-]);
+export const submissions = pgTable(
+  'submissions',
+  {
+    ...baseColumns,
+    jobId: uuid('job_id')
+      .notNull()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
+    simulationId: uuid('simulation_id')
+      .notNull()
+      .references(() => simulations.id),
+    candidateId: uuid('candidate_id').references(() => jobSeekerProfiles.id, {
+      onDelete: 'set null',
+    }),
+    guestInfo: jsonb('guest_info').$type<GuestInfo>(),
+    status: submissionStatusEnum('status')
+      .notNull()
+      .default('PENDING')
+      .$type<SubmissionStatus>(),
+    answers: jsonb('answers').$type<CandidateAnswer[]>().notNull().default([]),
+    overallScore: numeric('overall_score', {
+      precision: 5,
+      scale: 2,
+      mode: 'number',
+    }),
+    categoryScores: jsonb('category_scores').$type<CategoryScores>(),
+    // Per-task breakdown behind the rolled-up categoryScores above — see TaskGradingResult.
+    taskScores: jsonb('task_scores').$type<TaskGradingResult[]>(),
+    timeTakenSeconds: integer('time_taken_seconds'),
+    isAntiCheatFlagged: boolean('is_anti_cheat_flagged')
+      .notNull()
+      .default(false),
+    // A per-event log (see AntiCheatEvent), not a flat summary-string array — was
+    // text('anti_cheat_flags').array() before, which could only hold "type ×count" totals for the
+    // whole run with no per-event timing or task association.
+    antiCheatFlags: jsonb('anti_cheat_flags')
+      .$type<AntiCheatEvent[]>()
+      .notNull()
+      .default([]),
+    disqualificationReason: text('disqualification_reason'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    isUnlocked: boolean('is_unlocked').notNull().default(false),
+    // Last POST /submissions/:id/heartbeat received from the candidate's client during the run —
+    // an authenticated liveness ping, not just a raw connectivity check (see
+    // SubmissionsService.recordHeartbeat). A stale value at submit time auto-flags the submission.
+    lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('submissions_candidate_job_idx').on(table.candidateId, table.jobId),
+  ],
+);
 
 export const submissionsRelations = relations(submissions, ({ one }) => ({
   job: one(jobs, {

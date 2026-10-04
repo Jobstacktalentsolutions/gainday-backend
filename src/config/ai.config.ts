@@ -31,8 +31,7 @@ export const aiConfig = {
     // nested enough to warrant the same larger model rather than risking malformed output on a
     // call that runs unattended in a background worker.
     // gradingModel: 'openai/gpt-oss-120b'
-    gradingModel: 'openai/gpt-oss-20b'
-
+    gradingModel: 'openai/gpt-oss-20b',
   },
 
   generationTemperature: 0.9,

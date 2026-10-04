@@ -6,7 +6,8 @@ import type { Request } from 'express';
 export class GoogleAuthGuard extends AuthGuard('google') {
   getAuthenticateOptions(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<Request>();
-    const role = request.query.role === 'JOB_SEEKER' ? 'JOB_SEEKER' : 'EMPLOYER';
+    const role =
+      request.query.role === 'JOB_SEEKER' ? 'JOB_SEEKER' : 'EMPLOYER';
     return { state: role };
   }
 }
