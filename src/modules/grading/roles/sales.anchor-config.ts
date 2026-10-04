@@ -7,7 +7,7 @@ export const SALES_ANCHOR_CONFIG: RoleAnchorConfig = {
     problemSolving:
       'Did the candidate correctly read the sales situation (e.g. which lever actually matters — deal size vs. urgency vs. probability to close; stalling vs. genuine hesitation) and apply sound sales reasoning rather than a generic playbook response?',
     judgmentExecution:
-      'Did the candidate make the right sales judgment call — e.g. acknowledging an objection before countering it, protecting deal value instead of defaulting to a discount, choosing a single clear call-to-action or next step rather than a vague one?',
+      'Did the candidate make the right sales judgment call — e.g. acknowledging an objection before countering it, protecting deal value via strategic counter-proposals (such as longer contract terms, added services, or phased implementation) instead of defaulting to a discount, and choosing a single clear call-to-action or next step?',
     writtenCommunication:
       'Is the written email/message/plan clear, appropriately concise, and free of generic mass-outreach or reassurance-language tells that a real buyer would recognize and discount?',
     commercialDomainAwareness:
@@ -21,9 +21,7 @@ export const SALES_ANCHOR_CONFIG: RoleAnchorConfig = {
   },
   anchorCorrectnessPrompt: `You are validating anchor responses generated for a sales job-simulation task.
 Sales anchors must reflect sound, defensible sales practice, not just plausible-sounding prose:
-- An objection-handling or closing anchor must acknowledge the prospect's actual concern before
-  countering it, avoid generic reassurance language ("I hear you, but..." with no substance), and
-  move toward a concrete next step rather than just defending the product or defaulting to a discount.
+- An objection-handling or closing anchor at high score points MUST demonstrate deal-value protection (e.g. proposing structured counter-strategies like contract length, added services, or phased rollouts instead of blanket price cuts), acknowledge the prospect's actual concern, and move toward a concrete next step.
 - A cold outreach anchor must speak to a real, specific pain point rather than listing product
   features, and end with a single clear call-to-action — not a vague "let me know if interested."
 - A pipeline-prioritization anchor's ordering and justification must actually follow from the

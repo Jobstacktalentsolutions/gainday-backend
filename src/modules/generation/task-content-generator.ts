@@ -14,6 +14,8 @@ const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simul
 matching the given candidate's taskType. Produce a scenario and the task components appropriate
 to that taskType.
 
+- Never include tips, hints, solution strategies, or example tactics. State WHAT deliverable is required, not HOW to solve it.
+
 Free-text fields (scenarioDescription, questionPrompt, and any markdown-documented field in
 interfacePayload) are GitHub-flavored Markdown. Use markdown syntax (bold, italics,
 bullet/numbered lists) only where structure genuinely aids readability — e.g. presenting several
@@ -131,6 +133,8 @@ minimally as possible — this is an edit, not a rewrite: keep the title, scenar
 and every other detail that the request doesn't touch exactly as they are. Only when the request
 requires it for internal consistency (e.g. a changed number that other fields reference) should you
 adjust a field you weren't directly asked to change.
+
+- Never include tips, hints, solution strategies, or example tactics in questionPrompt or scenarioDescription. State WHAT deliverable is required, not HOW to solve it.
 
 Free-text fields (scenarioDescription, questionPrompt, and any markdown-documented field in
 interfacePayload) are GitHub-flavored Markdown. Preserve existing markdown structure unless the

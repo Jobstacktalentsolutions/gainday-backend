@@ -12,9 +12,9 @@ score point, in order, each scored against the four fixed criteria below (framed
 - Written communication: ${criteriaFraming.writtenCommunication}
 - Commercial/domain awareness: ${criteriaFraming.commercialDomainAwareness}
 
-The top-scoring anchor should be strong but not implausibly perfect on all four criteria at once —
-avoid manufacturing an artificial "perfect" answer that no real strong candidate response would
-actually resemble; real strong answers often trade off one dimension for another.
+The top-scoring anchor (highest score point) MUST demonstrate sound, concrete domain strategy (e.g. in sales/negotiation: protecting deal value, proposing alternative concessions like longer terms or added services rather than giving unconditional discounts).
+Mid and low-scoring anchors MUST reflect real candidate pitfalls (e.g. defaulting to price cuts, generic platitudes without a clear counter-strategy, or missing key trade-offs).
+Avoid manufacturing an artificial "perfect" answer that no real candidate response would actually resemble; real strong answers often trade off one dimension for another.
 
 Generate anchors at these score points: ${anchorScorePoints.join(', ')}.`;
 }
