@@ -113,6 +113,13 @@
       "when": 1791129591115,
       "tag": "0015_peaceful_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791130098551,
+      "tag": "0016_friendly_krista_starr",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,7 @@ export const adminProfiles = pgTable('admin_profiles', {
     .unique()
     .references(() => users.id, { onDelete: 'cascade' }),
   fullName: varchar('full_name', { length: 255 }).notNull(),
+  adminRole: varchar('admin_role', { length: 50 }).notNull().default('MANAGER'),
 });
 
 export const adminProfilesRelations = relations(

@@ -46,6 +46,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const profile = await this.findProfileForRole(user.id, user.role);
 
+    const isSuperAdmin =
+      user.role === UserRole.ADMIN &&
+      (user.email === process.env.ADMIN_EMAIL ||
+        user.email === 'admin@gainday.com' ||
+        user.email === 'enweremproper@gmail.com' ||
+        (profile as any)?.adminRole === 'SUPER_ADMIN');
+
+    const adminRole =
+      user.role === UserRole.ADMIN
+        ? isSuperAdmin
+          ? 'SUPER_ADMIN'
+          : (profile as any)?.adminRole || 'MANAGER'
+        : undefined;
+
     return {
       id: user.id,
       email: user.email,
@@ -57,6 +71,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       fullName: profile?.fullName,
       companyName: (profile as any)?.companyName,
       phoneNumber: (profile as any)?.phoneNumber,
+      adminRole,
+      isSuperAdmin,
     };
   }
 

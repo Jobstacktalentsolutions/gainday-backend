@@ -208,6 +208,20 @@ export class AuthService {
     };
     const access_token = this.jwtService.sign(payload);
 
+    const isSuperAdmin =
+      user.role === UserRole.ADMIN &&
+      (user.email === process.env.ADMIN_EMAIL ||
+        user.email === 'admin@gainday.com' ||
+        user.email === 'enweremproper@gmail.com' ||
+        (profile as any)?.adminRole === 'SUPER_ADMIN');
+
+    const adminRole =
+      user.role === UserRole.ADMIN
+        ? isSuperAdmin
+          ? 'SUPER_ADMIN'
+          : (profile as any)?.adminRole || 'MANAGER'
+        : undefined;
+
     return {
       access_token,
       user: {
@@ -217,6 +231,8 @@ export class AuthService {
         profileId: profile?.id,
         fullName: profile?.fullName,
         companyName: (profile as any)?.companyName,
+        adminRole,
+        isSuperAdmin,
         mustChangePassword: user.mustChangePassword ?? false,
       },
     };

@@ -1,0 +1,1 @@
+ALTER TABLE "admin_profiles" ADD COLUMN "admin_role" varchar(50) DEFAULT 'MANAGER' NOT NULL;

@@ -403,7 +403,8 @@ export class AdminService {
         const isSuperAdmin =
           user.email === process.env.ADMIN_EMAIL ||
           user.email === 'admin@gainday.com' ||
-          user.email === 'enweremproper@gmail.com';
+          user.email === 'enweremproper@gmail.com' ||
+          adm?.adminRole === 'SUPER_ADMIN';
         return {
           id: user.id,
           email: user.email,
@@ -419,7 +420,7 @@ export class AdminService {
             | 'suspended',
           adminProfile: {
             fullName: adm?.fullName || 'Admin User',
-            adminRole: isSuperAdmin ? 'SUPER_ADMIN' : 'MANAGER',
+            adminRole: isSuperAdmin ? 'SUPER_ADMIN' : ((adm?.adminRole as any) || 'MANAGER'),
             isSuperAdmin,
           },
         };
@@ -477,6 +478,7 @@ export class AdminService {
       .values({
         userId: newUser.id,
         fullName: dto.fullName.trim(),
+        adminRole: dto.role || 'MANAGER',
       })
       .returning();
 
@@ -499,7 +501,7 @@ export class AdminService {
       status: 'active' as const,
       adminProfile: {
         fullName: newProfile.fullName,
-        adminRole: dto.role || 'MANAGER',
+        adminRole: newProfile.adminRole || dto.role || 'MANAGER',
         isSuperAdmin: false,
       },
     };
