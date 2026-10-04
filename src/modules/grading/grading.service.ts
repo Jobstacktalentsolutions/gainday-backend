@@ -19,6 +19,8 @@ import { GradingConfig } from './grading.config.interface';
 import { NotificationsService } from '../notifications/notifications.service';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
 
+import { AnchorRoleRegistry } from './roles/anchor-role-registry';
+
 @Injectable()
 export class GradingService {
   private readonly logger = new Logger(GradingService.name);
@@ -28,6 +30,7 @@ export class GradingService {
     @InjectQueue(GRADING_QUEUE) private readonly gradingQueue: Queue,
     private readonly anchorGenerationService: AnchorGenerationService,
     private readonly taskGradingService: TaskGradingService,
+    private readonly roleRegistry: AnchorRoleRegistry,
     private readonly notificationsService: NotificationsService,
     private readonly jobSeekerProfileService: JobSeekerProfileService,
     private readonly configService: ConfigService,
@@ -74,7 +77,6 @@ export class GradingService {
     const tasksById = new Map(
       submission.simulation.tasks.map((t) => [t.id, t]),
     );
-    const grading: GradingConfig = this.configService.getOrThrow('grading');
 
     const taskResults: TaskGradingResult[] = [];
     for (const answer of submission.answers) {
@@ -136,13 +138,23 @@ export class GradingService {
       return;
     }
 
+    const [extraction] = await this.db
+      .select()
+      .from(jobExtractions)
+      .where(eq(jobExtractions.jobId, submission.jobId));
+    const capabilityDomain =
+      extraction?.category ?? submission.job?.role ?? 'Unspecified';
+
+    const roleConfig = this.roleRegistry.resolve(capabilityDomain);
+    const categoryWeights = roleConfig.categoryWeights;
+
     const taskTitleById = new Map(
       Array.from(tasksById.values()).map((t) => [t.id, t.title]),
     );
     const { categoryScores, overallScore } = rollUpTaskScores(
       taskResults,
       taskTitleById,
-      grading.categoryWeights,
+      categoryWeights,
     );
 
     const [updated] = await this.db
@@ -158,17 +170,16 @@ export class GradingService {
       .returning();
 
     this.logger.log(
-      `Submission ${submissionId} graded: overallScore=${overallScore}, ${taskResults.length} task(s)`,
+      `Submission ${submissionId} graded: overallScore=${overallScore}, ${taskResults.length} task(s), domain=${capabilityDomain}`,
     );
 
-    if (updated.candidateId) {
-      const [extraction] = await this.db
-        .select()
-        .from(jobExtractions)
-        .where(eq(jobExtractions.jobId, updated.jobId));
-      const capabilityDomain =
-        extraction?.category ?? submission.job?.role ?? 'Unspecified';
+    if (submission.isAntiCheatFlagged) {
+      this.logger.warn(
+        `Submission ${submissionId} was graded but has ${submission.antiCheatFlags.length} anti-cheat integrity event(s)`,
+      );
+    }
 
+    if (updated.candidateId) {
       await this.jobSeekerProfileService.updateCapabilityScores(
         updated.candidateId,
         capabilityDomain,

@@ -7,6 +7,7 @@ import {
   OPEN_ENDED_COMPONENT_SCHEMAS,
 } from '../generation/roles/component-schemas';
 import { RoleRegistry } from '../generation/roles/role-registry';
+import { generationConfig } from '../../config/ai.config';
 
 const baseTaskSchema = z.object({
   id: z.string().min(1),
@@ -35,6 +36,18 @@ export function validateSimulationTasks(
 ): SimulationTask[] {
   if (!Array.isArray(tasks)) {
     throw new BadRequestException('tasks must be an array');
+  }
+
+  // The generation pipeline (overgenerate → rank-select) only ever selects
+  // generationConfig.selectedTaskCount candidates in the first place — this endpoint is the one
+  // place that can grow the array past that afterward (the employer's "Add Task" button in
+  // SimulationBuilder had no cap of its own, and neither did this validator, so a simulation
+  // could silently end up with 5+ tasks). Enforced here rather than only client-side, since this
+  // is the actual persistence boundary.
+  if (tasks.length > generationConfig.selectedTaskCount) {
+    throw new BadRequestException(
+      `A simulation may have at most ${generationConfig.selectedTaskCount} tasks (got ${tasks.length})`,
+    );
   }
 
   return tasks.map((raw, index) => {

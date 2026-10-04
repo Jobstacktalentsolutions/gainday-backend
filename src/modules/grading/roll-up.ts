@@ -2,7 +2,7 @@ import {
   CategoryScores,
   TaskGradingResult,
 } from '../../db/schema/submissions.schema';
-import { GradingConfig } from './grading.config.interface';
+import { CategoryWeights } from './roles/anchor-role-config.interface';
 
 const CATEGORY_KEYS = [
   'problemSolving',
@@ -37,7 +37,7 @@ function round2(n: number): number {
 export function rollUpTaskScores(
   taskResults: TaskGradingResult[],
   taskTitleById: Map<string, string>,
-  weights: GradingConfig['categoryWeights'],
+  weights: CategoryWeights,
 ): { categoryScores: CategoryScores; overallScore: number } {
   const categoryScores = {} as CategoryScores;
 

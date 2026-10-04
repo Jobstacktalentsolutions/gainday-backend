@@ -13,6 +13,12 @@ export const SALES_ANCHOR_CONFIG: RoleAnchorConfig = {
     commercialDomainAwareness:
       'Does the response reflect real understanding of the buyer/deal context — speaking to a specific pain point rather than product features, correctly identifying stakeholder roles, or reasoning about deal economics — rather than a generic, could-apply-to-any-deal answer?',
   },
+  categoryWeights: {
+    problemSolving: 0.25,
+    judgmentExecution: 0.25,
+    writtenCommunication: 0.25,
+    commercialDomainAwareness: 0.25,
+  },
   anchorCorrectnessPrompt: `You are validating anchor responses generated for a sales job-simulation task.
 Sales anchors must reflect sound, defensible sales practice, not just plausible-sounding prose:
 - An objection-handling or closing anchor must acknowledge the prospect's actual concern before

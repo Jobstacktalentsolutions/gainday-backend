@@ -24,11 +24,9 @@ Rules:
 - The rewritten description should preserve all substantive content (responsibilities,
   requirements, context) from the original — it's a cleanup and reformat, not a summary that drops
   information.
+- Omit any application instructions, CV/resume submission details, or links/methods on how to apply.
 - Only extract businessProblem if the text explicitly names a specific problem this hire should
-  solve — a generic role description with no such problem stated means null. Don't give the
-  business problem its own dedicated section in the rewritten description (it's captured
-  separately in the businessProblem field) — just fold any necessary context from it naturally
-  into the responsibilities section instead of restating it verbatim under its own heading.
+  solve — a generic role description with no such problem stated means null.
 - Formatting is rendered by a real markdown parser on the candidate-facing page, so use actual
   markdown syntax, not bold text standing in for it:
   - Section titles (e.g. "About the role", "Key responsibilities", "Required experience &

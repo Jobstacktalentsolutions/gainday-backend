@@ -24,6 +24,12 @@ export const GENERIC_ANCHOR_CONFIG: RoleAnchorConfig = {
       "Does the response reflect real, specific understanding of this field's practical stakes " +
       '(what actually matters to someone doing this job) rather than a could-apply-to-any-job answer?',
   },
+  categoryWeights: {
+    problemSolving: 0.4,
+    judgmentExecution: 0.2,
+    writtenCommunication: 0.2,
+    commercialDomainAwareness: 0.2,
+  },
   anchorCorrectnessPrompt: `You are validating anchor responses generated for a job-simulation task
 in a category with no pre-built anchor template. Using your own general and industry-specific
 knowledge of what this category ("category" field on the task) actually involves, judge whether

@@ -10,8 +10,18 @@ export interface AnchorCriteriaFraming {
   commercialDomainAwareness: string;
 }
 
+export interface CategoryWeights {
+  problemSolving: number;
+  judgmentExecution: number;
+  writtenCommunication: number;
+  commercialDomainAwareness: number;
+}
+
 export interface RoleAnchorConfig {
   criteriaFraming: AnchorCriteriaFraming;
   /** What "sound" means for this role's anchors — see ANCHOR_ARCHITECTURE.md Section 3. */
   anchorCorrectnessPrompt: string;
+  /** Role-specific category weights for score roll-up (must sum to 1.0). */
+  categoryWeights: CategoryWeights;
 }
+
