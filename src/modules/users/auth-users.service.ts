@@ -14,6 +14,8 @@ const publicColumns = {
   googleId: users.googleId,
   isEmailVerified: users.isEmailVerified,
   isActive: users.isActive,
+  suspensionReason: users.suspensionReason,
+  suspendedAt: users.suspendedAt,
 };
 
 @Injectable()

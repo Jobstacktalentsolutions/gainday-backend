@@ -16,5 +16,5 @@ export class CreateAdminDto {
 
   @IsOptional()
   @IsString()
-  role?: 'SUPER_ADMIN' | 'MANAGER' | 'MODERATOR';
+  role?: 'MANAGER' | 'MODERATOR';
 }

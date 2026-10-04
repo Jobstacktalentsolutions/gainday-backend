@@ -59,6 +59,12 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (isPasswordValid) {
+      if (user.isActive === false) {
+        const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
+        throw new UnauthorizedException(
+          `Your account has been suspended${reason}. Please contact support.`
+        );
+      }
       const { password, ...result } = user;
       return result;
     }
@@ -74,6 +80,13 @@ export class AuthService {
 
     if (user.role !== UserRole.ADMIN) {
       throw new UnauthorizedException('Access denied. Administrator privileges required.');
+    }
+
+    if (user.isActive === false) {
+      const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
+      throw new UnauthorizedException(
+        `Administrator account has been suspended${reason}. Please contact support.`
+      );
     }
 
     // Generate 6-digit OTP and UUID challenge token
@@ -128,7 +141,12 @@ export class AuthService {
 
     const user = await this.usersService.findById(challenge.userId);
     if (!user || user.role !== UserRole.ADMIN) {
-      throw new UnauthorizedException('Administrator account not found or deactivated');
+      throw new UnauthorizedException('Administrator account not found');
+    }
+
+    if (user.isActive === false) {
+      const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
+      throw new UnauthorizedException(`Administrator account has been suspended${reason}`);
     }
 
     return this.login(user);
@@ -493,6 +511,13 @@ export class AuthService {
           return newUser;
         });
       }
+    }
+
+    if (user && user.isActive === false) {
+      const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
+      throw new UnauthorizedException(
+        `Your account has been suspended${reason}. Please contact support.`
+      );
     }
 
     return this.login(user);

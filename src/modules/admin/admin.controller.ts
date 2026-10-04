@@ -25,13 +25,20 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('stats')
-  async getStats() {
-    return this.adminService.getAdminStats();
+  async getStats(
+    @Query('timeframe') timeframe?: 'day' | 'week' | 'month' | 'year' | 'all',
+  ) {
+    return this.adminService.getAdminStats(timeframe);
   }
 
   @Get('users')
   async listUsers(@Query('role') role?: UserRole) {
     return this.adminService.listUsers(role);
+  }
+
+  @Get('candidates/:id')
+  async getCandidateDetail(@Param('id') id: string) {
+    return this.adminService.getCandidateDetail(id);
   }
 
   @Post('admins')
@@ -52,13 +59,31 @@ export class AdminController {
     return this.adminService.listJobs();
   }
 
+  @Get('jobs/:id')
+  async getJobDetail(@Param('id') id: string) {
+    return this.adminService.getJobDetail(id);
+  }
+
+  @Put('jobs/:id/status')
+  async updateJobStatus(
+    @Param('id') id: string,
+    @Body() body: { status: any },
+  ) {
+    return this.adminService.updateJobStatus(id, body.status);
+  }
+
   @Put('users/:id/status')
   async setStatus(
     @Param('id') id: string,
-    @Body() body: { isActive: boolean },
+    @Body() body: { isActive: boolean; suspensionReason?: string },
     @CurrentUser() admin: any,
   ) {
-    return this.adminService.setUserActiveStatus(id, body.isActive, admin?.id);
+    return this.adminService.setUserActiveStatus(
+      id,
+      body.isActive,
+      admin?.id,
+      body.suspensionReason,
+    );
   }
 
   @Put('submissions/:id/anti-cheat-review')

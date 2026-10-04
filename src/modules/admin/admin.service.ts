@@ -5,13 +5,14 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, or } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
   users,
   adminProfiles,
+  jobSeekerProfiles,
   jobs,
   submissions,
   simulations,
@@ -50,13 +51,23 @@ export class AdminService {
     );
   }
 
-  async getAdminStats() {
+  async getAdminStats(
+    timeframe: 'day' | 'week' | 'month' | 'year' | 'all' = 'month',
+  ) {
     const [
       [{ activeJobs }],
       [{ totalUsers }],
+      [{ employersCount }],
+      [{ candidatesCount }],
+      [{ totalSubmissions }],
       [{ openSubmissions }],
+      [{ scoredSubmissions }],
       [{ jobsFilled }],
+      [{ flaggedAntiCheatCount }],
+      [{ pendingReviewsCount }],
       recentJobsList,
+      candidateRegistrations,
+      allSubmissions,
     ] = await Promise.all([
       this.db
         .select({ activeJobs: count() })
@@ -64,38 +75,200 @@ export class AdminService {
         .where(eq(jobs.status, 'ACTIVE')),
       this.db.select({ totalUsers: count() }).from(users),
       this.db
+        .select({ employersCount: count() })
+        .from(users)
+        .where(eq(users.role, 'EMPLOYER')),
+      this.db
+        .select({ candidatesCount: count() })
+        .from(users)
+        .where(eq(users.role, 'JOB_SEEKER')),
+      this.db.select({ totalSubmissions: count() }).from(submissions),
+      this.db
         .select({ openSubmissions: count() })
         .from(submissions)
         .where(eq(submissions.status, 'PENDING')),
       this.db
+        .select({ scoredSubmissions: count() })
+        .from(submissions)
+        .where(eq(submissions.status, 'SCORED')),
+      this.db
         .select({ jobsFilled: count() })
         .from(jobs)
         .where(eq(jobs.status, 'INACTIVE')),
+      this.db
+        .select({ flaggedAntiCheatCount: count() })
+        .from(submissions)
+        .where(
+          or(
+            eq(submissions.isAntiCheatFlagged, true),
+            eq(submissions.status, 'DISQUALIFIED'),
+          ),
+        ),
+      this.db
+        .select({ pendingReviewsCount: count() })
+        .from(generationReviewItems)
+        .where(eq(generationReviewItems.status, 'PENDING')),
       this.db.query.jobs.findMany({
-        with: { employer: true },
+        with: { employer: true, submissions: true },
         orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
-        limit: 5,
+        limit: 6,
       }),
+      this.db
+        .select({ createdAt: users.createdAt })
+        .from(users)
+        .where(eq(users.role, 'JOB_SEEKER')),
+      this.db
+        .select({ createdAt: submissions.createdAt })
+        .from(submissions),
     ]);
 
     const recentJobs = recentJobsList.map((j) => ({
       id: j.id,
       title: j.title || 'Untitled Role',
       company: j.employer?.companyName || 'Unknown Company',
+      applicantsCount: j.submissions?.length || 0,
       status: (j.status === 'ACTIVE' ? 'active' : 'pending') as
         | 'active'
         | 'pending',
     }));
 
+    const analytics = this.buildAnalyticsSeries(
+      timeframe,
+      candidateRegistrations.map((r) => r.createdAt),
+      allSubmissions.map((s) => s.createdAt),
+    );
+
     return {
       stats: {
         activeJobs,
         totalUsers,
+        employersCount,
+        candidatesCount,
+        totalSubmissions,
         openSubmissions,
+        scoredSubmissions,
         jobsFilled,
+        flaggedAntiCheatCount,
+        pendingReviewsCount,
       },
+      analytics,
+      timeframe,
       recentJobs,
     };
+  }
+
+  private buildAnalyticsSeries(
+    timeframe: 'day' | 'week' | 'month' | 'year' | 'all',
+    appDates: (Date | string | null)[],
+    subDates: (Date | string | null)[],
+  ) {
+    const now = new Date();
+    const buckets: {
+      key: string;
+      label: string;
+      startTime: number;
+      endTime: number;
+      applications: number;
+      submissions: number;
+    }[] = [];
+
+    if (timeframe === 'day') {
+      // 24 hourly buckets
+      for (let i = 23; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), 0, 0).getTime();
+        const end = start + 60 * 60 * 1000;
+        const hourStr = `${d.getHours().toString().padStart(2, '0')}:00`;
+        buckets.push({
+          key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`,
+          label: hourStr,
+          startTime: start,
+          endTime: end,
+          applications: 0,
+          submissions: 0,
+        });
+      }
+    } else if (timeframe === 'week') {
+      // 7 daily buckets
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).getTime();
+        const end = start + 24 * 60 * 60 * 1000;
+        const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
+        buckets.push({
+          key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+          label,
+          startTime: start,
+          endTime: end,
+          applications: 0,
+          submissions: 0,
+        });
+      }
+    } else if (timeframe === 'month') {
+      // 30 daily buckets (or 15 two-day steps)
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).getTime();
+        const end = start + 24 * 60 * 60 * 1000;
+        const label = `${monthNames[d.getMonth()]} ${d.getDate()}`;
+        buckets.push({
+          key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+          label,
+          startTime: start,
+          endTime: end,
+          applications: 0,
+          submissions: 0,
+        });
+      }
+    } else if (timeframe === 'year' || timeframe === 'all') {
+      // 12 monthly buckets
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthsCount = timeframe === 'all' ? 12 : 12;
+      for (let i = monthsCount - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const start = d.getTime();
+        const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        const end = nextMonth.getTime();
+        const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(-2)}`;
+        buckets.push({
+          key: `${d.getFullYear()}-${d.getMonth()}`,
+          label,
+          startTime: start,
+          endTime: end,
+          applications: 0,
+          submissions: 0,
+        });
+      }
+    }
+
+    // Populate applications
+    for (const rawDate of appDates) {
+      if (!rawDate) continue;
+      const t = new Date(rawDate).getTime();
+      const bucket = buckets.find((b) => t >= b.startTime && t < b.endTime);
+      if (bucket) {
+        bucket.applications += 1;
+      }
+    }
+
+    // Populate submissions
+    for (const rawDate of subDates) {
+      if (!rawDate) continue;
+      const t = new Date(rawDate).getTime();
+      const bucket = buckets.find((b) => t >= b.startTime && t < b.endTime);
+      if (bucket) {
+        bucket.submissions += 1;
+      }
+    }
+
+    return buckets.map((b) => ({
+      label: b.label,
+      applications: b.applications,
+      submissions: b.submissions,
+      total: b.applications + b.submissions,
+    }));
   }
 
   async listUsers(role?: (typeof users.role.enumValues)[number]) {
@@ -126,6 +299,8 @@ export class AdminService {
           email: user.email,
           role: user.role,
           isActive: user.isActive,
+          suspensionReason: user.suspensionReason,
+          suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
           name: emp?.fullName || user.email.split('@')[0],
           status: (user.isActive ? 'active' : 'suspended') as
@@ -145,6 +320,8 @@ export class AdminService {
           email: user.email,
           role: user.role,
           isActive: user.isActive,
+          suspensionReason: user.suspensionReason,
+          suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
           name: cand?.fullName || user.email.split('@')[0],
           status: (user.isActive ? 'active' : 'suspended') as
@@ -166,6 +343,8 @@ export class AdminService {
           email: user.email,
           role: user.role,
           isActive: user.isActive,
+          suspensionReason: user.suspensionReason,
+          suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
           name: adm?.fullName || 'Admin User',
           status: (user.isActive ? 'active' : 'suspended') as
@@ -182,6 +361,12 @@ export class AdminService {
   }
 
   async createAdmin(dto: CreateAdminDto) {
+    if ((dto.role as string) === 'SUPER_ADMIN') {
+      throw new BadRequestException(
+        'A Super Admin cannot be created from the dashboard. There is strictly one Super Admin, configured via system environment.',
+      );
+    }
+
     const existing = await this.db.query.users.findFirst({
       where: eq(users.email, dto.email.toLowerCase().trim()),
     });
@@ -240,13 +425,13 @@ export class AdminService {
       throw new NotFoundException('Admin user not found');
     }
 
-    if (
+    const isSuperAdmin =
       user.email === process.env.ADMIN_EMAIL ||
-      user.email === 'admin@gainday.com' ||
-      user.email === 'enweremproper@gmail.com'
-    ) {
+      user.email === 'enweremproper@gmail.com';
+
+    if (isSuperAdmin) {
       throw new BadRequestException(
-        'Primary Super Admin account cannot be deleted',
+        'The Super Admin account cannot be deleted directly from the dashboard.',
       );
     }
 
@@ -257,47 +442,213 @@ export class AdminService {
   async listJobs() {
     const jobRows = await this.db.query.jobs.findMany({
       with: {
-        employer: true,
+        employer: {
+          with: {
+            user: true,
+          },
+        },
         submissions: true,
         simulation: true,
       },
       orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
     });
 
-    return jobRows.map((job) => ({
+    return jobRows.map((job) => {
+      const scored = job.submissions?.filter((s) => s.status === 'SCORED') || [];
+      const avgScore =
+        scored.length > 0
+          ? Math.round(
+              scored.reduce((acc, s) => acc + (Number(s.overallScore) || 0), 0) /
+                scored.length,
+            )
+          : null;
+      const flaggedCount =
+        job.submissions?.filter((s) => s.isAntiCheatFlagged).length || 0;
+
+      return {
+        id: job.id,
+        title: job.title || 'Untitled Role',
+        company: job.employer?.companyName || 'Unknown Company',
+        employerEmail: job.employer?.user?.email,
+        isEmployerVerified: job.employer?.user?.isEmailVerified ?? false,
+        status: (job.status === 'ACTIVE'
+          ? 'live'
+          : job.status === 'DRAFT'
+            ? 'draft'
+            : 'closed') as 'live' | 'draft' | 'closed',
+        rawStatus: job.status,
+        applicantCount: job.submissions?.length || 0,
+        scoredApplicantCount: scored.length,
+        averageScore: avgScore,
+        flaggedCount,
+        createdAt: job.createdAt,
+        isSimulationReady: !!job.simulation,
+        simulationTaskCount: job.simulation?.tasks?.length || 0,
+        role: job.role,
+        skillLevel: job.skillLevel,
+        skillCategory: job.skillCategory,
+        location: job.location,
+        isRemoteFriendly: job.isRemoteFriendly,
+        employmentType: job.employmentType,
+        salaryRange: job.salaryRange,
+        requiredSkills: job.requiredSkills || [],
+        applicationDeadline: job.applicationDeadline,
+      };
+    });
+  }
+
+  async getJobDetail(jobId: string) {
+    const job = await this.db.query.jobs.findFirst({
+      where: eq(jobs.id, jobId),
+      with: {
+        employer: {
+          with: {
+            user: true,
+          },
+        },
+        simulation: true,
+        submissions: {
+          with: {
+            candidate: {
+              with: {
+                user: true,
+              },
+            },
+          },
+          orderBy: (submissions, { desc }) => [desc(submissions.createdAt)],
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job post not found');
+    }
+
+    const scoredSubmissions = job.submissions.filter(
+      (s) => s.status === 'SCORED' && s.overallScore !== null,
+    );
+    const avgScore =
+      scoredSubmissions.length > 0
+        ? Math.round(
+            scoredSubmissions.reduce(
+              (acc, s) => acc + (Number(s.overallScore) || 0),
+              0,
+            ) / scoredSubmissions.length,
+          )
+        : null;
+
+    return {
       id: job.id,
       title: job.title || 'Untitled Role',
-      company: job.employer?.companyName || 'Unknown Company',
-      status: (job.status === 'ACTIVE'
-        ? 'live'
-        : job.status === 'DRAFT'
-          ? 'draft'
-          : 'closed') as 'live' | 'draft' | 'closed',
-      applicantCount: job.submissions?.length || 0,
-      createdAt: job.createdAt,
-      isSimulationReady: !!job.simulation,
+      description: job.description,
+      requiredSkills: job.requiredSkills || [],
       role: job.role,
+      skillLevel: job.skillLevel,
+      skillCategory: job.skillCategory,
+      companyDescription: job.companyDescription,
+      isRemoteFriendly: job.isRemoteFriendly,
       location: job.location,
-    }));
+      employmentType: job.employmentType,
+      salaryRange: job.salaryRange,
+      applicationDeadline: job.applicationDeadline,
+      businessProblem: job.businessProblem,
+      status: job.status,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      employer: {
+        id: job.employer?.id,
+        companyName: job.employer?.companyName || 'Unknown Company',
+        fullName: job.employer?.fullName,
+        email: job.employer?.user?.email,
+        isVerified: job.employer?.user?.isEmailVerified ?? false,
+        phoneNumber: job.employer?.phoneNumber,
+      },
+      simulation: job.simulation
+        ? {
+            id: job.simulation.id,
+            timeLimitMinutes: job.simulation.timeLimitMinutes,
+            taskCount: job.simulation.tasks?.length || 0,
+            tasks: job.simulation.tasks,
+          }
+        : null,
+      stats: {
+        totalApplicants: job.submissions.length,
+        scoredApplicants: scoredSubmissions.length,
+        averageScore: avgScore,
+        flaggedApplicants: job.submissions.filter((s) => s.isAntiCheatFlagged).length,
+      },
+      submissions: job.submissions.map((sub) => ({
+        id: sub.id,
+        candidateId: sub.candidate?.userId || sub.candidate?.id || null,
+        candidateName:
+          sub.candidate?.fullName ||
+          sub.guestInfo?.fullName ||
+          sub.candidate?.user?.email?.split('@')[0] ||
+          'Anonymous Candidate',
+        candidateEmail:
+          sub.candidate?.user?.email ||
+          sub.guestInfo?.email ||
+          'No email recorded',
+        overallScore: sub.overallScore ? Number(sub.overallScore) : null,
+        status: sub.status,
+        isAntiCheatFlagged: sub.isAntiCheatFlagged,
+        antiCheatFlags: sub.antiCheatFlags || [],
+        timeTakenSeconds: sub.timeTakenSeconds,
+        categoryScores: sub.categoryScores,
+        taskScores: sub.taskScores,
+        completedAt: sub.completedAt,
+        createdAt: sub.createdAt,
+      })),
+    };
+  }
+
+  async updateJobStatus(jobId: string, status: (typeof jobs.status.enumValues)[number]) {
+    const [updated] = await this.db
+      .update(jobs)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(jobs.id, jobId))
+      .returning();
+    if (!updated) {
+      throw new NotFoundException('Job post not found');
+    }
+    return updated;
   }
 
   async setUserActiveStatus(
     userId: string,
     isActive: boolean,
     currentAdminId?: string,
+    suspensionReason?: string,
   ) {
     if (currentAdminId && userId === currentAdminId && !isActive) {
       throw new BadRequestException('You cannot disable your own admin account');
     }
 
-    const [user] = await this.db
-      .update(users)
-      .set({ isActive, updatedAt: new Date() })
-      .where(eq(users.id, userId))
-      .returning();
-    if (!user) {
+    const targetUser = await this.db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+    if (!targetUser) {
       throw new NotFoundException('User not found');
     }
+
+    const isSuperAdmin =
+      targetUser.email === process.env.ADMIN_EMAIL ||
+      targetUser.email === 'enweremproper@gmail.com';
+
+    if (isSuperAdmin && !isActive) {
+      throw new BadRequestException('The Super Admin account cannot be disabled.');
+    }
+
+    const [user] = await this.db
+      .update(users)
+      .set({
+        isActive,
+        suspensionReason: isActive ? null : (suspensionReason || 'Account suspended by administrator.'),
+        suspendedAt: isActive ? null : new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
     return user;
   }
 
@@ -450,5 +801,87 @@ export class AdminService {
     if (pendingCount > 0) {
       return;
     }
+  }
+
+  async getCandidateDetail(userId: string) {
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+
+    if (!user) {
+      throw new NotFoundException('Candidate not found');
+    }
+
+    const profile = await this.db.query.jobSeekerProfiles.findFirst({
+      where: eq(jobSeekerProfiles.userId, user.id),
+      with: {
+        submissions: {
+          with: {
+            job: {
+              with: {
+                employer: true,
+              },
+            },
+            simulation: true,
+          },
+          orderBy: (submissions, { desc }) => [desc(submissions.createdAt)],
+        },
+      },
+    });
+
+    const submissionsList = profile?.submissions || [];
+    const scoredSubmissions = submissionsList.filter(
+      (s) => s.status === 'SCORED' && s.overallScore !== null,
+    );
+    const avgScore =
+      scoredSubmissions.length > 0
+        ? Math.round(
+            scoredSubmissions.reduce(
+              (acc, s) => acc + (Number(s.overallScore) || 0),
+              0,
+            ) / scoredSubmissions.length,
+          )
+        : null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      suspensionReason: user.suspensionReason,
+      suspendedAt: user.suspendedAt,
+      createdAt: user.createdAt,
+      name: profile?.fullName || user.email.split('@')[0],
+      status: (user.isActive ? 'active' : 'suspended') as 'active' | 'suspended',
+      profile: {
+        id: profile?.id,
+        fullName: profile?.fullName || user.email.split('@')[0],
+        phoneNumber: profile?.phoneNumber || null,
+        capabilityScores: profile?.capabilityScores || null,
+      },
+      stats: {
+        totalApplications: submissionsList.length,
+        completedSubmissions: scoredSubmissions.length,
+        averageScore: avgScore,
+        antiCheatFlaggedCount: submissionsList.filter((s) => s.isAntiCheatFlagged).length,
+      },
+      submissions: submissionsList.map((sub) => ({
+        id: sub.id,
+        jobId: sub.jobId,
+        jobTitle: sub.job?.title || 'Untitled Role',
+        companyName: sub.job?.employer?.companyName || 'Unknown Company',
+        simulationTitle: sub.job?.title ? `${sub.job.title} Simulation` : 'Job Simulation',
+        status: sub.status,
+        overallScore: sub.overallScore ? Number(sub.overallScore) : null,
+        categoryScores: sub.categoryScores,
+        taskScores: sub.taskScores,
+        timeTakenSeconds: sub.timeTakenSeconds,
+        isAntiCheatFlagged: sub.isAntiCheatFlagged,
+        antiCheatFlags: sub.antiCheatFlags,
+        startedAt: sub.startedAt,
+        completedAt: sub.completedAt,
+        createdAt: sub.createdAt,
+      })),
+    };
   }
 }

@@ -6,22 +6,33 @@ import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
 import { users } from '../schema/users.schema';
 import { adminProfiles } from '../schema/admin-profiles.schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 
 async function main() {
   if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL is not set');
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@gainday.com';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@gainday.com').toLowerCase().trim();
   const adminPassword = process.env.ADMIN_PASSWORD || 'AdminGainday2026!';
 
-  console.log(`Using admin credentials: ${adminEmail}`);
+  console.log(`Using Super Admin credentials: ${adminEmail}`);
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const db = drizzle(pool);
 
-  console.log(`Checking if admin user (${adminEmail}) already exists...`);
+  // Enforce single Super Admin: delete any previous admin accounts with different email
+  const otherAdmins = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.role, 'ADMIN'), ne(users.email, adminEmail)));
+
+  for (const oldAdmin of otherAdmins) {
+    console.log(`Deleting previous/duplicate super admin account: ${oldAdmin.email}`);
+    await db.delete(users).where(eq(users.id, oldAdmin.id));
+  }
+
+  console.log(`Checking if super admin user (${adminEmail}) already exists...`);
 
   const existingUsers = await db
     .select()

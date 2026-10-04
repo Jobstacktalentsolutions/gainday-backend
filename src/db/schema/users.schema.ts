@@ -2,6 +2,7 @@ import {
   boolean,
   pgEnum,
   pgTable,
+  text,
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -51,6 +52,8 @@ export const users = pgTable('users', {
     withTimezone: true,
   }),
   isActive: boolean('is_active').notNull().default(true),
+  suspensionReason: text('suspension_reason'),
+  suspendedAt: timestamp('suspended_at', { withTimezone: true }),
 });
 
 export const usersRelations = relations(users, ({ one }) => ({
