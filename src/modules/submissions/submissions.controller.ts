@@ -124,7 +124,7 @@ export class SubmissionsController {
         'You may only view your own submission results',
       );
     }
-    return this.submissionsService.getCandidateResult(submission);
+    return await this.submissionsService.getCandidateResult(submission);
   }
 
   @Get(':id')

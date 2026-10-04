@@ -165,10 +165,40 @@ export class SubmissionsService {
     return submission ?? null;
   }
 
-  getCandidateResult(submission: any) {
+  async getCandidateResult(submission: any) {
     const job = submission.job;
     const simulation = submission.simulation;
     const tasks = simulation?.tasks ?? [];
+
+    // Query real scored submissions for this job to compute real percentile on-demand
+    let percentileText = 'Overall score out of 100';
+    if (submission.jobId) {
+      const allScored = await this.db
+        .select({ overallScore: submissions.overallScore })
+        .from(submissions)
+        .where(
+          and(
+            eq(submissions.jobId, submission.jobId),
+            eq(submissions.status, 'SCORED'),
+          ),
+        );
+
+      const candidateScore = Number(submission.overallScore ?? 0);
+      const totalApplicants = allScored.length;
+
+      if (totalApplicants > 1) {
+        const lowerCount = allScored.filter(
+          (s) => Number(s.overallScore ?? 0) < candidateScore,
+        ).length;
+        const topPercentile = Math.max(
+          1,
+          Math.round(100 - (lowerCount / totalApplicants) * 100),
+        );
+        percentileText = `Overall score · top ${topPercentile}% of ${totalApplicants} applicants for this role`;
+      } else if (totalApplicants === 1) {
+        percentileText = `Overall score · 1st applicant for this role`;
+      }
+    }
 
     const taskEvidence = (submission.taskScores ?? []).map((tScore: any, idx: number) => {
       const matchingTask = tasks.find(
@@ -219,6 +249,7 @@ export class SubmissionsService {
       id: submission.id,
       status: submission.status,
       overallScore,
+      percentileText,
       completedDate,
       job: {
         id: job?.id ?? '',
