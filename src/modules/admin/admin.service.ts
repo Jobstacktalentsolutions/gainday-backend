@@ -7,8 +7,10 @@ import {
 } from '@nestjs/common';
 import { and, count, eq, or, ilike, inArray } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   users,
   adminProfiles,
@@ -54,6 +56,7 @@ export class AdminService {
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     @Inject(EMBEDDINGS) private readonly embeddings: Embeddings,
     private readonly roleRegistry: RoleRegistry,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -360,6 +363,7 @@ export class AdminService {
           email: user.email,
           role: user.role,
           isActive: user.isActive,
+          mustChangePassword: user.mustChangePassword,
           suspensionReason: user.suspensionReason,
           suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
@@ -381,6 +385,7 @@ export class AdminService {
           email: user.email,
           role: user.role,
           isActive: user.isActive,
+          mustChangePassword: user.mustChangePassword,
           suspensionReason: user.suspensionReason,
           suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
@@ -404,6 +409,7 @@ export class AdminService {
           email: user.email,
           role: user.role,
           isActive: user.isActive,
+          mustChangePassword: user.mustChangePassword,
           suspensionReason: user.suspensionReason,
           suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
@@ -449,7 +455,10 @@ export class AdminService {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const tempPassword =
+      dto.password?.trim() || `Gnd-${crypto.randomBytes(4).toString('hex')}!`;
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
     const [newUser] = await this.db
       .insert(users)
       .values({
@@ -459,6 +468,7 @@ export class AdminService {
         authProvider: 'local',
         isEmailVerified: true,
         isActive: true,
+        mustChangePassword: true,
       })
       .returning();
 
@@ -470,11 +480,20 @@ export class AdminService {
       })
       .returning();
 
+    // Send invitation email with temporary password
+    await this.notificationsService.sendAdminInviteEmail(
+      newUser.email,
+      newProfile.fullName,
+      dto.role || 'MANAGER',
+      tempPassword,
+    );
+
     return {
       id: newUser.id,
       email: newUser.email,
       role: newUser.role,
       isActive: newUser.isActive,
+      mustChangePassword: newUser.mustChangePassword,
       createdAt: newUser.createdAt,
       name: newProfile.fullName,
       status: 'active' as const,

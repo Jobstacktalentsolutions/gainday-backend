@@ -9,10 +9,10 @@ export class CreateAdminDto {
   @IsString()
   fullName: string;
 
-  @IsNotEmpty({ message: 'Password is required' })
+  @IsOptional()
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
-  password: string;
+  password?: string;
 
   @IsOptional()
   @IsString()

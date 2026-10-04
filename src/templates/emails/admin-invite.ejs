@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Gainday Administrator Invitation</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'Administrator Access Granted' }) %>
+
+      <div class="content">
+        <p class="intro">
+          Hello <strong><%= fullName %></strong>,
+        </p>
+        <p class="intro">
+          You have been granted administrator access to the <strong>Gainday Admin Console</strong> with the role of <strong><%= role %></strong>.
+        </p>
+
+        <!-- Temporary Credentials Card -->
+        <div class="stat-card" style="background-color: #eef0fb; border: 1px solid #dcdcfb; padding: 24px; border-radius: 12px; margin: 24px 0;">
+          <div style="font-size: 11px; font-weight: 700; color: #1817fe; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;">
+            YOUR TEMPORARY LOGIN CREDENTIALS
+          </div>
+          
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; color: #6a6a85; width: 90px;"><strong>Email:</strong></td>
+              <td style="padding: 6px 0; font-size: 14px; font-weight: 600; color: #1a1a2e;"><%= email %></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; color: #6a6a85;"><strong>Password:</strong></td>
+              <td style="padding: 6px 0; font-size: 16px; font-weight: 700; font-family: monospace; color: #1817fe;"><%= temporaryPassword %></td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="cta-wrap" style="text-align: center; margin: 28px 0;">
+          <a href="<%= loginUrl %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            Sign In to Admin Portal
+          </a>
+        </div>
+
+        <div class="alert" style="margin-top: 20px;">
+          <div class="alert-text">
+            <strong>Mandatory First-Time Setup:</strong> When you sign in with this temporary password, you will be prompted to verify via 2FA email and immediately set your own secure permanent password.
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <p class="intro" style="font-size: 13px; color: #6a6a85;">
+          If you were not expecting this invitation, please notify our security team immediately at <a href="mailto:security@gainday.com" style="color:#1817fe !important; text-decoration:none;">security@gainday.com</a>.
+        </p>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

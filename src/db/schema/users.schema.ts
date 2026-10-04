@@ -54,6 +54,7 @@ export const users = pgTable('users', {
   isActive: boolean('is_active').notNull().default(true),
   suspensionReason: text('suspension_reason'),
   suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+  mustChangePassword: boolean('must_change_password').notNull().default(false),
 });
 
 export const usersRelations = relations(users, ({ one }) => ({

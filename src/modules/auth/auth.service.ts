@@ -217,6 +217,7 @@ export class AuthService {
         profileId: profile?.id,
         fullName: profile?.fullName,
         companyName: (profile as any)?.companyName,
+        mustChangePassword: user.mustChangePassword ?? false,
       },
     };
   }
@@ -395,6 +396,34 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await this.usersService.updatePassword(user.id, hashedPassword);
+  }
+
+  async setAdminInitialPassword(
+    userId: string,
+    dto: { newPassword: string; confirmNewPassword: string },
+  ) {
+    const { newPassword, confirmNewPassword } = dto;
+
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestException(
+        'Password must be at least 8 characters long',
+      );
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const user = await this.usersService.findById(userId);
+    if (!user || user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedException('Administrator account not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(user.id, hashedPassword);
+
+    const updatedUser = await this.usersService.findById(user.id);
+    return this.login(updatedUser);
   }
 
   async verifyEmail(token: string): Promise<boolean> {

@@ -82,6 +82,34 @@ export class NotificationsService {
     this.logger.log(`Admin 2FA verification email enqueued for ${to}`);
   }
 
+  async sendAdminInviteEmail(
+    to: string,
+    fullName: string,
+    role: string,
+    temporaryPassword: string,
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>('email.appUrl') || 'http://localhost:5173';
+    const loginUrl = `${appUrl}/admin/login`;
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: 'Welcome to the Gainday Admin Team - Your Login Credentials',
+      template: 'admin-invite',
+      context: {
+        email: to,
+        fullName,
+        role: role === 'MANAGER' ? 'Manager' : 'Moderator',
+        temporaryPassword,
+        loginUrl,
+        appUrl,
+        year,
+      },
+    });
+
+    this.logger.log(`Admin invite email enqueued for ${to}`);
+  }
+
   async sendBatchNotification(
     employerEmail: string,
     candidateCount: number,

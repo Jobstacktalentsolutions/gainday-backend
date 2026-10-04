@@ -25,6 +25,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { SetInitialPasswordDto } from './dto/set-initial-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -60,6 +61,19 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async adminResend2fa(@Body() dto: AdminResend2faDto) {
     return this.authService.resendAdmin2fa(dto.challengeToken);
+  }
+
+  @Post('admin/set-initial-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async setAdminInitialPassword(
+    @CurrentUser() user: any,
+    @Body() dto: SetInitialPasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.setAdminInitialPassword(user.id, dto);
+    this.setAuthCookie(res, result.access_token);
+    return result;
   }
 
   @Post('login')
