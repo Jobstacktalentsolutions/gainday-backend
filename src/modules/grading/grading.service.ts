@@ -20,6 +20,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
 
 import { AnchorRoleRegistry } from './roles/anchor-role-registry';
+import { classifyRateLimitError } from './utils/rate-limit.util';
 
 @Injectable()
 export class GradingService {
@@ -78,7 +79,14 @@ export class GradingService {
       submission.simulation.tasks.map((t) => [t.id, t]),
     );
 
-    const taskResults: TaskGradingResult[] = [];
+    // Resumability support: Load any taskScores previously saved on earlier run attempts
+    const existingTaskScoresMap = new Map<string, TaskGradingResult>(
+      (submission.taskScores || []).map((t) => [t.taskId, t]),
+    );
+    const taskResults: TaskGradingResult[] = Array.from(
+      existingTaskScoresMap.values(),
+    );
+
     for (const answer of submission.answers) {
       const task = tasksById.get(answer.taskId);
       if (!task) {
@@ -97,6 +105,14 @@ export class GradingService {
         continue;
       }
 
+      // Check if task was already graded in a previous run attempt
+      if (existingTaskScoresMap.has(task.id)) {
+        this.logger.log(
+          `Submission ${submissionId}: Task ${task.id} already graded in previous run attempt — reusing saved result`,
+        );
+        continue;
+      }
+
       const [row] = await this.db
         .select()
         .from(questionBank)
@@ -108,23 +124,50 @@ export class GradingService {
         continue;
       }
 
-      const anchors = await this.anchorGenerationService.ensureAnchors(row);
+      try {
+        const anchors = await this.anchorGenerationService.ensureAnchors(row);
 
-      const result = await this.taskGradingService.gradeTask({
-        category: row.category,
-        taskTitle: task.title,
-        scenarioDescription: task.scenarioDescription,
-        questionPrompt: task.questionPrompt,
-        anchors,
-        candidateResponse: answer.responseBody,
-      });
+        const result = await this.taskGradingService.gradeTask({
+          category: row.category,
+          taskTitle: task.title,
+          scenarioDescription: task.scenarioDescription,
+          questionPrompt: task.questionPrompt,
+          anchors,
+          candidateResponse: answer.responseBody,
+        });
 
-      taskResults.push({
-        taskId: task.id,
-        questionBankId: task.questionBankId,
-        categoryScores: result.categoryScores,
-        summary: result.summary,
-      });
+        const taskResult: TaskGradingResult = {
+          taskId: task.id,
+          questionBankId: task.questionBankId,
+          categoryScores: result.categoryScores,
+          summary: result.summary,
+        };
+
+        taskResults.push(taskResult);
+        existingTaskScoresMap.set(task.id, taskResult);
+
+        // Incremental Persistence: Save progress to DB immediately after each task is graded
+        await this.db
+          .update(submissions)
+          .set({
+            taskScores: taskResults,
+            updatedAt: new Date(),
+          })
+          .where(eq(submissions.id, submissionId));
+
+        this.logger.log(
+          `Submission ${submissionId}: Task ${task.id} graded and state persisted (${taskResults.length}/${submission.answers.length})`,
+        );
+      } catch (err) {
+        const rateLimitInfo = classifyRateLimitError(err);
+        if (rateLimitInfo.isRateLimit) {
+          this.logger.warn(
+            `Submission ${submissionId}: API rate limit/quota encountered on task ${task.id} (${rateLimitInfo.reason}). ` +
+              `Saved progress: ${taskResults.length}/${submission.answers.length} task(s) graded. Delaying queue retry...`,
+          );
+        }
+        throw err;
+      }
     }
 
     if (taskResults.length === 0) {

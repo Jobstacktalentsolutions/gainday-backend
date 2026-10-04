@@ -11,7 +11,18 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    BullModule.registerQueue({ name: GRADING_QUEUE }),
+    BullModule.registerQueue({
+      name: GRADING_QUEUE,
+      defaultJobOptions: {
+        attempts: 10,
+        backoff: {
+          type: 'exponential',
+          delay: 15000,
+        },
+        removeOnComplete: false,
+        removeOnFail: false,
+      },
+    }),
     UsersModule,
     NotificationsModule,
   ],

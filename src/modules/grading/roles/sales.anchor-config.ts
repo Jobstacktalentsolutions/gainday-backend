@@ -19,20 +19,11 @@ export const SALES_ANCHOR_CONFIG: RoleAnchorConfig = {
     writtenCommunication: 0.25,
     commercialDomainAwareness: 0.25,
   },
-  anchorCorrectnessPrompt: `You are validating anchor responses generated for a sales job-simulation task.
-Sales anchors must reflect sound, defensible sales practice, not just plausible-sounding prose:
-- An objection-handling or closing anchor at high score points MUST demonstrate deal-value protection (e.g. proposing structured counter-strategies like contract length, added services, or phased rollouts instead of blanket price cuts), acknowledge the prospect's actual concern, and move toward a concrete next step.
-- A cold outreach anchor must speak to a real, specific pain point rather than listing product
-  features, and end with a single clear call-to-action — not a vague "let me know if interested."
-- A pipeline-prioritization anchor's ordering and justification must actually follow from the
-  deal attributes given (size, urgency, stage, probability to close) — not just assert a
-  reasonable-sounding priority without the reasoning matching the underlying data.
-- An account-planning anchor must correctly identify the distinct buyer roles present in the
-  scenario (e.g. economic buyer vs. technical evaluator) and sequence the approach logically.
+  anchorCorrectnessPrompt: `You are validating anchor responses generated for a sales job-simulation task across score points.
+Sales anchors must reflect appropriate quality for their assigned score points:
+- TOP-SCORING anchors (high score points e.g. 8-10) MUST demonstrate sound, defensible sales practice (e.g. protecting deal value via structured counter-strategies like contract length, added services, or phased rollouts instead of blanket price cuts).
+- LOW/MID-SCORING anchors (low score points e.g. 0-5) SHOULD demonstrate realistic candidate mistakes or weak execution (e.g. defaulting to price discounts, offering generic platitudes, or failing to protect margin). Do NOT reject low-scoring anchors for having weak sales practice — that is expected for a low score!
+- Reject an anchor ONLY if its content quality does NOT match its assigned score point (e.g. an anchor scored 10/10 that defaults to a discount, or an anchor scored 0/10 that is actually a strong answer).
 
-Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given),
-report in anchorFeedback whether it is sound, and if not, exactly what is wrong (e.g. "defaults
-to a discount instead of protecting deal value", "score doesn't match reasoning quality — this
-reads like a 5/10 answer but is scored 10"). Set issue to null for sound anchors. The top-level
-"sound" field is true only if every anchor is sound.`,
+Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given), report in anchorFeedback whether its response quality matches its assigned score point, and if not, exactly what is wrong. Set issue to null for sound anchors. The top-level "sound" field is true only if every anchor is sound.`,
 };
