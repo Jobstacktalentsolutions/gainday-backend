@@ -5,7 +5,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, eq, or } from 'drizzle-orm';
+import { and, count, eq, or, ilike, inArray } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -13,6 +13,7 @@ import {
   users,
   adminProfiles,
   jobSeekerProfiles,
+  employerProfiles,
   jobs,
   submissions,
   simulations,
@@ -21,6 +22,25 @@ import {
   GenerationReviewStatus,
 } from '../../db/schema';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import {
+  ListUsersQueryDto,
+  ListJobsQueryDto,
+  ListGenerationReviewsQueryDto,
+} from './dto/pagination-query.dto';
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationMeta;
+}
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
@@ -271,27 +291,68 @@ export class AdminService {
     }));
   }
 
-  async listUsers(role?: (typeof users.role.enumValues)[number]) {
-    const userRows = await this.db.query.users.findMany({
-      where: role ? eq(users.role, role) : undefined,
-      orderBy: (users, { desc }) => [desc(users.createdAt)],
-    });
+  async listUsers(
+    query: ListUsersQueryDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query.limit) || 10));
+    const offset = (page - 1) * limit;
 
-    const [employerList, candidateList, adminList] = await Promise.all([
-      this.db.query.employerProfiles.findMany({
-        with: { jobs: true },
+    const conditions: any[] = [];
+    if (query.role) {
+      conditions.push(eq(users.role, query.role));
+    }
+    if (query.status === 'active') {
+      conditions.push(eq(users.isActive, true));
+    } else if (query.status === 'suspended') {
+      conditions.push(eq(users.isActive, false));
+    }
+    if (query.search && query.search.trim()) {
+      const s = `%${query.search.trim()}%`;
+      conditions.push(ilike(users.email, s));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [[{ total }], userRows] = await Promise.all([
+      this.db.select({ total: count() }).from(users).where(whereClause),
+      this.db.query.users.findMany({
+        where: whereClause,
+        orderBy: (users, { desc }) => [desc(users.createdAt)],
+        limit,
+        offset,
       }),
-      this.db.query.jobSeekerProfiles.findMany({
-        with: { submissions: true },
-      }),
-      this.db.query.adminProfiles.findMany(),
     ]);
+
+    const totalCount = Number(total) || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+    const userIds = userRows.map((u) => u.id);
+
+    let employerList: any[] = [];
+    let candidateList: any[] = [];
+    let adminList: any[] = [];
+
+    if (userIds.length > 0) {
+      [employerList, candidateList, adminList] = await Promise.all([
+        this.db.query.employerProfiles.findMany({
+          where: inArray(employerProfiles.userId, userIds),
+          with: { jobs: true },
+        }),
+        this.db.query.jobSeekerProfiles.findMany({
+          where: inArray(jobSeekerProfiles.userId, userIds),
+          with: { submissions: true },
+        }),
+        this.db.query.adminProfiles.findMany({
+          where: inArray(adminProfiles.userId, userIds),
+        }),
+      ]);
+    }
 
     const employerMap = new Map(employerList.map((e) => [e.userId, e]));
     const candidateMap = new Map(candidateList.map((c) => [c.userId, c]));
     const adminMap = new Map(adminList.map((a) => [a.userId, a]));
 
-    return userRows.map((user) => {
+    const items = userRows.map((user) => {
       if (user.role === 'EMPLOYER') {
         const emp = employerMap.get(user.id);
         return {
@@ -358,6 +419,18 @@ export class AdminService {
         };
       }
     });
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
   }
 
   async createAdmin(dto: CreateAdminDto) {
@@ -439,21 +512,59 @@ export class AdminService {
     return { success: true, message: 'Admin deleted successfully' };
   }
 
-  async listJobs() {
-    const jobRows = await this.db.query.jobs.findMany({
-      with: {
-        employer: {
-          with: {
-            user: true,
-          },
-        },
-        submissions: true,
-        simulation: true,
-      },
-      orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
-    });
+  async listJobs(
+    query: ListJobsQueryDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query.limit) || 10));
+    const offset = (page - 1) * limit;
 
-    return jobRows.map((job) => {
+    const conditions: any[] = [];
+    if (query.status) {
+      const normalized = query.status.toUpperCase();
+      if (normalized === 'LIVE' || normalized === 'ACTIVE') {
+        conditions.push(eq(jobs.status, 'ACTIVE'));
+      } else if (normalized === 'DRAFT') {
+        conditions.push(eq(jobs.status, 'DRAFT'));
+      } else if (normalized === 'CLOSED' || normalized === 'INACTIVE') {
+        conditions.push(eq(jobs.status, 'INACTIVE'));
+      }
+    }
+    if (query.search && query.search.trim()) {
+      const s = `%${query.search.trim()}%`;
+      conditions.push(
+        or(
+          ilike(jobs.title, s),
+          ilike(jobs.role, s),
+        ),
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [[{ total }], jobRows] = await Promise.all([
+      this.db.select({ total: count() }).from(jobs).where(whereClause),
+      this.db.query.jobs.findMany({
+        where: whereClause,
+        with: {
+          employer: {
+            with: {
+              user: true,
+            },
+          },
+          submissions: true,
+          simulation: true,
+        },
+        orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
+        limit,
+        offset,
+      }),
+    ]);
+
+    const totalCount = Number(total) || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    const items = jobRows.map((job) => {
       const scored = job.submissions?.filter((s) => s.status === 'SCORED') || [];
       const avgScore =
         scored.length > 0
@@ -495,6 +606,18 @@ export class AdminService {
         applicationDeadline: job.applicationDeadline,
       };
     });
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
   }
 
   async getJobDetail(jobId: string) {
@@ -683,11 +806,50 @@ export class AdminService {
     await this.db.delete(jobs).where(eq(jobs.id, jobId));
   }
 
-  async listGenerationReviewItems(status?: GenerationReviewStatus) {
-    return this.db.query.generationReviewItems.findMany({
-      where: status ? eq(generationReviewItems.status, status) : undefined,
-      with: { job: true },
-    });
+  async listGenerationReviewItems(
+    query: ListGenerationReviewsQueryDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query.limit) || 10));
+    const offset = (page - 1) * limit;
+
+    const conditions: any[] = [];
+    if (query.status) {
+      conditions.push(
+        eq(generationReviewItems.status, query.status as GenerationReviewStatus),
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [[{ total }], items] = await Promise.all([
+      this.db
+        .select({ total: count() })
+        .from(generationReviewItems)
+        .where(whereClause),
+      this.db.query.generationReviewItems.findMany({
+        where: whereClause,
+        with: { job: true },
+        orderBy: (items, { desc }) => [desc(items.createdAt)],
+        limit,
+        offset,
+      }),
+    ]);
+
+    const totalCount = Number(total) || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
   }
 
   async approveGenerationReviewWithEdits(

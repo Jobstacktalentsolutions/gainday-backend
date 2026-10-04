@@ -17,6 +17,11 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole, GenerationReviewStatus } from '../../db/schema';
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import {
+  ListUsersQueryDto,
+  ListJobsQueryDto,
+  ListGenerationReviewsQueryDto,
+} from './dto/pagination-query.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,8 +37,8 @@ export class AdminController {
   }
 
   @Get('users')
-  async listUsers(@Query('role') role?: UserRole) {
-    return this.adminService.listUsers(role);
+  async listUsers(@Query() query: ListUsersQueryDto) {
+    return this.adminService.listUsers(query);
   }
 
   @Get('candidates/:id')
@@ -55,8 +60,8 @@ export class AdminController {
   }
 
   @Get('jobs')
-  async listJobs() {
-    return this.adminService.listJobs();
+  async listJobs(@Query() query: ListJobsQueryDto) {
+    return this.adminService.listJobs(query);
   }
 
   @Get('jobs/:id')
@@ -106,9 +111,9 @@ export class AdminController {
 
   @Get('generation-reviews')
   async listGenerationReviews(
-    @Query('status') status?: GenerationReviewStatus,
+    @Query() query: ListGenerationReviewsQueryDto,
   ) {
-    return this.adminService.listGenerationReviewItems(status);
+    return this.adminService.listGenerationReviewItems(query);
   }
 
   @Put('generation-reviews/:id/approve')
