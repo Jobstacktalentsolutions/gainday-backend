@@ -46,12 +46,17 @@ export class EmailService {
     context: Record<string, any> = {},
   ): Promise<string> {
     try {
-      const templatesDir = path.join(
-        process.cwd(),
-        'src',
-        'templates',
-        'emails',
-      );
+      const possibleDirs = [
+        path.join(process.cwd(), 'src', 'templates', 'emails'),
+        path.join(process.cwd(), 'gainday-backend', 'src', 'templates', 'emails'),
+        path.join(process.cwd(), 'dist', 'templates', 'emails'),
+        path.join(process.cwd(), 'gainday-backend', 'dist', 'templates', 'emails'),
+        path.join(__dirname, '..', '..', 'templates', 'emails'),
+      ];
+      const templatesDir =
+        possibleDirs.find((dir) =>
+          fs.existsSync(path.join(dir, `${templateName}.ejs`)),
+        ) || possibleDirs[0];
       const templatePath = path.join(templatesDir, `${templateName}.ejs`);
 
       if (!fs.existsSync(templatePath)) {

@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Patch,
+  Body,
   Param,
   UseGuards,
   ForbiddenException,
@@ -13,6 +15,7 @@ import { AdminProfileService } from './admin-profile.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../db/schema';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -27,6 +30,42 @@ export class UsersController {
   @Get('profile')
   async getProfile(@CurrentUser() user: any) {
     return user;
+  }
+
+  @Patch('profile')
+  async updateProfile(
+    @CurrentUser() currentUser: any,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    if (currentUser.role === UserRole.EMPLOYER && currentUser.profileId) {
+      await this.employerProfileService.update(currentUser.profileId, {
+        ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
+        ...(dto.companyName !== undefined ? { companyName: dto.companyName } : {}),
+        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
+      });
+    } else if (currentUser.role === UserRole.JOB_SEEKER && currentUser.profileId) {
+      await this.jobSeekerProfileService.update(currentUser.profileId, {
+        ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
+        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
+      });
+    }
+
+    const updatedProfile = await this.getProfileForUser(
+      currentUser.id,
+      currentUser.role,
+    );
+
+    return {
+      id: currentUser.id,
+      email: currentUser.email,
+      role: currentUser.role,
+      authProvider: currentUser.authProvider,
+      isEmailVerified: currentUser.isEmailVerified,
+      profileId: updatedProfile?.id,
+      fullName: updatedProfile?.fullName,
+      companyName: (updatedProfile as any)?.companyName,
+      phoneNumber: (updatedProfile as any)?.phoneNumber,
+    };
   }
 
   @Get(':id')

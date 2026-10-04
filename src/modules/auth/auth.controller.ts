@@ -15,6 +15,8 @@ import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { AdminVerify2faDto } from './dto/admin-verify-2fa.dto';
+import { AdminResend2faDto } from './dto/admin-resend-2fa.dto';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
 import { SignupJobSeekerDto } from './dto/signup-job-seeker.dto';
 import { UserRole } from '../../db/schema';
@@ -33,6 +35,32 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {}
+
+  @Post('admin/login')
+  @HttpCode(HttpStatus.OK)
+  async adminLogin(@Body() loginDto: LoginDto) {
+    return this.authService.initiateAdminLogin(loginDto.email, loginDto.password);
+  }
+
+  @Post('admin/verify-2fa')
+  @HttpCode(HttpStatus.OK)
+  async adminVerify2fa(
+    @Body() dto: AdminVerify2faDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verifyAdmin2fa(
+      dto.challengeToken,
+      dto.otp,
+    );
+    this.setAuthCookie(res, result.access_token);
+    return result;
+  }
+
+  @Post('admin/resend-2fa')
+  @HttpCode(HttpStatus.OK)
+  async adminResend2fa(@Body() dto: AdminResend2faDto) {
+    return this.authService.resendAdmin2fa(dto.challengeToken);
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)

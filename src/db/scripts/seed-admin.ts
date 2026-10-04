@@ -14,11 +14,9 @@ async function main() {
   }
 
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@gainday.com';
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminPassword = process.env.ADMIN_PASSWORD || 'AdminGainday2026!';
 
-  if (!adminPassword) {
-    throw new Error('ADMIN_PASSWORD is not set in environment variables');
-  }
+  console.log(`Using admin credentials: ${adminEmail}`);
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const db = drizzle(pool);

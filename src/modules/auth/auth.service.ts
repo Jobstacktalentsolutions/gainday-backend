@@ -36,6 +36,15 @@ export class AuthService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  private admin2faChallenges = new Map<string, {
+    challengeToken: string;
+    userId: string;
+    email: string;
+    otp: string;
+    expiresAt: number;
+    lastSentAt: number;
+  }>();
+
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmailWithPassword(email);
 
@@ -55,6 +64,107 @@ export class AuthService {
     }
 
     return null;
+  }
+
+  async initiateAdminLogin(email: string, password: string) {
+    const user = await this.validateUser(email, password);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedException('Access denied. Administrator privileges required.');
+    }
+
+    // Generate 6-digit OTP and UUID challenge token
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const challengeToken = crypto.randomUUID();
+    const now = Date.now();
+
+    // Clean up expired challenges
+    for (const [token, challenge] of this.admin2faChallenges.entries()) {
+      if (challenge.expiresAt < now) {
+        this.admin2faChallenges.delete(token);
+      }
+    }
+
+    // 10 minutes expiry
+    this.admin2faChallenges.set(challengeToken, {
+      challengeToken,
+      userId: user.id,
+      email: user.email,
+      otp,
+      expiresAt: now + 10 * 60 * 1000,
+      lastSentAt: now,
+    });
+
+    // Send 2FA email to admin
+    await this.notificationsService.sendAdmin2faEmail(user.email, otp);
+
+    return {
+      requires2FA: true,
+      challengeToken,
+      emailMasked: this.maskEmail(user.email),
+    };
+  }
+
+  async verifyAdmin2fa(challengeToken: string, otp: string) {
+    const challenge = this.admin2faChallenges.get(challengeToken);
+    if (!challenge) {
+      throw new BadRequestException('2FA verification session not found or expired. Please sign in again.');
+    }
+
+    if (Date.now() > challenge.expiresAt) {
+      this.admin2faChallenges.delete(challengeToken);
+      throw new BadRequestException('2FA verification code has expired. Please sign in again.');
+    }
+
+    if (challenge.otp !== otp.trim()) {
+      throw new BadRequestException('Invalid verification code. Please check your email and try again.');
+    }
+
+    // OTP verified successfully — clear challenge
+    this.admin2faChallenges.delete(challengeToken);
+
+    const user = await this.usersService.findById(challenge.userId);
+    if (!user || user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedException('Administrator account not found or deactivated');
+    }
+
+    return this.login(user);
+  }
+
+  async resendAdmin2fa(challengeToken: string) {
+    const challenge = this.admin2faChallenges.get(challengeToken);
+    if (!challenge) {
+      throw new BadRequestException('2FA verification session not found or expired. Please sign in again.');
+    }
+
+    const now = Date.now();
+    // 60-second cooldown
+    if (now - challenge.lastSentAt < 60 * 1000) {
+      const waitSeconds = Math.ceil((60 * 1000 - (now - challenge.lastSentAt)) / 1000);
+      throw new BadRequestException(`Please wait ${waitSeconds}s before requesting a new code.`);
+    }
+
+    const newOtp = crypto.randomInt(100000, 999999).toString();
+    challenge.otp = newOtp;
+    challenge.lastSentAt = now;
+    challenge.expiresAt = now + 10 * 60 * 1000;
+
+    await this.notificationsService.sendAdmin2faEmail(challenge.email, newOtp);
+
+    return {
+      success: true,
+      message: 'A fresh verification code has been sent to your email.',
+    };
+  }
+
+  private maskEmail(email: string): string {
+    const [user, domain] = email.split('@');
+    if (!domain) return email;
+    if (user.length <= 2) return `${user[0]}*@${domain}`;
+    return `${user[0]}${'*'.repeat(user.length - 2)}${user[user.length - 1]}@${domain}`;
   }
 
   private async findProfileForRole(userId: string, role: UserRole) {

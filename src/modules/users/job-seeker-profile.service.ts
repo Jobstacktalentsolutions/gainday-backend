@@ -69,4 +69,16 @@ export class JobSeekerProfileService {
 
     return updated;
   }
+
+  async update(
+    profileId: string,
+    data: Partial<Pick<JobSeekerProfile, 'fullName' | 'phoneNumber'>>,
+  ): Promise<JobSeekerProfile> {
+    const [updated] = await this.db
+      .update(jobSeekerProfiles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(jobSeekerProfiles.id, profileId))
+      .returning();
+    return updated;
+  }
 }

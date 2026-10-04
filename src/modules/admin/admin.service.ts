@@ -47,6 +47,7 @@ export class AdminService {
       [{ totalUsers }],
       [{ openSubmissions }],
       [{ jobsFilled }],
+      recentJobsList,
     ] = await Promise.all([
       this.db
         .select({ activeJobs: count() })
@@ -61,9 +62,132 @@ export class AdminService {
         .select({ jobsFilled: count() })
         .from(jobs)
         .where(eq(jobs.status, 'INACTIVE')),
+      this.db.query.jobs.findMany({
+        with: { employer: true },
+        orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
+        limit: 5,
+      }),
     ]);
 
-    return { activeJobs, totalUsers, openSubmissions, jobsFilled };
+    const recentJobs = recentJobsList.map((j) => ({
+      id: j.id,
+      title: j.title || 'Untitled Role',
+      company: j.employer?.companyName || 'Unknown Company',
+      status: (j.status === 'ACTIVE' ? 'active' : 'pending') as
+        | 'active'
+        | 'pending',
+    }));
+
+    return {
+      stats: {
+        activeJobs,
+        totalUsers,
+        openSubmissions,
+        jobsFilled,
+      },
+      recentJobs,
+    };
+  }
+
+  async listUsers(role?: (typeof users.role.enumValues)[number]) {
+    const userRows = await this.db.query.users.findMany({
+      where: role ? eq(users.role, role) : undefined,
+      orderBy: (users, { desc }) => [desc(users.createdAt)],
+    });
+
+    const [employerList, candidateList, adminList] = await Promise.all([
+      this.db.query.employerProfiles.findMany({
+        with: { jobs: true },
+      }),
+      this.db.query.jobSeekerProfiles.findMany({
+        with: { submissions: true },
+      }),
+      this.db.query.adminProfiles.findMany(),
+    ]);
+
+    const employerMap = new Map(employerList.map((e) => [e.userId, e]));
+    const candidateMap = new Map(candidateList.map((c) => [c.userId, c]));
+    const adminMap = new Map(adminList.map((a) => [a.userId, a]));
+
+    return userRows.map((user) => {
+      if (user.role === 'EMPLOYER') {
+        const emp = employerMap.get(user.id);
+        return {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+          name: emp?.fullName || user.email.split('@')[0],
+          status: (user.isActive ? 'active' : 'suspended') as
+            | 'active'
+            | 'suspended',
+          employerProfile: {
+            companyName: emp?.companyName || 'Not specified',
+            isVerified: user.isEmailVerified,
+            phoneNumber: emp?.phoneNumber,
+            jobsCount: emp?.jobs?.length || 0,
+          },
+        };
+      } else if (user.role === 'JOB_SEEKER') {
+        const cand = candidateMap.get(user.id);
+        return {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+          name: cand?.fullName || user.email.split('@')[0],
+          status: (user.isActive ? 'active' : 'suspended') as
+            | 'active'
+            | 'suspended',
+          candidateProfile: {
+            phoneNumber: cand?.phoneNumber,
+            submissionsCount: cand?.submissions?.length || 0,
+          },
+        };
+      } else {
+        const adm = adminMap.get(user.id);
+        return {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+          name: adm?.fullName || 'Admin User',
+          status: (user.isActive ? 'active' : 'suspended') as
+            | 'active'
+            | 'suspended',
+        };
+      }
+    });
+  }
+
+  async listJobs() {
+    const jobRows = await this.db.query.jobs.findMany({
+      with: {
+        employer: true,
+        submissions: true,
+        simulation: true,
+      },
+      orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
+    });
+
+    return jobRows.map((job) => ({
+      id: job.id,
+      title: job.title || 'Untitled Role',
+      company: job.employer?.companyName || 'Unknown Company',
+      status: (job.status === 'ACTIVE'
+        ? 'live'
+        : job.status === 'DRAFT'
+          ? 'draft'
+          : 'closed') as 'live' | 'draft' | 'closed',
+      applicantCount: job.submissions?.length || 0,
+      createdAt: job.createdAt,
+      isSimulationReady: !!job.simulation,
+      role: job.role,
+      location: job.location,
+    }));
   }
 
   async setUserActiveStatus(userId: string, isActive: boolean) {

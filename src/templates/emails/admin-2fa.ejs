@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Gainday Admin 2FA Code</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'Admin Two-Factor Authentication' }) %>
+
+      <div class="content">
+        <p class="intro">
+          A sign-in request was initiated for your Gainday Administrator account. Use the verification code below to complete your sign-in:
+        </p>
+
+        <!-- 6-digit 2FA Code Card -->
+        <div class="stat-card" style="background-color: #eef0fb; border: 1px solid #dcdcfb; padding: 28px; border-radius: 12px; text-align: center; margin: 24px 0;">
+          <div style="font-size: 11px; font-weight: 700; color: #1817fe; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">
+            ONE-TIME PASSCODE (2FA)
+          </div>
+          <div style="font-size: 38px; font-weight: 700; letter-spacing: 6px; color: #1817fe; font-family: monospace; line-height: 1.2;">
+            <%= otp %>
+          </div>
+        </div>
+
+        <div class="alert" style="margin-top: 20px;">
+          <div class="alert-text">
+            <strong>Security Notice:</strong> This code expires in 10 minutes. Never share this code with anyone. Gainday staff will never ask for your verification code.
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <p class="intro" style="font-size: 13px; color: #6a6a85;">
+          If you did not attempt to sign in to the Gainday Admin Console, please change your admin password immediately and review your account security.
+        </p>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

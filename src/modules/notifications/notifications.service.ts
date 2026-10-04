@@ -64,6 +64,24 @@ export class NotificationsService {
     this.logger.log(`Password reset email enqueued for ${to}`);
   }
 
+  async sendAdmin2faEmail(to: string, otp: string): Promise<void> {
+    const appUrl = this.configService.get<string>('email.appUrl');
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: `Your Gainday Admin Verification Code: ${otp}`,
+      template: 'admin-2fa',
+      context: {
+        otp,
+        appUrl,
+        year,
+      },
+    });
+
+    this.logger.log(`Admin 2FA verification email enqueued for ${to}`);
+  }
+
   async sendBatchNotification(
     employerEmail: string,
     candidateCount: number,

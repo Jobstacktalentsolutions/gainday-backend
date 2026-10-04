@@ -39,4 +39,16 @@ export class EmployerProfileService {
       .returning();
     return profile;
   }
+
+  async update(
+    profileId: string,
+    data: Partial<Pick<EmployerProfile, 'fullName' | 'companyName' | 'phoneNumber'>>,
+  ): Promise<EmployerProfile> {
+    const [profile] = await this.db
+      .update(employerProfiles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(employerProfiles.id, profileId))
+      .returning();
+    return profile;
+  }
 }

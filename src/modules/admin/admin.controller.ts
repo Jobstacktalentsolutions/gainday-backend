@@ -27,6 +27,16 @@ export class AdminController {
     return this.adminService.getAdminStats();
   }
 
+  @Get('users')
+  async listUsers(@Query('role') role?: UserRole) {
+    return this.adminService.listUsers(role);
+  }
+
+  @Get('jobs')
+  async listJobs() {
+    return this.adminService.listJobs();
+  }
+
   @Put('users/:id/status')
   async setStatus(
     @Param('id') id: string,
