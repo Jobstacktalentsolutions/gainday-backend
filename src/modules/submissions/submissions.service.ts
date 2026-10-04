@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -26,11 +26,29 @@ export class SubmissionsService {
     private readonly gradingService: GradingService,
   ) {}
 
+  async findAppliedJobIds(candidateId: string): Promise<string[]> {
+    const rows = await this.db
+      .selectDistinct({ jobId: submissions.jobId })
+      .from(submissions)
+      .where(eq(submissions.candidateId, candidateId));
+    return rows.map((r) => r.jobId);
+  }
+
   async createSubmission(
     jobId: string,
     simulationId: string,
     candidateId: string,
   ) {
+    const existing = await this.db.query.submissions.findFirst({
+      where: and(
+        eq(submissions.jobId, jobId),
+        eq(submissions.candidateId, candidateId),
+      ),
+    });
+    if (existing) {
+      throw new BadRequestException('You have already applied for this job.');
+    }
+
     const now = new Date();
     const [submission] = await this.db
       .insert(submissions)

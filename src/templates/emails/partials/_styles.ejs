@@ -1,47 +1,366 @@
 <style>
+  /* ── Reset & Base ── */
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', sans-serif; line-height: 1.6; color: #1a202c; background-color: #eef0fb; }
-  .wrapper { width: 100%; background-color: #eef0fb; padding: 32px 16px; }
-  .container { max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; }
+  
+  body {
+    margin: 0;
+    padding: 0;
+    width: 100% !important;
+    background-color: #eef0fb;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #1a1a2e;
+  }
 
-  /* header + banner (shared across every template — see partials/_header.ejs) */
-  .header { background-color: #eef0fb; padding: 24px 32px; text-align: left; }
-  .logo { height: 28px; width: auto; }
-  .banner { background-color: #1817fe; padding: 36px 32px; }
-  .banner h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; }
+  /* ── Layout Containers ── */
+  .wrapper {
+    width: 100%;
+    background-color: #eef0fb;
+    padding: 40px 16px;
+  }
+  .container {
+    max-width: 560px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  }
 
-  .content { padding: 32px; }
-  .intro { font-size: 15px; color: #4a5568; margin-bottom: 20px; line-height: 1.6; }
-  .divider { height: 1px; background-color: #e2e8f0; margin: 24px 0; }
+  /* ── Header ── */
+  .header {
+    background-color: #ffffff;
+    padding: 28px 32px 16px 32px;
+    text-align: left;
+  }
+  .header-with-tint {
+    background-color: #eef0fb;
+    padding: 24px 32px;
+    text-align: left;
+  }
+  .logo {
+    height: 28px;
+    width: auto;
+    max-height: 28px;
+    display: block;
+    border: 0;
+  }
 
-  /* buttons — color/background also set inline on the <a> itself (belt-and-suspenders).
-     Gmail, Outlook.com and several mobile mail apps strip <style> blocks or override
-     anchor colors with their own defaults, so the class alone is not reliable. */
-  .cta-button { display: inline-block; background-color: #1817fe; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 14px; margin: 8px 0; }
+  /* ── Banner (optional) ── */
+  .banner {
+    background-color: #1817fe;
+    padding: 32px 32px;
+  }
+  .banner h1 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
 
-  .link-section { background-color: #f7fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 6px; margin: 20px 0; }
-  .link-label { font-size: 11px; color: #718096; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; }
-  .link-text { color: #1817fe; font-size: 13px; word-break: break-all; font-family: monospace; }
+  /* ── Body Content ── */
+  .content {
+    padding: 32px;
+  }
+  .intro {
+    font-size: 15px;
+    color: #3a3a4d;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  .intro strong {
+    color: #1a1a2e;
+  }
+  .divider {
+    height: 1px;
+    background-color: #e4e4f0;
+    margin: 24px 0;
+  }
 
-  .alert { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px; }
-  .alert-text { color: #92400e; font-size: 14px; }
+  /* ── Buttons ── */
+  .cta-wrap {
+    text-align: center;
+    margin: 32px 0 16px 0;
+  }
+  .cta-button {
+    display: inline-block;
+    background-color: #1817fe;
+    color: #ffffff !important;
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.1px;
+    margin: 8px 0;
+    transition: background-color 0.15s ease;
+  }
 
-  .highlight-box { background-color: #f0f4ff; border-left: 4px solid #1817fe; padding: 20px 24px; margin: 24px 0; border-radius: 6px; }
-  .highlight-box .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: #1817fe; text-transform: uppercase; margin-bottom: 8px; }
-  .highlight-box p { margin: 0; font-size: 14px; line-height: 1.6; color: #3a3a4d; }
+  /* ── Circular Score Badge ── */
+  .score-circle-wrap {
+    text-align: center;
+    padding: 16px 0 4px 0;
+  }
+  .score-circle {
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    border: 4px solid #1817fe;
+    margin: 0 auto;
+    display: table;
+    text-align: center;
+  }
+  .score-circle-cell {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+  }
+  .score-circle-number {
+    font-size: 40px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .score-subtitle {
+    font-size: 13px;
+    color: #8a8aa3;
+    text-align: center;
+    margin-top: 14px;
+    margin-bottom: 28px;
+  }
 
-  .score-value { font-size: 48px; font-weight: 700; color: #1817fe; margin: 0; }
-  .score-label { font-size: 14px; color: #4a5568; margin-top: 8px; }
-  .badge { display: inline-block; background-color: #f0f4ff; color: #1817fe; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
-  .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-  .metric-row:last-child { border-bottom: none; }
-  .metric-name { color: #4a5568; }
-  .metric-score { color: #1817fe; font-weight: 600; }
-  .card-number { font-size: 36px; font-weight: 700; color: #1817fe; margin: 0; }
-  .card-label { font-size: 14px; color: #4a5568; margin: 8px 0 0 0; }
-  .card-title { font-size: 16px; font-weight: 600; color: #1817fe; margin-top: 16px; }
+  /* ── Progress Bars for Skills ── */
+  .skill-group {
+    margin: 18px 0;
+  }
+  .skill-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+  }
+  .skill-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .skill-track-wrap {
+    padding-right: 14px;
+  }
+  .skill-track {
+    background-color: #e4e4f0;
+    border-radius: 9999px;
+    height: 8px;
+    overflow: hidden;
+    width: 100%;
+  }
+  .skill-fill {
+    background-color: #1817fe;
+    border-radius: 9999px;
+    height: 8px;
+  }
+  .skill-value {
+    width: 44px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a2e;
+  }
 
-  .footer { background-color: #f7fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0; }
-  .footer-text { font-size: 12px; color: #718096; margin: 6px 0; }
-  .social-icons a { display: inline-block; text-decoration: none; }
+  /* ── Callout / Highlight Boxes ── */
+  .standout-box {
+    background-color: #f5f5fa;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 28px 0 16px 0;
+  }
+  .standout-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: #6a6a85;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .standout-box p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #3a3a4d;
+  }
+
+  .validity-box {
+    background-color: #ffffff;
+    border: 1px solid #e4e4f0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+  }
+  .validity-box p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #6a6a85;
+  }
+
+  /* ── Link Box (fallback) ── */
+  .link-section {
+    background-color: #f7fafc;
+    border: 1px solid #e2e8f0;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  .link-label {
+    font-size: 11px;
+    color: #718096;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .link-text {
+    color: #1817fe;
+    font-size: 13px;
+    word-break: break-all;
+    font-family: monospace;
+    line-height: 1.4;
+  }
+
+  /* ── Alerts ── */
+  .alert {
+    background-color: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 14px 18px;
+    margin: 20px 0;
+    border-radius: 6px;
+  }
+  .alert-text {
+    color: #92400e;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── Badges & Stats ── */
+  .badge {
+    display: inline-block;
+    background-color: #eef0fb;
+    color: #1817fe;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .stat-card {
+    background-color: #f5f5fa;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    margin: 24px 0;
+  }
+  .stat-number {
+    font-size: 40px;
+    font-weight: 700;
+    color: #1817fe;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: #6a6a85;
+    margin-bottom: 4px;
+  }
+  .stat-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-top: 8px;
+  }
+
+  /* ── Stepper ── */
+  .stepper {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0 28px 0;
+  }
+  .stepper td {
+    text-align: center;
+    font-size: 12px;
+    color: #8a8aa3;
+    padding-top: 8px;
+    width: 25%;
+  }
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-done { background-color: #1817fe; }
+  .dot-current { background-color: #1817fe; box-shadow: 0 0 0 4px #dcdcfb; }
+  .dot-pending { background-color: #d8d8e8; }
+  .step-label-active { color: #1a1a2e; font-weight: 600; }
+
+  /* ── Details Box ── */
+  .details-box {
+    border: 1px solid #e4e4f0;
+    border-radius: 10px;
+    padding: 4px 20px;
+    margin-bottom: 24px;
+  }
+  .detail-row {
+    padding: 12px 0;
+    border-bottom: 1px solid #eeeef6;
+    font-size: 14px;
+  }
+  .detail-row:last-child {
+    border-bottom: none;
+  }
+  .detail-label {
+    color: #8a8aa3;
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+  .detail-value {
+    color: #1a1a2e;
+    font-weight: 600;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    background-color: #f7fafc;
+    padding: 32px 32px 28px 32px;
+    text-align: left;
+    border-top: 1px solid #e4e4f0;
+  }
+  .social-icons-table {
+    margin-bottom: 18px;
+  }
+  .social-icon-btn {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    background-color: #8a8aa3;
+    border-radius: 6px;
+    text-align: center;
+    line-height: 28px;
+    margin-right: 10px;
+    text-decoration: none;
+  }
+  .footer-meta {
+    font-size: 13px;
+    color: #8a8aa3;
+    line-height: 1.8;
+  }
+  .footer-meta a {
+    color: #1817fe;
+    text-decoration: underline;
+  }
 </style>

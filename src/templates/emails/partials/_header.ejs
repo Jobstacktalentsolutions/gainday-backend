@@ -1,6 +1,16 @@
 <div class="header">
-  <img src="<%= logoUrl %>" alt="Gainday" class="logo" />
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      <td>
+        <a href="<%= appUrl %>" target="_blank" style="text-decoration: none; display: inline-block;">
+          <img src="<%= logoUrl %>" alt="Gainday" class="logo" style="height: 28px; width: auto; max-height: 28px; border: 0; display: block;" />
+        </a>
+      </td>
+    </tr>
+  </table>
 </div>
+<% if (typeof bannerTitle !== 'undefined' && bannerTitle) { %>
 <div class="banner">
   <h1><%= bannerTitle %></h1>
 </div>
+<% } %>

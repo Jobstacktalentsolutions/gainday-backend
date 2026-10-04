@@ -12,21 +12,27 @@
       <%- include('partials/_header', { bannerTitle: 'New Submissions Received' }) %>
 
       <div class="content">
-        <p class="intro">Great news! You've received new applications for your job posting.</p>
+        <p class="intro">
+          Great news! You've received new simulation submissions for your job posting.
+        </p>
 
-        <div class="highlight-box" style="border-left: none; border-top: 4px solid #1817fe;">
-          <div class="card-number"><%= candidateCount %></div>
-          <div class="card-label">New Submission<%= candidateCount !== 1 ? 's' : '' %></div>
-          <div class="card-title"><%= jobTitle %></div>
+        <div class="stat-card">
+          <div class="stat-number"><%= typeof candidateCount !== 'undefined' ? candidateCount : 1 %></div>
+          <div class="stat-label">New Submission<%= (typeof candidateCount !== 'undefined' && candidateCount === 1) ? '' : 's' %></div>
+          <div class="stat-title"><%= typeof jobTitle !== 'undefined' ? jobTitle : 'Open Role' %></div>
         </div>
 
-        <center>
-          <a href="<%= appUrl %>/employer/jobs" class="cta-button" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:12px 28px; border-radius:6px; font-weight:600; font-size:14px; display:inline-block;">Review Applications</a>
-        </center>
+        <div class="cta-wrap">
+          <a href="<%= typeof appUrl !== 'undefined' ? appUrl : '' %>/employer/jobs" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            Review Applications
+          </a>
+        </div>
 
         <div class="divider"></div>
 
-        <p class="intro" style="font-size: 13px;">Log in to your Gainday dashboard to review candidates, compare their scores, and manage next steps.</p>
+        <p class="intro" style="font-size: 13px; color: #6a6a85;">
+          Log in to your Gainday dashboard to review candidate submissions, compare capability passports, and advance candidates to interviews.
+        </p>
       </div>
 
       <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>

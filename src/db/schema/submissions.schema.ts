@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   jsonb,
   numeric,
@@ -136,7 +137,9 @@ export const submissions = pgTable('submissions', {
   // an authenticated liveness ping, not just a raw connectivity check (see
   // SubmissionsService.recordHeartbeat). A stale value at submit time auto-flags the submission.
   lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true }),
-});
+}, (table) => [
+  index('submissions_candidate_job_idx').on(table.candidateId, table.jobId),
+]);
 
 export const submissionsRelations = relations(submissions, ({ one }) => ({
   job: one(jobs, {

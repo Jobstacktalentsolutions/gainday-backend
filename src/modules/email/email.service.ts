@@ -61,15 +61,16 @@ export class EmailService {
       // Add the app URL and logo to every template so no template has to
       // wire these up itself, and every email points at the same place.
       const enrichedContext = {
-        ...context,
         appUrl: this.appUrl,
         logoUrl: `${this.appUrl}/gainday-logo.png`,
         year: context.year || new Date().getFullYear(),
+        ...context,
       };
 
-      // Render the template with proper directory configuration for includes
+      // Render the template with proper directory configuration for includes.
+      // Note: do NOT pass async: true here, as ejs.renderFile already returns a Promise,
+      // and async: true causes synchronous <%- include() %> calls to output "[object Promise]".
       const html = await ejs.renderFile(templatePath, enrichedContext, {
-        async: true,
         filename: templatePath,
         views: [templatesDir],
       });

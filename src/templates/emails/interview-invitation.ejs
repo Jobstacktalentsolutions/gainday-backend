@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're invited to interview</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: "You're invited to interview" }) %>
+
+      <div class="content">
+        <p class="intro">
+          Hi <%= typeof candidateName !== 'undefined' && candidateName ? candidateName : 'there' %>,<br><br>
+          Great news &mdash; <strong><%= typeof companyName !== 'undefined' && companyName ? companyName : 'The hiring team' %></strong> would like to move you forward to interview for the <strong><%= typeof jobTitle !== 'undefined' ? jobTitle : 'open' %></strong> role. Here are the details.
+        </p>
+
+        <div class="details-box">
+          <div class="detail-row">
+            <span class="detail-label">Date &amp; time</span>
+            <span class="detail-value"><%= typeof interviewDateTime !== 'undefined' ? interviewDateTime : 'To be confirmed' %></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Format</span>
+            <span class="detail-value"><%= typeof interviewFormat !== 'undefined' ? interviewFormat : 'Video call, 45 minutes' %></span>
+          </div>
+          <% if (typeof interviewerName !== 'undefined' && interviewerName) { %>
+          <div class="detail-row">
+            <span class="detail-label">Interviewer</span>
+            <span class="detail-value"><%= interviewerName %><% if (typeof interviewerTitle !== 'undefined' && interviewerTitle) { %>, <%= interviewerTitle %><% } %></span>
+          </div>
+          <% } %>
+        </div>
+
+        <div class="standout-box">
+          <div class="standout-title">How to prepare</div>
+          <p>
+            <%= typeof preparationNotes !== 'undefined' && preparationNotes ? preparationNotes : "Bring examples from your work simulation. You'll be invited to walk through your reasoning on key decisions and problem-solving under time pressure." %>
+          </p>
+        </div>
+
+        <div class="cta-wrap">
+          <a href="<%= typeof confirmUrl !== 'undefined' && confirmUrl ? confirmUrl : (appUrl + '/job-board') %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            Confirm your interview slot
+          </a>
+          <% if (typeof rescheduleUrl !== 'undefined' && rescheduleUrl) { %>
+            <div style="text-align: center; font-size: 13px; margin-top: 14px;">
+              <a href="<%= rescheduleUrl %>" style="color: #1817fe; text-decoration: underline;">Need to reschedule?</a>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

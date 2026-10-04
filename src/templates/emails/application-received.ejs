@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Received</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'Application received' }) %>
+
+      <div class="content">
+        <p class="intro">
+          Hi <%= typeof candidateName !== 'undefined' && candidateName ? candidateName : 'there' %>,<br><br>
+          Thanks for applying for <strong><%= typeof jobTitle !== 'undefined' ? jobTitle : 'the role' %></strong><% if (typeof companyName !== 'undefined' && companyName) { %> at <strong><%= companyName %></strong><% } %>. We've received your application and it's now with the hiring team.
+        </p>
+
+        <!-- Stepper Component -->
+        <table role="presentation" class="stepper" cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            <td><span class="dot dot-done"></span><br>Applied</td>
+            <td><span class="dot dot-current"></span><br><span class="step-label-active">In review</span></td>
+            <td><span class="dot dot-pending"></span><br>Simulation</td>
+            <td><span class="dot dot-pending"></span><br>Decision</td>
+          </tr>
+        </table>
+
+        <div class="standout-box">
+          <div class="standout-title">What happens next</div>
+          <p>
+            The <%= typeof companyName !== 'undefined' && companyName ? companyName : 'hiring' %> team typically reviews applications within 5 working days. If you're shortlisted, we'll email you a link to a work simulation before any interview is scheduled.
+          </p>
+        </div>
+
+        <div style="margin: 20px 0; font-size: 14px; color: #3a3a4d;">
+          <div style="margin-bottom: 6px;"><strong>Role:</strong> <%= typeof jobTitle !== 'undefined' ? jobTitle : 'Role' %></div>
+          <% if (typeof companyName !== 'undefined' && companyName) { %>
+            <div style="margin-bottom: 6px;"><strong>Company:</strong> <%= companyName %></div>
+          <% } %>
+          <div style="margin-bottom: 6px;"><strong>Applied on:</strong> <%= typeof appliedDate !== 'undefined' ? appliedDate : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></div>
+        </div>
+
+        <div class="cta-wrap">
+          <a href="<%= typeof trackUrl !== 'undefined' && trackUrl ? trackUrl : (appUrl + '/job-board') %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            Track your application
+          </a>
+        </div>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

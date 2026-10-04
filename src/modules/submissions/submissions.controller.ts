@@ -26,6 +26,13 @@ export class SubmissionsController {
     private readonly jobsService: JobsService,
   ) {}
 
+  @Get('applied-job-ids')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER)
+  async getAppliedJobIds(@CurrentUser() user: any) {
+    return this.submissionsService.findAppliedJobIds(user.profileId);
+  }
+
   @Post('job/:jobId/start')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.JOB_SEEKER)

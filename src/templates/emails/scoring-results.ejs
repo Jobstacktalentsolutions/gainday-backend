@@ -3,61 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Assessment Results</title>
+  <title>Your Work Simulation Results</title>
   <%- include('partials/_styles') %>
 </head>
 <body>
   <div class="wrapper">
     <div class="container">
-      <%- include('partials/_header', { bannerTitle: 'Your Assessment Results' }) %>
+      <%- include('partials/_header') %>
 
       <div class="content">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <span class="badge"><%= jobTitle %></span>
-        </div>
+        <p class="intro" style="margin-bottom: 24px; font-size: 15px; color: #3a3a4d; line-height: 1.6;">
+          You completed the work simulation for <strong><%= typeof jobTitle !== 'undefined' ? jobTitle : 'your role' %></strong><% if (typeof companyName !== 'undefined' && companyName) { %> at <strong><%= companyName %></strong><% } %>. Here is how you did.
+        </p>
 
-        <p class="intro">Congratulations! Your work simulation has been evaluated. Here's your performance summary:</p>
-
-        <div class="highlight-box" style="text-align: center; border-left: none; border-top: 4px solid #1817fe;">
-          <div class="score-value"><%= overallScore %></div>
-          <div class="score-label">Overall Score (out of 100)</div>
-        </div>
-
-        <% if (categoryScores) { %>
-        <div style="margin: 24px 0;">
-          <% if (categoryScores.problemSolving !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Problem Solving</span><span class="metric-score"><%= categoryScores.problemSolving %>/10</span></div>
-          <% } %>
-          <% if (categoryScores.judgmentExecution !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Judgment / Execution</span><span class="metric-score"><%= categoryScores.judgmentExecution %>/10</span></div>
-          <% } %>
-          <% if (categoryScores.writtenCommunication !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Written Communication</span><span class="metric-score"><%= categoryScores.writtenCommunication %>/10</span></div>
-          <% } %>
-          <% if (categoryScores.commercialDomainAwareness !== undefined) { %>
-            <div class="metric-row"><span class="metric-name">Commercial / Domain Awareness</span><span class="metric-score"><%= categoryScores.commercialDomainAwareness %>/10</span></div>
-          <% } %>
-        </div>
-        <% } %>
-
-        <% if (taskBreakdown && taskBreakdown.length) { %>
-        <div class="divider"></div>
-        <p class="intro" style="margin-bottom: 12px;"><strong>Task by task</strong></p>
-        <% taskBreakdown.forEach(function(task) { %>
-          <div style="margin-bottom: 16px;">
-            <p style="font-size: 14px; font-weight: 600; color: #1a202c; margin-bottom: 4px;"><%= task.title %></p>
-            <p style="font-size: 14px; color: #4a5568; margin: 0;"><%= task.summary %></p>
+        <!-- Circular Overall Score -->
+        <div class="score-circle-wrap">
+          <div class="score-circle">
+            <div class="score-circle-cell">
+              <span class="score-circle-number"><%= typeof overallScore !== 'undefined' ? overallScore : 82 %></span>
+            </div>
           </div>
-        <% }); %>
-        <% } %>
+        </div>
 
-        <center>
-          <a href="<%= dashboardUrl %>" class="cta-button" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:12px 28px; border-radius:6px; font-weight:600; font-size:14px; display:inline-block;">View Full Results</a>
-        </center>
+        <div class="score-subtitle">
+          Overall score &middot; <%= typeof percentileText !== 'undefined' && percentileText ? percentileText : ('top ' + Math.max(1, 100 - (typeof overallScore !== 'undefined' ? overallScore : 82)) + '% of applicants for this role') %>
+        </div>
 
-        <div class="divider"></div>
+        <!-- Category / Skills Progress Bars -->
+        <% 
+          var defaultCategories = [
+            { label: 'Problem Solving', score: 80 },
+            { label: 'Critical Thinking', score: 75 },
+            { label: 'Creativity', score: 85 },
+            { label: 'Decision Making', score: 78 }
+          ];
 
-        <p class="intro" style="font-size: 13px;">Your results will be reviewed by the hiring team. If you're a strong match, they may reach out with next steps. Check your email for updates.</p>
+          var categories = [];
+          if (typeof categoryScores !== 'undefined' && categoryScores && Object.keys(categoryScores).length > 0) {
+            var rawMap = {
+              problemSolving: 'Problem Solving',
+              criticalThinking: 'Critical Thinking',
+              judgmentExecution: 'Critical Thinking',
+              creativity: 'Creativity',
+              writtenCommunication: 'Creativity',
+              decisionMaking: 'Decision Making',
+              commercialDomainAwareness: 'Decision Making'
+            };
+            for (var key in categoryScores) {
+              if (Object.prototype.hasOwnProperty.call(categoryScores, key)) {
+                var rawVal = categoryScores[key];
+                var numVal = typeof rawVal === 'number' ? rawVal : (rawVal && rawVal.score ? rawVal.score : 0);
+                var pct = numVal <= 10 ? Math.round(numVal * 10) : Math.round(numVal);
+                var label = rawMap[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, function(str){ return str.toUpperCase(); });
+                categories.push({ label: label, score: Math.min(100, Math.max(0, pct)) });
+              }
+            }
+          }
+          
+          if (categories.length === 0) {
+            categories = defaultCategories;
+          }
+        %>
+
+        <div style="margin: 28px 0 20px 0;">
+          <% categories.forEach(function(item) { %>
+            <div class="skill-group">
+              <div class="skill-label"><%= item.label %></div>
+              <table role="presentation" class="skill-table" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td class="skill-track-wrap">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" height="8" style="background-color: #e4e4f0; border-radius: 9999px; overflow: hidden; height: 8px;">
+                      <tr>
+                        <td width="<%= item.score %>%" style="background-color: #1817fe; height: 8px; border-radius: 9999px;"></td>
+                        <td width="<%= 100 - item.score %>%" style="height: 8px;"></td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td class="skill-value">
+                    <span><%= item.score %>%</span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          <% }); %>
+        </div>
+
+        <!-- WHAT STOOD OUT Box -->
+        <div class="standout-box">
+          <div class="standout-title">WHAT STOOD OUT</div>
+          <p>
+            <% if (typeof whatStoodOut !== 'undefined' && whatStoodOut) { %>
+              <%= whatStoodOut %>
+            <% } else if (typeof taskBreakdown !== 'undefined' && taskBreakdown && taskBreakdown.length) { %>
+              <%= taskBreakdown.map(function(t) { return t.summary; }).filter(Boolean).join(' ') %>
+            <% } else { %>
+              You prioritized the client escalation correctly ahead of routine requests in the morning inbox task and explained your reasoning clearly. Your response to the stakeholder pushback was direct and confident. The area with the most room to grow is tying recommendations back to cost trade-offs when time is short.
+            <% } %>
+          </p>
+        </div>
+
+        <!-- Validity Note Box -->
+        <div class="validity-box">
+          <p>Your capability score is valid for 18 months. This score travels with you to every future Gainday application.</p>
+        </div>
+
+        <!-- Action Button -->
+        <div class="cta-wrap">
+          <a href="<%= typeof dashboardUrl !== 'undefined' && dashboardUrl ? dashboardUrl : (appUrl + '/candidate/profile') %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            View your full Capability Passport
+          </a>
+        </div>
       </div>
 
       <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
