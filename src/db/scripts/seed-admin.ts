@@ -32,11 +32,12 @@ async function main() {
   let adminUserId: string;
 
   if (existingUsers.length > 0) {
-    console.log('Admin user already exists. Updating password...');
+    console.log('Admin user already exists. Updating role and password...');
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     const [updated] = await db
       .update(users)
       .set({
+        role: 'ADMIN',
         password: hashedPassword,
         isEmailVerified: true,
         updatedAt: new Date(),
@@ -44,7 +45,7 @@ async function main() {
       .where(eq(users.email, adminEmail))
       .returning();
     adminUserId = updated.id;
-    console.log('Admin password updated successfully.');
+    console.log('Admin role and password updated successfully.');
   } else {
     console.log('Admin user does not exist. Creating admin user...');
     const hashedPassword = await bcrypt.hash(adminPassword, 10);

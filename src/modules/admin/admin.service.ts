@@ -1,9 +1,17 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { and, count, eq } from 'drizzle-orm';
+import * as bcrypt from 'bcrypt';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
   users,
+  adminProfiles,
   jobs,
   submissions,
   simulations,
@@ -11,6 +19,7 @@ import {
   generationReviewItems,
   GenerationReviewStatus,
 } from '../../db/schema';
+import { CreateAdminDto } from './dto/create-admin.dto';
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
@@ -148,6 +157,10 @@ export class AdminService {
         };
       } else {
         const adm = adminMap.get(user.id);
+        const isSuperAdmin =
+          user.email === process.env.ADMIN_EMAIL ||
+          user.email === 'admin@gainday.com' ||
+          user.email === 'enweremproper@gmail.com';
         return {
           id: user.id,
           email: user.email,
@@ -158,9 +171,87 @@ export class AdminService {
           status: (user.isActive ? 'active' : 'suspended') as
             | 'active'
             | 'suspended',
+          adminProfile: {
+            fullName: adm?.fullName || 'Admin User',
+            adminRole: isSuperAdmin ? 'SUPER_ADMIN' : 'MANAGER',
+            isSuperAdmin,
+          },
         };
       }
     });
+  }
+
+  async createAdmin(dto: CreateAdminDto) {
+    const existing = await this.db.query.users.findFirst({
+      where: eq(users.email, dto.email.toLowerCase().trim()),
+    });
+    if (existing) {
+      throw new ConflictException(
+        'A user with this email address already exists',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const [newUser] = await this.db
+      .insert(users)
+      .values({
+        email: dto.email.toLowerCase().trim(),
+        password: hashedPassword,
+        role: 'ADMIN',
+        authProvider: 'local',
+        isEmailVerified: true,
+        isActive: true,
+      })
+      .returning();
+
+    const [newProfile] = await this.db
+      .insert(adminProfiles)
+      .values({
+        userId: newUser.id,
+        fullName: dto.fullName.trim(),
+      })
+      .returning();
+
+    return {
+      id: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+      isActive: newUser.isActive,
+      createdAt: newUser.createdAt,
+      name: newProfile.fullName,
+      status: 'active' as const,
+      adminProfile: {
+        fullName: newProfile.fullName,
+        adminRole: dto.role || 'MANAGER',
+        isSuperAdmin: false,
+      },
+    };
+  }
+
+  async deleteAdmin(userId: string, currentAdminId?: string) {
+    if (currentAdminId && userId === currentAdminId) {
+      throw new BadRequestException('You cannot delete your own admin account');
+    }
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+    if (!user || user.role !== 'ADMIN') {
+      throw new NotFoundException('Admin user not found');
+    }
+
+    if (
+      user.email === process.env.ADMIN_EMAIL ||
+      user.email === 'admin@gainday.com' ||
+      user.email === 'enweremproper@gmail.com'
+    ) {
+      throw new BadRequestException(
+        'Primary Super Admin account cannot be deleted',
+      );
+    }
+
+    await this.db.delete(users).where(eq(users.id, userId));
+    return { success: true, message: 'Admin deleted successfully' };
   }
 
   async listJobs() {
@@ -190,14 +281,22 @@ export class AdminService {
     }));
   }
 
-  async setUserActiveStatus(userId: string, isActive: boolean) {
+  async setUserActiveStatus(
+    userId: string,
+    isActive: boolean,
+    currentAdminId?: string,
+  ) {
+    if (currentAdminId && userId === currentAdminId && !isActive) {
+      throw new BadRequestException('You cannot disable your own admin account');
+    }
+
     const [user] = await this.db
       .update(users)
       .set({ isActive, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning();
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
     return user;
   }
