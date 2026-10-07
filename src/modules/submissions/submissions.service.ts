@@ -122,7 +122,7 @@ export class SubmissionsService {
       heartbeatAgeMs > HEARTBEAT_STALE_THRESHOLD_MS
     ) {
       events.push({
-        type: 'server-stale-heartbeat',
+        type: 'Unexpected connection loss',
         taskId: null,
         occurredAt: completedAt.toISOString(),
         durationMs: heartbeatAgeMs,

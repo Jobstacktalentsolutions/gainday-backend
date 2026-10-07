@@ -78,8 +78,8 @@ export interface GuestInfo {
  * frontend listeners (gainday-frontend/src/features/candidate/hooks/{useTabVisibilityGuard,
  * useFullscreenGuard,useIdleDetection}.ts) plus this backend's own server-observed check (see
  * SubmissionsService.submitAnswers), and a DB enum would need a migration every time a new
- * listener is added — known values today: "tab-hidden", "window-blur", "fullscreen-exit",
- * "idle", "server-stale-heartbeat".
+ * listener is added — known values: "Switched browser tab", "Switched window or application",
+ * "Exited full-screen mode", "Inactivity detected", "Unexpected connection loss".
  */
 export interface AntiCheatEvent {
   type: string;
