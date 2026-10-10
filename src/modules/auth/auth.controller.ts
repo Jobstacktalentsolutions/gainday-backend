@@ -15,8 +15,6 @@ import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { AdminVerify2faDto } from './dto/admin-verify-2fa.dto';
-import { AdminResend2faDto } from './dto/admin-resend-2fa.dto';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
 import { SignupJobSeekerDto } from './dto/signup-job-seeker.dto';
 import { UserRole } from '../../db/schema';
@@ -25,7 +23,6 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
-import { SetInitialPasswordDto } from './dto/set-initial-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -36,45 +33,6 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {}
-
-  @Post('admin/login')
-  @HttpCode(HttpStatus.OK)
-  async adminLogin(@Body() loginDto: LoginDto) {
-    return this.authService.initiateAdminLogin(loginDto.email, loginDto.password);
-  }
-
-  @Post('admin/verify-2fa')
-  @HttpCode(HttpStatus.OK)
-  async adminVerify2fa(
-    @Body() dto: AdminVerify2faDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.verifyAdmin2fa(
-      dto.challengeToken,
-      dto.otp,
-    );
-    this.setAuthCookie(res, result.access_token);
-    return result;
-  }
-
-  @Post('admin/resend-2fa')
-  @HttpCode(HttpStatus.OK)
-  async adminResend2fa(@Body() dto: AdminResend2faDto) {
-    return this.authService.resendAdmin2fa(dto.challengeToken);
-  }
-
-  @Post('admin/set-initial-password')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
-  async setAdminInitialPassword(
-    @CurrentUser() user: any,
-    @Body() dto: SetInitialPasswordDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.setAdminInitialPassword(user.id, dto);
-    this.setAuthCookie(res, result.access_token);
-    return result;
-  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -219,12 +177,10 @@ export class AuthController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
-    const role =
-      state === 'JOB_SEEKER' ? UserRole.JOB_SEEKER : UserRole.EMPLOYER;
+    const role = state === 'JOB_SEEKER' ? UserRole.JOB_SEEKER : UserRole.EMPLOYER;
     const result = await this.authService.validateGoogleUser(user, role);
     const frontendUrl = this.configService.get('frontendUrl');
-    const rolePath =
-      result.user.role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
+    const rolePath = result.user.role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
 
     this.setAuthCookie(res, result.access_token);
 

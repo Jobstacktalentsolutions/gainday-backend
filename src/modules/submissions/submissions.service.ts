@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  BadRequestException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -31,29 +26,11 @@ export class SubmissionsService {
     private readonly gradingService: GradingService,
   ) {}
 
-  async findAppliedJobIds(candidateId: string): Promise<string[]> {
-    const rows = await this.db
-      .selectDistinct({ jobId: submissions.jobId })
-      .from(submissions)
-      .where(eq(submissions.candidateId, candidateId));
-    return rows.map((r) => r.jobId);
-  }
-
   async createSubmission(
     jobId: string,
     simulationId: string,
     candidateId: string,
   ) {
-    const existing = await this.db.query.submissions.findFirst({
-      where: and(
-        eq(submissions.jobId, jobId),
-        eq(submissions.candidateId, candidateId),
-      ),
-    });
-    if (existing) {
-      throw new BadRequestException('You have already applied for this job.');
-    }
-
     const now = new Date();
     const [submission] = await this.db
       .insert(submissions)
@@ -122,7 +99,7 @@ export class SubmissionsService {
       heartbeatAgeMs > HEARTBEAT_STALE_THRESHOLD_MS
     ) {
       events.push({
-        type: 'Unexpected connection loss',
+        type: 'server-stale-heartbeat',
         taskId: null,
         occurredAt: completedAt.toISOString(),
         durationMs: heartbeatAgeMs,
@@ -159,124 +136,9 @@ export class SubmissionsService {
   async findById(id: string) {
     const submission = await this.db.query.submissions.findFirst({
       where: eq(submissions.id, id),
-      with: {
-        job: {
-          with: { employer: true },
-        },
-        simulation: true,
-        candidate: true,
-      },
+      with: { job: true, simulation: true, candidate: true },
     });
     return submission ?? null;
-  }
-
-  async getCandidateResult(submission: any) {
-    const job = submission.job;
-    const simulation = submission.simulation;
-    const tasks = simulation?.tasks ?? [];
-
-    // Query real scored submissions for this job to compute real percentile on-demand
-    let percentileText = 'Overall score out of 100';
-    if (submission.jobId) {
-      const allScored = await this.db
-        .select({ overallScore: submissions.overallScore })
-        .from(submissions)
-        .where(
-          and(
-            eq(submissions.jobId, submission.jobId),
-            eq(submissions.status, 'SCORED'),
-          ),
-        );
-
-      const candidateScore = Number(submission.overallScore ?? 0);
-      const totalApplicants = allScored.length;
-
-      if (totalApplicants > 1) {
-        const lowerCount = allScored.filter(
-          (s) => Number(s.overallScore ?? 0) < candidateScore,
-        ).length;
-        const topPercentile = Math.max(
-          1,
-          Math.round(100 - (lowerCount / totalApplicants) * 100),
-        );
-        percentileText = `Overall score · top ${topPercentile}% of ${totalApplicants} applicants for this role`;
-      } else if (totalApplicants === 1) {
-        percentileText = `Overall score · 1st applicant for this role`;
-      }
-    }
-
-    const taskEvidence = (submission.taskScores ?? []).map(
-      (tScore: any, idx: number) => {
-        const matchingTask = tasks.find(
-          (t: any) =>
-            t.id === tScore.taskId ||
-            (tScore.questionBankId &&
-              t.questionBankId === tScore.questionBankId),
-        );
-        return {
-          taskId: tScore.taskId,
-          taskNumber: idx + 1,
-          title: matchingTask?.title ?? `Task ${idx + 1}`,
-          summary: tScore.summary ?? 'Evaluation in progress.',
-        };
-      },
-    );
-
-    const catScores = submission.categoryScores ?? {};
-    const getPct = (val: any, fallback = 75) => {
-      if (val === undefined || val === null) return fallback;
-      const num = typeof val === 'number' ? val : (val.score ?? fallback);
-      return num <= 10 ? Math.round(num * 10) : Math.round(num);
-    };
-
-    const metrics = [
-      { label: 'PROBLEM SOLVED', score: getPct(catScores.problemSolving, 82) },
-      { label: 'EXECUTION', score: getPct(catScores.judgmentExecution, 76) },
-      {
-        label: 'COMMUNICATION',
-        score: getPct(catScores.writtenCommunication, 88),
-      },
-      { label: 'JUDGEMENT', score: getPct(catScores.judgmentExecution, 74) },
-      {
-        label: 'ATTENTION TO DETAIL',
-        score: getPct(catScores.commercialDomainAwareness, 91),
-      },
-    ];
-
-    const overallScore = submission.overallScore
-      ? Math.round(Number(submission.overallScore))
-      : 82;
-
-    const completedDate = submission.completedAt
-      ? new Date(submission.completedAt).toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })
-      : new Date().toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        });
-
-    return {
-      id: submission.id,
-      status: submission.status,
-      overallScore,
-      percentileText,
-      completedDate,
-      job: {
-        id: job?.id ?? '',
-        title: job?.title ?? 'Custody Operations Analyst',
-        companyName: job?.employer?.companyName ?? 'Stanbic IBTC Custody',
-        location: job?.location ?? 'Remote',
-        employmentType: job?.employmentType ?? 'Full-time',
-      },
-      metrics,
-      cumulativeCapabilityScore: 721,
-      cumulativeDelta: '+18 from last result',
-      taskEvidence,
-    };
   }
 
   async unlockCandidate(submissionId: string) {

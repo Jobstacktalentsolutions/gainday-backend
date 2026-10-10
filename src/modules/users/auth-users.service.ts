@@ -14,9 +14,6 @@ const publicColumns = {
   googleId: users.googleId,
   isEmailVerified: users.isEmailVerified,
   isActive: users.isActive,
-  suspensionReason: users.suspensionReason,
-  suspendedAt: users.suspendedAt,
-  mustChangePassword: users.mustChangePassword,
 };
 
 @Injectable()
@@ -172,7 +169,6 @@ export class AuthUsersService {
         password: hashedPassword,
         passwordResetToken: null,
         passwordResetExpires: null,
-        mustChangePassword: false,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));

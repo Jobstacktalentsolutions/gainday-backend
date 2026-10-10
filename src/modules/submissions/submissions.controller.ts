@@ -26,13 +26,6 @@ export class SubmissionsController {
     private readonly jobsService: JobsService,
   ) {}
 
-  @Get('applied-job-ids')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.JOB_SEEKER)
-  async getAppliedJobIds(@CurrentUser() user: any) {
-    return this.submissionsService.findAppliedJobIds(user.profileId);
-  }
-
   @Post('job/:jobId/start')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.JOB_SEEKER)
@@ -103,28 +96,6 @@ export class SubmissionsController {
       );
     }
     return this.submissionsService.findByJob(jobId);
-  }
-
-  @Get(':id/candidate-result')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.JOB_SEEKER, UserRole.EMPLOYER, UserRole.ADMIN)
-  async getCandidateSubmissionResult(
-    @Param('id') id: string,
-    @CurrentUser() user: any,
-  ) {
-    const submission = await this.submissionsService.findById(id);
-    if (!submission) {
-      throw new NotFoundException('Submission not found');
-    }
-    if (
-      user.role === UserRole.JOB_SEEKER &&
-      submission.candidateId !== user.profileId
-    ) {
-      throw new ForbiddenException(
-        'You may only view your own submission results',
-      );
-    }
-    return await this.submissionsService.getCandidateResult(submission);
   }
 
   @Get(':id')
