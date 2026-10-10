@@ -1,8 +1,14 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { jobs, Job, NewJob, SalaryRange } from '../../db/schema';
+import { jobs, Job, NewJob, SalaryRange, JobStatus, UserRole } from '../../db/schema';
 import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
 
@@ -121,5 +127,33 @@ export class JobsService {
       .from(jobs)
       .where(eq(jobs.employerId, employerId))
       .orderBy(desc(jobs.updatedAt));
+  }
+
+  async deleteJob(
+    jobId: string,
+    employerId: string,
+    userRole?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const job = await this.findById(jobId);
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (userRole !== UserRole.ADMIN && job.employerId !== employerId) {
+      throw new ForbiddenException('You may only delete your own jobs');
+    }
+
+    if (job.status === JobStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Live jobs cannot be deleted. Please make the job inactive first.',
+      );
+    }
+
+    await this.db.delete(jobs).where(eq(jobs.id, jobId));
+
+    return {
+      success: true,
+      message: 'Job deleted successfully',
+    };
   }
 }

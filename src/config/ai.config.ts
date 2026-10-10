@@ -1,13 +1,18 @@
 export const aiConfig = {
-  // Groq has no embeddings API at all, so switching `provider` only changes which model
-  // answers GENERATION_MODEL/CRITIC_MODEL — EMBEDDINGS always uses Gemini's embedding model
-  // regardless of this setting (see ai.module.ts).
-  provider: 'groq' as 'gemini' | 'groq',
+  // Configurable via AI_PROVIDER env variable ('gemini' | 'groq' | 'fireworks'), defaulting to
+  // 'gemini'. Neither Groq nor Fireworks has an embeddings API, so switching `provider` only
+  // changes which model answers GENERATION_MODEL/CRITIC_MODEL/TASK_GENERATION_MODEL/GRADING_MODEL
+  // — EMBEDDINGS always uses Gemini's embedding model regardless of this setting (see ai.module.ts).
+  provider: (process.env.AI_PROVIDER || 'gemini') as
+    | 'gemini'
+    | 'groq'
+    | 'fireworks',
 
   gemini: {
-    // gemini-2.5-pro was retired for new users by Google (404 as of 2026-08-30).
-    generationModel: 'gemini-3.5-flash',
-    criticModel: 'gemini-3.5-flash',
+    // Light Tier: High speed and lowest cost for straightforward text & extraction
+    generationModel: 'gemini-3.5-flash-lite',
+    criticModel: 'gemini-3.5-flash-lite',
+    // Heavy Tier: Strict JSON schema adherence & deep reasoning for complex scenarios and grading
     taskGenerationModel: 'gemini-3.5-flash',
     gradingModel: 'gemini-3.5-flash',
     embeddingModel: 'gemini-embedding-001',
@@ -32,6 +37,33 @@ export const aiConfig = {
     // call that runs unattended in a background worker.
     gradingModel: 'openai/gpt-oss-120b',
     // gradingModel: 'openai/gpt-oss-20b',
+  },
+
+  // Reached via ChatOpenAI pointed at Fireworks' base URL — see ai.module.ts. Model ids use
+  // Fireworks' `accounts/fireworks/models/<name>` format.
+  fireworks: {
+    // `gpt-oss-20b` is NOT available serverless on Fireworks (dedicated-deployment only —
+    // confirmed in-dashboard, model page shows "Serverless: Not supported"), so there is
+    // currently no cheap light-tier model in use — both tiers run on gpt-oss-120b until a proper
+    // replacement is found.
+    //
+    // Tried and REJECTED after live tests, both for the same reason: NVIDIA Nemotron Lightning
+    // 3.5 30B-A3B (174s for one job-description parse) and GLM 5.3 Flash (59s for the same call).
+    // Both are "thinking" models with reasoning enabled by default and no confirmed way to cap or
+    // disable it via Fireworks' OpenAI-compatible endpoint (unlike Groq's gpt-oss, which exposes
+    // `reasoningEffort`) — unusable for a user-facing "Parsing..." wait. This looks like a
+    // tier-wide pattern on Fireworks right now: the cheap small-model slots are filled by
+    // reasoning-tuned models, and the old non-reasoning "classic instruct" small models (Llama
+    // 3.1 8B, Qwen2.5 7B) no longer appear in the serverless catalog.
+    //
+    // Before trying another light-tier candidate: confirm whether Fireworks honors a
+    // thinking-disable param (e.g. `extra_body: { thinking: { type: 'disabled' } }`, documented
+    // for Z.ai's own GLM hosting but unverified on Fireworks) — don't wire a new model in without
+    // testing that first, same mistake twice already.
+    generationModel: 'accounts/fireworks/models/gpt-oss-120b',
+    criticModel: 'accounts/fireworks/models/gpt-oss-120b',
+    taskGenerationModel: 'accounts/fireworks/models/gpt-oss-120b',
+    gradingModel: 'accounts/fireworks/models/gpt-oss-120b',
   },
 
   generationTemperature: 0.9,

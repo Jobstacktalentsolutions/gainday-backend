@@ -171,4 +171,36 @@ export class NotificationsService {
 
     this.logger.log(`Scoring results email enqueued for ${candidateEmail}`);
   }
+
+  async sendSupportInquiryEmail(
+    name: string,
+    userEmail: string,
+    topic: string,
+    message: string,
+    messageId: string,
+  ): Promise<void> {
+    const supportEmail =
+      this.configService.get<string>('email.supportEmail') || 'support@gainday.com';
+    const appUrl = this.configService.get<string>('email.appUrl') || 'http://localhost:3000';
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to: supportEmail,
+      subject: `[Support Request] ${topic}: ${name}`,
+      template: 'support-request',
+      context: {
+        name,
+        userEmail,
+        topic,
+        message,
+        messageId,
+        appUrl,
+        year,
+      },
+      replyTo: userEmail,
+    });
+
+    this.logger.log(`Support inquiry email enqueued for support team regarding ${userEmail}`);
+  }
 }
+

@@ -3,12 +3,15 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Put,
   UseGuards,
   ForbiddenException,
   NotFoundException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { JobDescriptionParserService } from './job-description-parser.service';
@@ -105,5 +108,13 @@ export class JobsController {
       throw new ForbiddenException('You may only publish your own jobs');
     }
     return this.jobsService.publishJob(id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
+  async deleteJob(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.jobsService.deleteJob(id, user.profileId, user.role);
   }
 }

@@ -1,9 +1,12 @@
 import { z } from 'zod';
+import { Logger } from '@nestjs/common';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { BaseLanguageModelInput } from '@langchain/core/language_models/base';
 import { Runnable, RunnableLambda } from '@langchain/core/runnables';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { toJsonSchema } from '@langchain/core/utils/json_schema';
+
+const logger = new Logger('StructuredOutput');
 
 /**
  * Gemini-specific fix for a real gap in @langchain/google-genai@2.3.0's Zod-to-schema
@@ -103,14 +106,31 @@ export function withGeminiSafeStructuredOutput<T extends Record<string, any>>(
     RunnableLambda.from((output: unknown) => schema.parse(output)),
   );
 
+  const modelName = (model as { model?: string }).model ?? 'unknown-model';
+
   return RunnableLambda.from(async (input: BaseLanguageModelInput, config) => {
     let lastError: unknown;
     for (let attempt = 0; attempt <= MALFORMED_OUTPUT_RETRIES; attempt++) {
+      const startedAt = Date.now();
+      logger.log(
+        `[${modelName}] invoking (attempt ${attempt + 1}/${MALFORMED_OUTPUT_RETRIES + 1})`,
+      );
       try {
-        return await pipeline.invoke(input, config);
+        const result = await pipeline.invoke(input, config);
+        logger.log(
+          `[${modelName}] succeeded in ${Date.now() - startedAt}ms on attempt ${attempt + 1}`,
+        );
+        return result;
       } catch (err) {
         lastError = err;
-        if (!isMalformedOutputError(err)) throw err;
+        const elapsed = Date.now() - startedAt;
+        const malformed = isMalformedOutputError(err);
+        logger.warn(
+          `[${modelName}] attempt ${attempt + 1} failed after ${elapsed}ms ` +
+            `(${malformed ? 'malformed output, will retry' : 'non-retryable, rethrowing'}): ` +
+            `${err instanceof Error ? err.message : String(err)}`,
+        );
+        if (!malformed) throw err;
       }
     }
     throw lastError;

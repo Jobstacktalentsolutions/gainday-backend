@@ -40,11 +40,53 @@ export default () => {
         process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production',
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
+    auth: {
+      admin2fa: {
+        cooldownSeconds: parseInt(
+          process.env.ADMIN_2FA_RESEND_COOLDOWN_SECONDS || '60',
+          10,
+        ),
+        maxResends: parseInt(process.env.ADMIN_2FA_MAX_RESENDS || '5', 10),
+        ttlMinutes: parseInt(
+          process.env.ADMIN_2FA_EXPIRATION_MINUTES || '10',
+          10,
+        ),
+      },
+      emailVerification: {
+        cooldownSeconds: parseInt(
+          process.env.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS || '60',
+          10,
+        ),
+        maxResends: parseInt(
+          process.env.EMAIL_VERIFICATION_MAX_RESENDS || '5',
+          10,
+        ),
+        ttlHours: parseInt(
+          process.env.EMAIL_VERIFICATION_TTL_HOURS || '24',
+          10,
+        ),
+      },
+      passwordReset: {
+        cooldownSeconds: parseInt(
+          process.env.PASSWORD_RESET_RESEND_COOLDOWN_SECONDS || '60',
+          10,
+        ),
+        maxRequests: parseInt(
+          process.env.PASSWORD_RESET_MAX_REQUESTS || '5',
+          10,
+        ),
+        ttlMinutes: parseInt(
+          process.env.PASSWORD_RESET_TTL_MINUTES || '60',
+          10,
+        ),
+      },
+    },
     email: {
       brevoApiKey: process.env.BREVO_API_KEY || '',
       fromEmail: process.env.EMAIL_FROM || 'noreply@gainday.com',
       fromName: process.env.EMAIL_FROM_NAME || 'Gainday',
       appUrl: process.env.APP_URL || 'http://localhost:3000',
+      supportEmail: process.env.SUPPORT_EMAIL || 'support@gainday.com',
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -56,13 +98,22 @@ export default () => {
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5000',
     ai: {
       ...aiConfig,
+      provider: (process.env.AI_PROVIDER || aiConfig.provider) as
+        | 'gemini'
+        | 'groq'
+        | 'fireworks',
       gemini: {
         ...aiConfig.gemini,
-        apiKey: process.env.GOOGLE_API_KEY || '',
+        apiKey:
+          process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
       },
       groq: {
         ...aiConfig.groq,
         apiKey: process.env.GROQ_API_KEY || '',
+      },
+      fireworks: {
+        ...aiConfig.fireworks,
+        apiKey: process.env.FIREWORKS_API_KEY || '',
       },
     },
     generation: generationConfig,

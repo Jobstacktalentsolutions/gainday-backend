@@ -8,3 +8,4 @@ export * from './generation-review.schema';
 export * from './employer-profiles.schema';
 export * from './job-seeker-profiles.schema';
 export * from './admin-profiles.schema';
+export * from './support-messages.schema';

@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('ParsedJobDescriptionSchema');
 
 // Structured output for POST /jobs/parse-description — takes a recruiter's raw, unstructured job
 // description text and both (a) extracts the fields the employer job-posting form knows about,
@@ -43,12 +46,29 @@ export const parsedJobDescriptionSchema = z.object({
     .describe(
       'Must be exactly one of "Full-time", "Part-time", or "Contract". Null if not stated.',
     ),
+  // No date-format instruction needed in the prompt — the model can write the deadline however
+  // it naturally reads it from the text ("March 15, 2027", "15 March 2027", etc.); this transform
+  // normalizes whatever comes back into a strict "YYYY-MM-DD" string (or null) so downstream code
+  // (the DTOs' @IsISO8601() validators) never sees a malformed value. A value JS's Date can't
+  // parse is dropped to null rather than passed through broken or invented — logged so a
+  // persistent parsing miss is visible instead of silently becoming a null deadline.
   deadline: z
     .string()
     .nullable()
     .describe(
-      'Application deadline as an ISO 8601 date string (YYYY-MM-DD), only if an explicit date is stated. Null otherwise — never invent one.',
-    ),
+      'Application deadline, in whatever format it appears in the text, only if an explicit date is stated. Null otherwise — never invent one.',
+    )
+    .transform((raw) => {
+      if (!raw) return null;
+      const parsed = new Date(raw);
+      if (Number.isNaN(parsed.getTime())) {
+        logger.warn(
+          `Model returned an unparsable deadline value "${raw}" — dropping to null`,
+        );
+        return null;
+      }
+      return parsed.toISOString().slice(0, 10);
+    }),
   isRemoteFriendly: z
     .boolean()
     .nullable()

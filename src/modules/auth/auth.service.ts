@@ -4,8 +4,10 @@ import {
   ConflictException,
   BadRequestException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { AuthUsersService } from '../users/auth-users.service';
 import { EmployerProfileService } from '../users/employer-profile.service';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
@@ -34,16 +36,88 @@ export class AuthService {
     private readonly adminProfileService: AdminProfileService,
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
+    private readonly configService?: ConfigService,
   ) {}
 
-  private admin2faChallenges = new Map<string, {
-    challengeToken: string;
-    userId: string;
-    email: string;
-    otp: string;
-    expiresAt: number;
-    lastSentAt: number;
-  }>();
+  private admin2faChallenges = new Map<
+    string,
+    {
+      challengeToken: string;
+      userId: string;
+      email: string;
+      otp: string;
+      expiresAt: number;
+      lastSentAt: number;
+      resendCount: number;
+    }
+  >();
+
+  private emailVerificationRateLimits = new Map<
+    string,
+    {
+      count: number;
+      firstRequestedAt: number;
+      lastSentAt: number;
+    }
+  >();
+
+  private passwordResetRateLimits = new Map<
+    string,
+    {
+      count: number;
+      firstRequestedAt: number;
+      lastSentAt: number;
+    }
+  >();
+
+  private getAdmin2faConfig() {
+    return {
+      cooldownMs:
+        (this.configService?.get<number>('auth.admin2fa.cooldownSeconds') ??
+          60) * 1000,
+      maxResends:
+        this.configService?.get<number>('auth.admin2fa.maxResends') ?? 5,
+      ttlMs:
+        (this.configService?.get<number>('auth.admin2fa.ttlMinutes') ?? 10) *
+        60 *
+        1000,
+    };
+  }
+
+  private getEmailVerificationConfig() {
+    return {
+      cooldownMs:
+        (this.configService?.get<number>(
+          'auth.emailVerification.cooldownSeconds',
+        ) ?? 60) * 1000,
+      maxResends:
+        this.configService?.get<number>(
+          'auth.emailVerification.maxResends',
+        ) ?? 5,
+      ttlMs:
+        (this.configService?.get<number>('auth.emailVerification.ttlHours') ??
+          24) *
+        60 *
+        60 *
+        1000,
+    };
+  }
+
+  private getPasswordResetConfig() {
+    return {
+      cooldownMs:
+        (this.configService?.get<number>(
+          'auth.passwordReset.cooldownSeconds',
+        ) ?? 60) * 1000,
+      maxRequests:
+        this.configService?.get<number>('auth.passwordReset.maxRequests') ?? 5,
+      ttlMs:
+        (this.configService?.get<number>('auth.passwordReset.ttlMinutes') ??
+          60) *
+        60 *
+        1000,
+    };
+  }
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmailWithPassword(email);
@@ -61,7 +135,7 @@ export class AuthService {
     if (isPasswordValid) {
       if (user.isActive === false) {
         const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
-        throw new UnauthorizedException(
+        throw new ForbiddenException(
           `Your account has been suspended${reason}. Please contact support.`
         );
       }
@@ -84,12 +158,12 @@ export class AuthService {
 
     if (user.isActive === false) {
       const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
-      throw new UnauthorizedException(
+      throw new ForbiddenException(
         `Administrator account has been suspended${reason}. Please contact support.`
       );
     }
 
-    // Generate 6-digit OTP and UUID challenge token
+    const config = this.getAdmin2faConfig();
     const otp = crypto.randomInt(100000, 999999).toString();
     const challengeToken = crypto.randomUUID();
     const now = Date.now();
@@ -101,14 +175,14 @@ export class AuthService {
       }
     }
 
-    // 10 minutes expiry
     this.admin2faChallenges.set(challengeToken, {
       challengeToken,
       userId: user.id,
       email: user.email,
       otp,
-      expiresAt: now + 10 * 60 * 1000,
+      expiresAt: now + config.ttlMs,
       lastSentAt: now,
+      resendCount: 0,
     });
 
     // Send 2FA email to admin
@@ -129,7 +203,7 @@ export class AuthService {
 
     if (Date.now() > challenge.expiresAt) {
       this.admin2faChallenges.delete(challengeToken);
-      throw new BadRequestException('2FA verification code has expired. Please sign in again.');
+      throw new BadRequestException('2FA verification session not found or expired. Please sign in again.');
     }
 
     if (challenge.otp !== otp.trim()) {
@@ -146,7 +220,7 @@ export class AuthService {
 
     if (user.isActive === false) {
       const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
-      throw new UnauthorizedException(`Administrator account has been suspended${reason}`);
+      throw new ForbiddenException(`Administrator account has been suspended${reason}`);
     }
 
     return this.login(user);
@@ -159,22 +233,41 @@ export class AuthService {
     }
 
     const now = Date.now();
-    // 60-second cooldown
-    if (now - challenge.lastSentAt < 60 * 1000) {
-      const waitSeconds = Math.ceil((60 * 1000 - (now - challenge.lastSentAt)) / 1000);
-      throw new BadRequestException(`Please wait ${waitSeconds}s before requesting a new code.`);
+    if (now > challenge.expiresAt) {
+      this.admin2faChallenges.delete(challengeToken);
+      throw new BadRequestException('2FA verification session not found or expired. Please sign in again.');
+    }
+
+    const config = this.getAdmin2faConfig();
+
+    if (challenge.resendCount >= config.maxResends) {
+      this.admin2faChallenges.delete(challengeToken);
+      throw new BadRequestException(
+        `Maximum resend limit of ${config.maxResends} attempts reached. Please sign in again.`,
+      );
+    }
+
+    if (now - challenge.lastSentAt < config.cooldownMs) {
+      const waitSeconds = Math.ceil(
+        (config.cooldownMs - (now - challenge.lastSentAt)) / 1000,
+      );
+      throw new BadRequestException(
+        `Please wait ${waitSeconds}s before requesting a new code.`,
+      );
     }
 
     const newOtp = crypto.randomInt(100000, 999999).toString();
     challenge.otp = newOtp;
     challenge.lastSentAt = now;
-    challenge.expiresAt = now + 10 * 60 * 1000;
+    challenge.expiresAt = now + config.ttlMs;
+    challenge.resendCount = (challenge.resendCount || 0) + 1;
 
     await this.notificationsService.sendAdmin2faEmail(challenge.email, newOtp);
 
     return {
       success: true,
       message: 'A fresh verification code has been sent to your email.',
+      remainingResends: Math.max(0, config.maxResends - challenge.resendCount),
     };
   }
 
@@ -342,22 +435,56 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string): Promise<void> {
-    const user = await this.usersService.findByEmail(email);
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await this.usersService.findByEmail(normalizedEmail);
 
     if (!user) {
       return;
     }
 
+    const config = this.getPasswordResetConfig();
+    const now = Date.now();
+
+    // Check sliding window rate limit for password reset requests (1 hour window)
+    const rateLimit = this.passwordResetRateLimits.get(normalizedEmail);
+    const windowMs = 60 * 60 * 1000;
+    if (rateLimit) {
+      if (now - rateLimit.firstRequestedAt > windowMs) {
+        rateLimit.count = 0;
+        rateLimit.firstRequestedAt = now;
+      }
+
+      if (now - rateLimit.lastSentAt < config.cooldownMs) {
+        return;
+      }
+
+      if (rateLimit.count >= config.maxRequests) {
+        return;
+      }
+    }
+
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
+    const resetExpires = new Date(now + config.ttlMs);
 
     await this.usersService.setPasswordResetToken(
       user.id,
       resetToken,
       resetExpires,
     );
+
+    if (rateLimit) {
+      rateLimit.count += 1;
+      rateLimit.lastSentAt = now;
+    } else {
+      this.passwordResetRateLimits.set(normalizedEmail, {
+        count: 1,
+        firstRequestedAt: now,
+        lastSentAt: now,
+      });
+    }
+
     await this.notificationsService.sendPasswordResetEmail(
-      email,
+      normalizedEmail,
       resetToken,
       user.role,
     );
@@ -374,6 +501,15 @@ export class AuthService {
 
     if (!user) {
       throw new BadRequestException('Invalid or expired token');
+    }
+
+    if (user.password) {
+      const isSamePassword = await bcrypt.compare(password, user.password);
+      if (isSamePassword) {
+        throw new BadRequestException(
+          'New password cannot be the same as your previous password',
+        );
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -410,6 +546,13 @@ export class AuthService {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      throw new BadRequestException(
+        'New password cannot be the same as your current password',
+      );
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await this.usersService.updatePassword(user.id, hashedPassword);
   }
@@ -430,9 +573,18 @@ export class AuthService {
       throw new BadRequestException('Passwords do not match');
     }
 
-    const user = await this.usersService.findById(userId);
+    const user = await this.usersService.findByIdWithPassword(userId);
     if (!user || user.role !== UserRole.ADMIN) {
       throw new UnauthorizedException('Administrator account not found');
+    }
+
+    if (user.password) {
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        throw new BadRequestException(
+          'New password cannot be the same as your temporary password',
+        );
+      }
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -453,12 +605,34 @@ export class AuthService {
    * A still-valid token is reused so links from earlier emails keep working.
    */
   async resendVerificationEmail(email: string): Promise<void> {
-    const user = await this.usersService.findVerificationStateByEmail(email);
+    const normalizedEmail = email.toLowerCase().trim();
+    const user =
+      await this.usersService.findVerificationStateByEmail(normalizedEmail);
     if (!user || user.isEmailVerified) {
       return;
     }
 
+    const config = this.getEmailVerificationConfig();
     const now = Date.now();
+
+    // Check sliding window rate limit for email verification resends (1 hour window)
+    const rateLimit = this.emailVerificationRateLimits.get(normalizedEmail);
+    const windowMs = 60 * 60 * 1000;
+    if (rateLimit) {
+      if (now - rateLimit.firstRequestedAt > windowMs) {
+        rateLimit.count = 0;
+        rateLimit.firstRequestedAt = now;
+      }
+
+      if (now - rateLimit.lastSentAt < config.cooldownMs) {
+        return;
+      }
+
+      if (rateLimit.count >= config.maxResends) {
+        return;
+      }
+    }
+
     const { emailVerificationToken, emailVerificationExpires } = user;
     const liveToken =
       emailVerificationToken &&
@@ -469,9 +643,8 @@ export class AuthService {
 
     if (liveToken && emailVerificationExpires) {
       // Issue time is derived from the expiry, which is refreshed on each send.
-      const issuedAt =
-        emailVerificationExpires.getTime() - EMAIL_VERIFICATION_TTL_MS;
-      if (now - issuedAt < RESEND_VERIFICATION_COOLDOWN_MS) {
+      const issuedAt = emailVerificationExpires.getTime() - config.ttlMs;
+      if (now - issuedAt < config.cooldownMs) {
         return;
       }
     }
@@ -480,10 +653,22 @@ export class AuthService {
     await this.usersService.updateVerificationToken(
       user.id,
       token,
-      new Date(now + EMAIL_VERIFICATION_TTL_MS),
+      new Date(now + config.ttlMs),
     );
+
+    if (rateLimit) {
+      rateLimit.count += 1;
+      rateLimit.lastSentAt = now;
+    } else {
+      this.emailVerificationRateLimits.set(normalizedEmail, {
+        count: 1,
+        firstRequestedAt: now,
+        lastSentAt: now,
+      });
+    }
+
     await this.notificationsService.sendVerificationEmail(
-      email,
+      normalizedEmail,
       token,
       user.role,
     );
@@ -560,7 +745,7 @@ export class AuthService {
 
     if (user && user.isActive === false) {
       const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
-      throw new UnauthorizedException(
+      throw new ForbiddenException(
         `Your account has been suspended${reason}. Please contact support.`
       );
     }

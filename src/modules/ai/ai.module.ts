@@ -5,6 +5,7 @@ import {
   GoogleGenerativeAIEmbeddings,
 } from '@langchain/google-genai';
 import { ChatGroq } from '@langchain/groq';
+import { ChatOpenAI } from '@langchain/openai';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Embeddings } from '@langchain/core/embeddings';
 import {
@@ -49,6 +50,26 @@ function buildChatModel(
       apiKey: config.get<string>('ai.gemini.apiKey'),
       model: config.getOrThrow<string>(`ai.gemini.${role}`),
       temperature: config.get<number>(temperatureKey),
+    });
+  }
+  if (provider === 'fireworks') {
+    // Fireworks serves gpt-oss via an OpenAI-compatible endpoint, so ChatOpenAI is pointed at
+    // Fireworks' base URL instead of OpenAI's — same models/reasoning as the groq branch above,
+    // just a different host now that Groq's own subscription signup is temporarily broken.
+    //
+    // `timeout` is required here, unlike the other two providers: without it, a call that hangs
+    // server-side (observed with the untested light-tier model) blocks forever with zero log
+    // output and zero error — nothing client-side ever gives up. 60s is generous for a single
+    // structured-output call; past that we'd rather surface a clear timeout error (and let
+    // withGeminiSafeStructuredOutput's retry logic or the caller handle it) than hang silently.
+    return new ChatOpenAI({
+      apiKey: config.get<string>('ai.fireworks.apiKey'),
+      model: config.getOrThrow<string>(`ai.fireworks.${role}`),
+      temperature: config.get<number>(temperatureKey),
+      timeout: 60_000,
+      configuration: {
+        baseURL: 'https://api.fireworks.ai/inference/v1',
+      },
     });
   }
   throw new Error(`Unsupported AI provider: ${provider}`);

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Support Request</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'Support & Appeal Request' }) %>
+
+      <div class="content">
+        <p class="intro">
+          A new support inquiry / appeal has been submitted through Gainday.
+        </p>
+
+        <div style="background-color: #f8f9fc; border: 1px solid #e2e4ed; border-radius: 8px; padding: 18px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #494866; width: 120px;">Name:</td>
+              <td style="padding: 6px 0; color: #111019;"><%= name %></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #494866;">Email:</td>
+              <td style="padding: 6px 0; color: #1817fe;"><a href="mailto:<%= userEmail %>" style="color: #1817fe; text-decoration: underline;"><%= userEmail %></a></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #494866;">Topic:</td>
+              <td style="padding: 6px 0; color: #111019; font-weight: 600;"><%= topic %></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: 600; color: #494866;">Message ID:</td>
+              <td style="padding: 6px 0; color: #767592; font-family: monospace; font-size: 12px;"><%= messageId %></td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin: 20px 0;">
+          <div style="font-size: 13px; font-weight: 700; color: #494866; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+            User Message
+          </div>
+          <div style="background-color: #ffffff; border: 1px solid #dcdcfb; border-left: 4px solid #1817fe; padding: 16px; border-radius: 6px; font-size: 14px; color: #111019; white-space: pre-wrap; line-height: 1.6;">
+<%= message %>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <p style="font-size: 13px; color: #767592;">
+          You can reply directly to the user by clicking their email address above.
+        </p>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>
