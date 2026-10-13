@@ -1,9 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import { submissions, CandidateAnswer, AntiCheatEvent } from '../../db/schema';
 import { GradingService } from '../grading/grading.service';
+import { CreditLedgerService } from '../credits/credit-ledger.service';
+import { resolveCandidateContact } from './candidate-contact';
 
 // A heartbeat older than this by the time the candidate submits means the client went quiet
 // (tab closed, machine slept, network down, or deliberately stopped pinging) for longer than a
@@ -24,6 +26,7 @@ export class SubmissionsService {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly gradingService: GradingService,
+    private readonly creditLedger: CreditLedgerService,
   ) {}
 
   async createSubmission(
@@ -126,11 +129,55 @@ export class SubmissionsService {
     return updated;
   }
 
-  async findByJob(jobId: string) {
-    return this.db.query.submissions.findMany({
+  /**
+   * Employer-facing list for a job. Candidates stay anonymous (no identity fields at all) until
+   * `employerId` has unlocked them � see toEmployerView.
+   */
+  async findByJobForEmployer(jobId: string, employerId: string) {
+    const rows = await this.db.query.submissions.findMany({
       where: eq(submissions.jobId, jobId),
-      with: { candidate: true },
+      with: { candidate: { with: { user: true } } },
     });
+    const unlockedIds = await this.creditLedger.findUnlockedSubmissionIds(
+      employerId,
+      rows.map((row) => row.id),
+    );
+    return rows.map((row) => this.toEmployerView(row, unlockedIds.has(row.id)));
+  }
+
+  async findByIdForEmployer(id: string, employerId: string) {
+    const row = await this.db.query.submissions.findFirst({
+      where: eq(submissions.id, id),
+      with: {
+        job: true,
+        simulation: true,
+        candidate: { with: { user: true } },
+      },
+    });
+    if (!row) {
+      return null;
+    }
+    const unlockedIds = await this.creditLedger.findUnlockedSubmissionIds(
+      employerId,
+      [id],
+    );
+    return this.toEmployerView(row, unlockedIds.has(id));
+  }
+
+  // Strips the candidate's identity (profile and guest details) and only hands back contact
+  // details for unlocked submissions, so the pay-to-unlock rule is enforced here on the server
+  // rather than by what the frontend chooses to render.
+  private toEmployerView<
+    T extends Parameters<typeof resolveCandidateContact>[0],
+  >(row: T, isUnlocked: boolean) {
+    const { candidate, guestInfo, ...rest } = row;
+    return {
+      ...rest,
+      isUnlocked,
+      contact: isUnlocked
+        ? resolveCandidateContact({ candidate, guestInfo })
+        : null,
+    };
   }
 
   async findById(id: string) {
@@ -141,16 +188,12 @@ export class SubmissionsService {
     return submission ?? null;
   }
 
-  async unlockCandidate(submissionId: string) {
-    const [submission] = await this.db
-      .update(submissions)
-      .set({ isUnlocked: true, updatedAt: new Date() })
-      .where(eq(submissions.id, submissionId))
-      .returning();
-    if (!submission) {
-      throw new Error('Submission not found');
-    }
-    return submission;
+  /** Submissions with their job and the identity needed to contact the candidate. */
+  async findManyWithContactByIds(ids: string[]) {
+    return this.db.query.submissions.findMany({
+      where: inArray(submissions.id, ids),
+      with: { job: true, candidate: { with: { user: true } } },
+    });
   }
 
   async findPendingByJob(jobId: string) {

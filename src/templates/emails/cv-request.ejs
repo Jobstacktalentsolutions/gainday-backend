@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Send your CV</title>
+  <%- include('partials/_styles') %>
+</head>
+<%
+  // jobs.title and employer_profiles.company_name are nullable columns.
+  const role = jobTitle || 'the role';
+  const company = companyName || 'An employer';
+%>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'An employer wants your CV' }) %>
+
+      <div class="content">
+        <p class="intro">
+          Hi <%= candidateName %>,<br><br>
+          Good news: <strong><%= company %></strong> reviewed your work simulation for <strong><%= role %></strong> and would like to take the next step with you.
+        </p>
+
+        <div class="standout-box">
+          <div class="standout-title">What to do next</div>
+          <p>
+            Please email your CV to <strong><%= employerEmail %></strong> and mention the <strong><%= role %></strong> role in your message. The hiring team will be in touch from there about next steps.
+          </p>
+        </div>
+
+        <div class="cta-wrap">
+          <a href="mailto:<%= employerEmail %>?subject=<%= encodeURIComponent('CV for ' + role) %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            Email your CV
+          </a>
+        </div>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

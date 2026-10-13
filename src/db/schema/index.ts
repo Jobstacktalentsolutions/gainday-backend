@@ -9,3 +9,5 @@ export * from './employer-profiles.schema';
 export * from './job-seeker-profiles.schema';
 export * from './admin-profiles.schema';
 export * from './support-messages.schema';
+export * from './credit-purchases.schema';
+export * from './credit-ledger-entries.schema';

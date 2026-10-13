@@ -95,7 +95,7 @@ export class SubmissionsController {
         'You may only view submissions for your own jobs',
       );
     }
-    return this.submissionsService.findByJob(jobId);
+    return this.submissionsService.findByJobForEmployer(jobId, job.employerId);
   }
 
   @Get(':id')
@@ -114,25 +114,9 @@ export class SubmissionsController {
         'You may only view submissions for your own jobs',
       );
     }
-    return submission;
-  }
-
-  @Put(':id/unlock')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
-  async unlockSubmission(@Param('id') id: string, @CurrentUser() user: any) {
-    const submission = await this.submissionsService.findById(id);
-    if (!submission) {
-      throw new NotFoundException('Submission not found');
-    }
-    if (
-      user.role !== UserRole.ADMIN &&
-      submission.job.employerId !== user.profileId
-    ) {
-      throw new ForbiddenException(
-        'You may only unlock submissions for your own jobs',
-      );
-    }
-    return this.submissionsService.unlockCandidate(id);
+    return this.submissionsService.findByIdForEmployer(
+      id,
+      submission.job.employerId,
+    );
   }
 }

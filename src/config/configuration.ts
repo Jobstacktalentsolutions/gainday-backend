@@ -88,6 +88,10 @@ export default () => {
       appUrl: process.env.APP_URL || 'http://localhost:3000',
       supportEmail: process.env.SUPPORT_EMAIL || 'support@gainday.com',
     },
+    stripe: {
+      secretKey: process.env.STRIPE_SECRET_KEY || '',
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -99,13 +103,10 @@ export default () => {
     ai: {
       ...aiConfig,
       provider: (process.env.AI_PROVIDER || aiConfig.provider) as
-        | 'gemini'
-        | 'groq'
-        | 'fireworks',
+        'gemini' | 'groq' | 'fireworks',
       gemini: {
         ...aiConfig.gemini,
-        apiKey:
-          process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
+        apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
       },
       groq: {
         ...aiConfig.groq,

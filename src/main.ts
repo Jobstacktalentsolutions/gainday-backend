@@ -4,7 +4,10 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // Stripe webhook signatures are computed over the exact raw request bytes.
+    rawBody: true,
+  });
 
   app.use(cookieParser());
 

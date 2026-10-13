@@ -1,54 +1,56 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Get,
-  Query,
-  UseGuards,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { SubmissionsService } from '../submissions/submissions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../db/schema';
+import { UnlockCandidatesDto } from './dto/unlock-candidates.dto';
+import { CreatePurchaseDto } from './dto/create-purchase.dto';
 
+// The JWT strategy's validated user; profileId is the employer profile id for EMPLOYER users.
+interface AuthenticatedEmployer {
+  profileId: string;
+}
+
+// Credits belong to employer profiles, so admins (who have none) are not allowed here.
 @Controller('payments')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.EMPLOYER, UserRole.ADMIN)
+@Roles(UserRole.EMPLOYER)
 export class PaymentsController {
-  constructor(
-    private readonly paymentsService: PaymentsService,
-    private readonly submissionsService: SubmissionsService,
-  ) {}
+  constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Get('quote')
-  async getQuote(@Query('candidates') count: string) {
-    const parsedCount = parseInt(count || '1', 10);
-    return this.paymentsService.calculateQuote(parsedCount);
+  @Get('packs')
+  getPacks() {
+    return this.paymentsService.getPacks();
   }
 
-  @Post('checkout')
-  async checkout(
-    @Body() body: { candidateIds: string[] },
-    @CurrentUser() user: any,
+  @Get('balance')
+  getBalance(@CurrentUser() user: AuthenticatedEmployer) {
+    return this.paymentsService.getBalance(user.profileId);
+  }
+
+  @Post('unlock')
+  unlock(
+    @Body() dto: UnlockCandidatesDto,
+    @CurrentUser() user: AuthenticatedEmployer,
   ) {
-    if (user.role !== UserRole.ADMIN) {
-      for (const submissionId of body.candidateIds) {
-        const submission = await this.submissionsService.findById(submissionId);
-        if (!submission) {
-          throw new NotFoundException(`Submission ${submissionId} not found`);
-        }
-        if (submission.job.employerId !== user.profileId) {
-          throw new ForbiddenException(
-            'You may only unlock candidates for your own jobs',
-          );
-        }
-      }
-    }
-    return this.paymentsService.processUnlockCheckout(body.candidateIds);
+    return this.paymentsService.unlock(user.profileId, dto.submissionIds);
+  }
+
+  @Post('purchases')
+  createPurchase(
+    @Body() dto: CreatePurchaseDto,
+    @CurrentUser() user: AuthenticatedEmployer,
+  ) {
+    return this.paymentsService.createPurchase(user.profileId, dto.packId);
+  }
+
+  @Get('purchases/:id')
+  getPurchase(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedEmployer,
+  ) {
+    return this.paymentsService.getPurchase(user.profileId, id);
   }
 }
