@@ -64,6 +64,40 @@ export class NotificationsService {
     this.logger.log(`Password reset email enqueued for ${to}`);
   }
 
+  async sendAdminInviteEmail(
+    to: string,
+    fullName: string,
+    role: string,
+    temporaryPassword: string,
+  ): Promise<void> {
+    const appUrl =
+      this.configService.get<string>('email.appUrl') || 'http://localhost:5173';
+    const loginUrl = `${appUrl}/admin/login`;
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: 'Welcome to the Gainday Admin Team - Your Login Credentials',
+      template: 'admin-invite',
+      context: {
+        email: to,
+        fullName,
+        role:
+          role === 'MANAGER'
+            ? 'Manager'
+            : role === 'SUPER_ADMIN'
+              ? 'Super Admin'
+              : 'Moderator',
+        temporaryPassword,
+        loginUrl,
+        appUrl,
+        year,
+      },
+    });
+
+    this.logger.log(`Admin invite email enqueued for ${to}`);
+  }
+
   async sendBatchNotification(
     employerEmail: string,
     candidateCount: number,
@@ -98,9 +132,14 @@ export class NotificationsService {
     /** Per-task concise reasons (GradingService's TaskGradingResult.summary) — gives the
      *  candidate a specific "why" per question rather than just the numeric breakdown. */
     taskBreakdown?: { title: string; summary: string }[],
+    submissionId?: string,
+    companyName?: string | null,
   ): Promise<void> {
     const appUrl = this.configService.get<string>('email.appUrl');
-    const dashboardUrl = `${appUrl}/dashboard`;
+    const resultUrl = submissionId
+      ? `${appUrl}/job-board/submissions/${submissionId}/result`
+      : `${appUrl}/candidate/profile`;
+    const dashboardUrl = resultUrl;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({
@@ -109,14 +148,51 @@ export class NotificationsService {
       template: 'scoring-results',
       context: {
         jobTitle,
+        companyName,
         overallScore,
         categoryScores,
         taskBreakdown,
         dashboardUrl,
+        resultUrl,
         year,
       },
     });
 
     this.logger.log(`Scoring results email enqueued for ${candidateEmail}`);
+  }
+
+  async sendSupportInquiryEmail(
+    name: string,
+    userEmail: string,
+    topic: string,
+    message: string,
+    messageId: string,
+  ): Promise<void> {
+    const supportEmail =
+      this.configService.get<string>('email.supportEmail') ||
+      'support@gainday.com';
+    const appUrl =
+      this.configService.get<string>('email.appUrl') || 'http://localhost:3000';
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to: supportEmail,
+      subject: `[Support Request] ${topic}: ${name}`,
+      template: 'support-request',
+      context: {
+        name,
+        userEmail,
+        topic,
+        message,
+        messageId,
+        appUrl,
+        year,
+      },
+      replyTo: userEmail,
+    });
+
+    this.logger.log(
+      `Support inquiry email enqueued for support team regarding ${userEmail}`,
+    );
   }
 }

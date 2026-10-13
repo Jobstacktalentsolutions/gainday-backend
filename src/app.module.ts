@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import configuration from './config/configuration';
+import { envValidationSchema } from './config/env.validation';
 import { DbModule } from './db/db.module';
 import { AiModule } from './modules/ai/ai.module';
 
@@ -26,6 +27,11 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+      validationSchema: envValidationSchema,
+      // abortEarly: false so one bad/missing env var doesn't hide the rest — the app refuses to
+      // boot with every validation failure listed at once, rather than one crash at a time as
+      // each var happens to get read.
+      validationOptions: { abortEarly: false },
     }),
 
     // Database connection using Drizzle ORM
