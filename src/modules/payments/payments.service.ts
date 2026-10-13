@@ -91,9 +91,9 @@ export class PaymentsService {
   }
 
   /**
-   * Starts a pack purchase: creates the Stripe payment intent and a PENDING purchase record, and
-   * returns the client secret the frontend confirms with. No credits are granted here — only the
-   * Stripe webhook does that, once the payment has actually succeeded.
+   * Starts a pack purchase: creates an embedded Stripe Checkout Session and a PENDING purchase
+   * record, and returns the client secret the frontend mounts Checkout with. No credits are
+   * granted here — only the Stripe webhook does that, once the payment has actually succeeded.
    */
   async createPurchase(employerId: string, packId: string) {
     const pack = findPack(packId);
@@ -101,10 +101,11 @@ export class PaymentsService {
       throw new NotFoundException(`Unknown credit pack ${packId}`);
     }
 
-    // Generated up front so the payment intent can carry it; the purchase row is inserted
-    // before the client secret is returned, so the webhook always finds it.
+    // Generated up front so the session can carry it; the purchase row is inserted before the
+    // client secret is returned, so the webhook always finds it.
     const purchaseId = randomUUID();
-    const intent = await this.stripeService.createPaymentIntent({
+    const session = await this.stripeService.createCheckoutSession({
+      productName: `Gainday ${pack.name} credit pack (${pack.credits} unlock${pack.credits === 1 ? '' : 's'})`,
       amountPence: pack.pricePence,
       currency: CREDIT_CURRENCY,
       metadata: { purchaseId, employerId, packId: pack.id },
@@ -117,10 +118,10 @@ export class PaymentsService {
       credits: pack.credits,
       pricePence: pack.pricePence,
       currency: CREDIT_CURRENCY,
-      stripePaymentIntentId: intent.id,
+      stripeCheckoutSessionId: session.id,
     });
 
-    return { purchaseId, clientSecret: intent.clientSecret };
+    return { purchaseId, clientSecret: session.clientSecret };
   }
 
   async getPurchase(employerId: string, purchaseId: string) {
@@ -136,10 +137,19 @@ export class PaymentsService {
 
   async handleStripeEvent(event: Stripe.Event): Promise<void> {
     switch (event.type) {
-      case 'payment_intent.succeeded':
+      // `completed` fires as soon as checkout finishes, but for a payment method that settles
+      // asynchronously (e.g. a bank redirect) payment_status is still 'unpaid' at that point —
+      // the later async_payment_succeeded/failed event is the one that actually grants/fails it.
+      case 'checkout.session.completed':
+        if (event.data.object.payment_status === 'paid') {
+          await this.creditLedger.grantPurchase(event.data.object.id);
+        }
+        break;
+      case 'checkout.session.async_payment_succeeded':
         await this.creditLedger.grantPurchase(event.data.object.id);
         break;
-      case 'payment_intent.payment_failed':
+      case 'checkout.session.async_payment_failed':
+      case 'checkout.session.expired':
         await this.creditPurchases.markFailed(event.data.object.id);
         break;
       default:

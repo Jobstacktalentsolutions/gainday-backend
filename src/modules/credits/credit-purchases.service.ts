@@ -26,14 +26,14 @@ export class CreditPurchasesService {
     return purchase ?? null;
   }
 
-  /** Only a still-pending purchase can fail: a later success for the same intent wins. */
-  async markFailed(stripePaymentIntentId: string): Promise<void> {
+  /** Only a still-pending purchase can fail/expire: a later success for the same session wins. */
+  async markFailed(stripeCheckoutSessionId: string): Promise<void> {
     await this.db
       .update(creditPurchases)
       .set({ status: 'FAILED', updatedAt: new Date() })
       .where(
         and(
-          eq(creditPurchases.stripePaymentIntentId, stripePaymentIntentId),
+          eq(creditPurchases.stripeCheckoutSessionId, stripeCheckoutSessionId),
           eq(creditPurchases.status, 'PENDING'),
         ),
       );

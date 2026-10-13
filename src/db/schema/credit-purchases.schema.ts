@@ -32,7 +32,11 @@ export const creditPurchases = pgTable('credit_purchases', {
   credits: integer('credits').notNull(),
   pricePence: integer('price_pence').notNull(),
   currency: varchar('currency', { length: 3 }).notNull(),
-  stripePaymentIntentId: varchar('stripe_payment_intent_id', { length: 255 })
+  // The Checkout Session id (cs_...), not a PaymentIntent id — we use embedded Stripe Checkout,
+  // which issues the session up front and only creates its PaymentIntent once payment starts.
+  stripeCheckoutSessionId: varchar('stripe_checkout_session_id', {
+    length: 255,
+  })
     .notNull()
     .unique(),
   status: creditPurchaseStatusEnum('status')

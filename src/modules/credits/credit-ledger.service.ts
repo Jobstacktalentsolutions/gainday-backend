@@ -104,16 +104,18 @@ export class CreditLedgerService {
    * (Stripe retries webhooks): the unique creditPurchaseId on the ledger means a purchase is
    * credited at most once.
    */
-  async grantPurchase(stripePaymentIntentId: string): Promise<void> {
+  async grantPurchase(stripeCheckoutSessionId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
       const [purchase] = await tx
         .update(creditPurchases)
         .set({ status: 'SUCCEEDED', updatedAt: new Date() })
-        .where(eq(creditPurchases.stripePaymentIntentId, stripePaymentIntentId))
+        .where(
+          eq(creditPurchases.stripeCheckoutSessionId, stripeCheckoutSessionId),
+        )
         .returning();
       if (!purchase) {
         throw new Error(
-          `No credit purchase found for payment intent ${stripePaymentIntentId}`,
+          `No credit purchase found for checkout session ${stripeCheckoutSessionId}`,
         );
       }
 

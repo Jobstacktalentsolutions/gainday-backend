@@ -11,6 +11,15 @@ All endpoints below are employer-only (JWT cookie/bearer as for the rest of the 
   `STRIPE_WEBHOOK_SECRET`.
 - Local webhooks: `stripe listen --forward-to localhost:3000/payments/webhook`.
 
+### Why embedded Checkout, not a custom Elements form
+
+The payment step uses Stripe's **embedded Checkout** (a `checkout.session` with
+`ui_mode: 'embedded_page'`), not a hand-built `<PaymentElement>` form. Stripe owns the whole
+payment UI and its state machine — card entry, validation, retries, 3D Secure — so there's far
+less custom code on our side to get wrong, and it keeps the same lighter PCI posture (SAQ A) as a
+hosted Checkout page while still rendering inline in our modal, with no redirect away from the
+candidate review page.
+
 ## Endpoints
 
 | Method | Path | Purpose |
@@ -39,12 +48,23 @@ All endpoints below are employer-only (JWT cookie/bearer as for the rest of the 
 1. Employer clicks Unlock (one or many). Call `POST /payments/unlock`.
 2. 201 -> done: refetch the submission(s) and balance. Contact details are now returned.
 3. 402 -> open the modal: show the 3 packs from `/payments/packs`, preselect `recommendedPackId`.
-4. "Pay and unlock": `POST /payments/purchases { packId }`, mount Stripe's `<PaymentElement>`
-   with the returned `clientSecret` (`<Elements stripe={...} options={{ clientSecret }}>`), then
-   `stripe.confirmPayment({ elements, redirect: 'if_required' })`.
-5. Credits are granted by the Stripe webhook, not by the browser. After confirmPayment succeeds,
-   poll `GET /payments/purchases/:purchaseId` (e.g. every 1s, give up after ~30s) until
-   `status === 'SUCCEEDED'`. `FAILED` -> show the error and let them retry.
+4. "Pay and unlock": `POST /payments/purchases { packId }` -> `{ clientSecret }`. Mount embedded
+   Checkout in the modal:
+   ```tsx
+   const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+   <EmbeddedCheckoutProvider stripe={stripe} options={{ clientSecret }}>
+     <EmbeddedCheckout />
+   </EmbeddedCheckoutProvider>
+   ```
+   Checkout handles card entry, validation and 3D Secure itself inside that iframe — nothing
+   else to build. Card payments complete without leaving the modal; a redirect-based method
+   (rare for this flow) would bounce through `appUrl + '/employer/payments/return'`, a route
+   that doesn't exist yet — add a trivial one ("you can close this tab") only if you enable
+   non-card payment methods, otherwise it's unused.
+5. Credits are granted by the Stripe webhook, not by the browser, once the session actually
+   completes. Poll `GET /payments/purchases/:purchaseId` (e.g. every 1s, give up after ~30s)
+   until `status === 'SUCCEEDED'`. `FAILED` -> show the error and let them retry (covers a
+   declined card or an abandoned/expired session).
 6. Call `POST /payments/unlock` again with the same `submissionIds`. Close the modal and refetch.
 
 If the browser closes between 5 and 6 the credits are still on the account; the employer just

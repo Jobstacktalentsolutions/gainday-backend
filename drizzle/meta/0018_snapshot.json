@@ -1,5 +1,5 @@
 {
-  "id": "b7ffee7b-eff3-4c32-bf05-004a7ff77917",
+  "id": "97be647b-c280-4224-9820-6ff94c3ae5d7",
   "prevId": "0b000fd2-c0ca-4f48-8477-7917f0c0647e",
   "version": "7",
   "dialect": "postgresql",
@@ -1250,8 +1250,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "stripe_payment_intent_id": {
-          "name": "stripe_payment_intent_id",
+        "stripe_checkout_session_id": {
+          "name": "stripe_checkout_session_id",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -1283,11 +1283,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "credit_purchases_stripe_payment_intent_id_unique": {
-          "name": "credit_purchases_stripe_payment_intent_id_unique",
+        "credit_purchases_stripe_checkout_session_id_unique": {
+          "name": "credit_purchases_stripe_checkout_session_id_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "stripe_payment_intent_id"
+            "stripe_checkout_session_id"
           ]
         }
       },
