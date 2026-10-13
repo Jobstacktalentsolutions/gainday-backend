@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Response to Your Gainday Inquiry</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'Gainday Support Response' }) %>
+
+      <div class="content">
+        <p class="intro">
+          Hello <strong><%= recipientName %></strong>,
+        </p>
+
+        <p class="intro">
+          Our support team has reviewed your inquiry regarding <strong><%= topic %></strong>. Here is our response:
+        </p>
+
+        <!-- Admin Response Block -->
+        <div style="background-color: #f4f6fe; border-left: 4px solid #1817fe; border-radius: 6px; padding: 20px; margin: 20px 0;">
+          <div style="font-size: 11px; font-weight: 700; color: #1817fe; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">
+            RESPONSE FROM GAINDAY SUPPORT
+          </div>
+          <div style="font-size: 14px; color: #111019; white-space: pre-wrap; line-height: 1.6;">
+<%= replyMessage %>
+          </div>
+        </div>
+
+        <!-- Quoted Original Message -->
+        <% if (typeof originalMessage !== 'undefined' && originalMessage) { %>
+        <div style="margin: 24px 0;">
+          <div style="font-size: 12px; font-weight: 600; color: #767592; margin-bottom: 6px;">
+            YOUR ORIGINAL MESSAGE:
+          </div>
+          <div style="background-color: #f8f9fc; border: 1px solid #e2e4ed; border-radius: 6px; padding: 14px; font-size: 13px; color: #494866; white-space: pre-wrap; line-height: 1.5;">
+<%= originalMessage %>
+          </div>
+        </div>
+        <% } %>
+
+        <div class="divider"></div>
+
+        <p style="font-size: 13px; color: #767592;">
+          If you have further questions or require additional assistance, simply reply directly to this email or visit our <a href="<%= appUrl %>/support" style="color: #1817fe; text-decoration: underline;">Support Center</a>.
+        </p>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>
