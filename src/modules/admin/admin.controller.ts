@@ -22,6 +22,11 @@ import {
   ListJobsQueryDto,
   ListGenerationReviewsQueryDto,
 } from './dto/pagination-query.dto';
+import {
+  ListSupportMessagesQueryDto,
+  UpdateSupportStatusDto,
+  ReplySupportMessageDto,
+} from './dto/support-query.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -136,5 +141,36 @@ export class AdminController {
     @CurrentUser() admin: any,
   ) {
     return this.adminService.rejectGenerationReview(id, admin.profileId);
+  }
+
+  @Get('support/messages')
+  async listSupportMessages(@Query() query: ListSupportMessagesQueryDto) {
+    return this.adminService.listSupportMessages(query);
+  }
+
+  @Get('support/messages/stats')
+  async getSupportMessageStats() {
+    return this.adminService.getSupportMessageStats();
+  }
+
+  @Get('support/messages/:id')
+  async getSupportMessage(@Param('id') id: string) {
+    return this.adminService.getSupportMessage(id);
+  }
+
+  @Put('support/messages/:id/status')
+  async updateSupportMessageStatus(
+    @Param('id') id: string,
+    @Body() body: UpdateSupportStatusDto,
+  ) {
+    return this.adminService.updateSupportMessageStatus(id, body.status);
+  }
+
+  @Post('support/messages/:id/reply')
+  async replyToSupportMessage(
+    @Param('id') id: string,
+    @Body() body: ReplySupportMessageDto,
+  ) {
+    return this.adminService.replyToSupportMessage(id, body);
   }
 }

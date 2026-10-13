@@ -195,4 +195,36 @@ export class NotificationsService {
       `Support inquiry email enqueued for support team regarding ${userEmail}`,
     );
   }
+
+  async sendSupportReplyEmail(
+    to: string,
+    recipientName: string,
+    topic: string,
+    originalMessage: string,
+    replyMessage: string,
+  ): Promise<void> {
+    const supportEmail =
+      this.configService.get<string>('email.supportEmail') ||
+      'support@gainday.com';
+    const appUrl =
+      this.configService.get<string>('email.appUrl') || 'http://localhost:3000';
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: `Re: [${topic}] - Gainday Support`,
+      template: 'support-reply',
+      context: {
+        recipientName,
+        topic,
+        replyMessage,
+        originalMessage,
+        appUrl,
+        year,
+      },
+      replyTo: supportEmail,
+    });
+
+    this.logger.log(`Support response email enqueued for ${to}`);
+  }
 }

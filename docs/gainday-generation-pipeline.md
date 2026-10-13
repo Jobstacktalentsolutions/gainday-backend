@@ -116,9 +116,11 @@ For each of the selected tasks, the generation agent produces a structured objec
 - The task itself (scenario text, task components per the role module's allowed types — Section 5 or the role-specific equivalent)
 - Associated metadata (task type, category, source fields it was derived from, and **interface type** per Section 2.5 — tells the frontend how to render the task)
 - **Problem inclusion rule:** if a business Problem was extracted in Section 3, it must be woven into the task content. If no Problem was extracted, the task is generated without one — never fabricated to fill the field.
-- A set of **anchor responses** (Section 6.2), used later at grading time
+- ~~A set of anchor responses~~ — **no longer part of generation.** As of 2026-08-30, anchors are generated lazily by the grading pipeline on the first submission that needs them (see `docs/gainday-grading-pipeline.md` §2). Generated tasks are persisted to `question_bank` with `anchors = null`.
 
-### 6.2 Anchor Responses — 5-Point Scale
+### 6.2 Anchor Responses — 5-Point Scale (now produced by the grading pipeline)
+
+> **Note:** this section describes the anchor design, which is unchanged, but anchors are generated and critiqued by the grading pipeline, not per-task generation. The critic in Section 7 therefore no longer performs the anchor-correctness check at generation time; that check now lives in grading (`AnchorGenerationService`, per-role `anchorCorrectnessPrompt`).
 A single "good response = 10/10" and "bad response = 0/10" pair is not sufficient. The hardest grading problem is distinguishing mid-range answers (a 6 from a 7) — exactly where real candidate responses cluster. Two extreme anchors give a grader nothing to calibrate against there.
 
 **Anchors generated per task: minimum 4–5 points across the range** — e.g. scores of 0, 3, 5, 7, 10 — not just the two poles.
@@ -145,7 +147,7 @@ The critic agent is a separate step from generation. It validates each generated
 - **Novelty check:** the generated question is compared against the existing question bank using pgvector similarity search (Postgres vector extension) to retrieve semantically similar stored questions.
 - **Duplicate check:** flags near-identical matches from the novelty search above a similarity threshold.
 - **Relevance check:** confirms the generated task genuinely aligns with the extracted Category and Intent (not just novel, but actually on-target).
-- **Anchor correctness check:** because there is no external grounding source, the good/bad/mid-range anchor responses (Section 6.2) are themselves LLM-generated and could be subtly wrong. The critic verifies they are sound — an incorrect "10/10" anchor would silently corrupt every future grading decision made against it. What "sound" means is role-specific: factual/numeric correctness for finance, sound sales practice for sales (Section 2.2) — the role module defines the correctness check, not one generic definition.
+- **Anchor correctness check (moved to grading as of 2026-08-30; not run by the generation critic — the rationale below still applies there):** because there is no external grounding source, the good/bad/mid-range anchor responses (Section 6.2) are themselves LLM-generated and could be subtly wrong. The critic verifies they are sound — an incorrect "10/10" anchor would silently corrupt every future grading decision made against it. What "sound" means is role-specific: factual/numeric correctness for finance, sound sales practice for sales (Section 2.2) — the role module defines the correctness check, not one generic definition.
 
 ### 7.2 Regeneration loop
 - If a task fails critique (duplicate, irrelevant, or anchor-correctness failure), the generation agent selects another candidate from the original overgenerated pool (Section 4) rather than restarting extraction.

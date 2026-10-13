@@ -5,7 +5,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, eq, or, ilike, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, or, ilike, inArray } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { DRIZZLE } from '../../db/db.constants';
@@ -22,6 +22,7 @@ import {
   questionBank,
   generationReviewItems,
   GenerationReviewStatus,
+  supportMessages,
 } from '../../db/schema';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import {
@@ -29,6 +30,11 @@ import {
   ListJobsQueryDto,
   ListGenerationReviewsQueryDto,
 } from './dto/pagination-query.dto';
+import {
+  ListSupportMessagesQueryDto,
+  UpdateSupportStatusDto,
+  ReplySupportMessageDto,
+} from './dto/support-query.dto';
 
 export interface PaginationMeta {
   page: number;
@@ -1065,6 +1071,173 @@ export class AdminService {
         completedAt: sub.completedAt,
         createdAt: sub.createdAt,
       })),
+    };
+  }
+
+  async listSupportMessages(
+    query: ListSupportMessagesQueryDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query.limit) || 10));
+    const offset = (page - 1) * limit;
+
+    const conditions: any[] = [];
+    if (query.status && query.status !== 'all') {
+      conditions.push(eq(supportMessages.status, query.status));
+    }
+
+    if (query.search && query.search.trim()) {
+      const s = `%${query.search.trim()}%`;
+      conditions.push(
+        or(
+          ilike(supportMessages.name, s),
+          ilike(supportMessages.email, s),
+          ilike(supportMessages.topic, s),
+          ilike(supportMessages.message, s),
+        ),
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [[{ total }], messageRows] = await Promise.all([
+      this.db
+        .select({ total: count() })
+        .from(supportMessages)
+        .where(whereClause),
+      this.db
+        .select()
+        .from(supportMessages)
+        .where(whereClause)
+        .orderBy(desc(supportMessages.createdAt))
+        .limit(limit)
+        .offset(offset),
+    ]);
+
+    const totalCount = Number(total) || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      items: messageRows,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  }
+
+  async getSupportMessageStats(): Promise<{
+    total: number;
+    pending: number;
+    read: number;
+    inProgress: number;
+    resolved: number;
+  }> {
+    const rows = await this.db
+      .select({
+        status: supportMessages.status,
+        count: count(),
+      })
+      .from(supportMessages)
+      .groupBy(supportMessages.status);
+
+    const stats = {
+      total: 0,
+      pending: 0,
+      read: 0,
+      inProgress: 0,
+      resolved: 0,
+    };
+
+    for (const r of rows) {
+      const c = Number(r.count) || 0;
+      stats.total += c;
+      if (r.status === 'pending') stats.pending += c;
+      else if (r.status === 'read') stats.read += c;
+      else if (r.status === 'in_progress') stats.inProgress += c;
+      else if (r.status === 'resolved') stats.resolved += c;
+    }
+
+    return stats;
+  }
+
+  async getSupportMessage(id: string) {
+    const [msg] = await this.db
+      .select()
+      .from(supportMessages)
+      .where(eq(supportMessages.id, id))
+      .limit(1);
+
+    if (!msg) {
+      throw new NotFoundException(`Support message with ID ${id} not found`);
+    }
+
+    return msg;
+  }
+
+  async updateSupportMessageStatus(id: string, status: string) {
+    const [msg] = await this.db
+      .select()
+      .from(supportMessages)
+      .where(eq(supportMessages.id, id))
+      .limit(1);
+
+    if (!msg) {
+      throw new NotFoundException(`Support message with ID ${id} not found`);
+    }
+
+    const [updated] = await this.db
+      .update(supportMessages)
+      .set({
+        status: status.trim(),
+        updatedAt: new Date(),
+      })
+      .where(eq(supportMessages.id, id))
+      .returning();
+
+    return updated;
+  }
+
+  async replyToSupportMessage(
+    id: string,
+    dto: ReplySupportMessageDto,
+  ) {
+    const [msg] = await this.db
+      .select()
+      .from(supportMessages)
+      .where(eq(supportMessages.id, id))
+      .limit(1);
+
+    if (!msg) {
+      throw new NotFoundException(`Support message with ID ${id} not found`);
+    }
+
+    await this.notificationsService.sendSupportReplyEmail(
+      msg.email,
+      msg.name,
+      msg.topic,
+      msg.message,
+      dto.replyMessage.trim(),
+    );
+
+    const nextStatus = dto.markStatus || 'resolved';
+    const [updated] = await this.db
+      .update(supportMessages)
+      .set({
+        status: nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(supportMessages.id, id))
+      .returning();
+
+    return {
+      success: true,
+      message: `Reply sent successfully to ${msg.email}`,
+      supportMessage: updated,
     };
   }
 }
