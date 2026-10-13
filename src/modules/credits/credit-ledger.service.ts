@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -9,10 +9,28 @@ import {
 } from '../../db/schema';
 import type { DbExecutor } from './db-executor.type';
 import { InsufficientCreditsError } from './insufficient-credits.error';
+import { SignupBonusSettingsService } from './signup-bonus-settings.service';
+
+// Postgres' unique_violation code — used to detect a repeated/concurrent signup bonus grant
+// without needing a transaction wrapping the whole signup flow (see grantSignupBonus).
+const POSTGRES_UNIQUE_VIOLATION = '23505';
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: string }).code === POSTGRES_UNIQUE_VIOLATION
+  );
+}
 
 @Injectable()
 export class CreditLedgerService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
+  private readonly logger = new Logger(CreditLedgerService.name);
+
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
+    private readonly signupBonusSettings: SignupBonusSettingsService,
+  ) {}
 
   async getBalance(
     employerId: string,
@@ -97,6 +115,40 @@ export class CreditLedgerService {
       );
       return newlyUnlockedIds;
     });
+  }
+
+  /**
+   * Grants the configured signup bonus to a newly created employer, if an admin has it enabled
+   * with a non-zero amount. A no-op (not an error) when it's disabled, so it's safe to call on
+   * every signup unconditionally.
+   *
+   * Deliberately run *after* the signup transaction commits, not nested inside it: granting the
+   * bonus is best-effort (logged, not fatal, on failure) and must never be able to roll back
+   * account creation. The unique partial index on (employerId) WHERE type = 'SIGNUP_BONUS' is
+   * the actual idempotency guarantee — a repeated or racing call simply hits that constraint and
+   * is treated as "already granted", not retried or escalated.
+   */
+  async grantSignupBonus(employerId: string): Promise<void> {
+    const settings = await this.signupBonusSettings.get();
+    if (!settings.enabled || settings.creditAmount <= 0) {
+      return;
+    }
+
+    try {
+      await this.db.insert(creditLedgerEntries).values({
+        employerId,
+        type: 'SIGNUP_BONUS',
+        amount: settings.creditAmount,
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        this.logger.debug(
+          `Signup bonus already granted for employer ${employerId}`,
+        );
+        return;
+      }
+      throw error;
+    }
   }
 
   /**

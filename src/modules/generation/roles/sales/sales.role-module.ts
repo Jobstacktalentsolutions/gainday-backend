@@ -14,6 +14,7 @@ export enum SalesTaskType {
   PIPELINE_PRIORITIZATION = 'PIPELINE_PRIORITIZATION',
   CLOSING_NEGOTIATION_SITUATIONAL = 'CLOSING_NEGOTIATION_SITUATIONAL',
   ACCOUNT_PLANNING = 'ACCOUNT_PLANNING',
+  INBOX_PRIORITIZATION = 'INBOX_PRIORITIZATION',
 }
 
 /**
@@ -72,6 +73,18 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Candidate is given information about a named target account and asked to produce a plan: ' +
       'stakeholders, approach sequencing, and strategy. Most senior/AE-oriented category.',
     interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
+  },
+  {
+    key: SalesTaskType.INBOX_PRIORITIZATION,
+    label: 'Inbox / workload prioritization',
+    objectiveComponentType: 'PRIORITY_RANKING',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description:
+      'Candidate receives several competing messages or requests (e.g. a morning inbox) and ranks ' +
+      'them from highest to lowest priority, then explains their top choice. The items must carry ' +
+      'enough signal (deadlines, revenue at risk, stakeholder seniority) that some orderings are ' +
+      'clearly better than others — the written reasoning is what gets graded, not the order alone.',
+    interfaceType: InterfaceType.TEXT_AREA,
   },
 ];
 

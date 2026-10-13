@@ -11,7 +11,8 @@ export type ObjectiveComponentType =
   | 'CLASSIFICATION'
   | 'PROCEDURAL_SEQUENCING'
   | 'SINGLE_BEST_ACTION'
-  | 'MULTI_SELECT_UNDER_CONSTRAINT';
+  | 'MULTI_SELECT_UNDER_CONSTRAINT'
+  | 'PRIORITY_RANKING';
 
 export type OpenEndedComponentType =
   | 'WRITTEN_JUSTIFICATION'

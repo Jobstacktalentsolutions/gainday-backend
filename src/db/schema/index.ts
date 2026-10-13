@@ -11,3 +11,4 @@ export * from './admin-profiles.schema';
 export * from './support-messages.schema';
 export * from './credit-purchases.schema';
 export * from './credit-ledger-entries.schema';
+export * from './signup-bonus-settings.schema';

@@ -95,6 +95,7 @@ Each task is built from one or both of two component types:
 - Procedural sequencing (order steps that have a genuinely correct process order)
 - Single-best-action selection (pick the one correct action among plausible distractors)
 - Multi-select under constraint (e.g. "choose 2 of 3," graded against an ideal set membership)
+- Priority ranking (`PRIORITY_RANKING`) — see the excluded-type note below for why this is not scored as pure ranking
 
 **Open-ended components** — require LLM rubric judgment, no single correct answer:
 - Written justification of a decision already made
@@ -104,7 +105,7 @@ Each task is built from one or both of two component types:
 
 **Combination rule:** not every task needs both component types. Pair an objective and open-ended component only when the objective answer alone wouldn't reveal whether the candidate actually understands *why* it's correct. Otherwise, use whichever single component type fits what's being tested.
 
-**Excluded task type (applies across roles):** priority-ranking tasks are not supported as a standalone mechanic — dropped because ranking by priority is usually a judgment call disguised as an objective mechanic, lacking genuine ground truth. Where a role needs something ranking-shaped (e.g. sales lead prioritization), it must be built so the underlying data makes some orderings clearly better than others, with the reasoning graded as an open-ended component — not scored as pure objective ranking.
+**Priority ranking (applies across roles):** priority-ranking is not supported as a *standalone* mechanic — ranking by priority is usually a judgment call disguised as an objective mechanic, lacking genuine ground truth. It is supported only as the objective half of a pair: the `PRIORITY_RANKING` component (items with a label and description, an `idealOrder`, and an `idealOrderRationale`) is always combined with a `WRITTEN_JUSTIFICATION` open-ended component, and the underlying data must make some orderings clearly better than others. The ideal order is reference material for graders and the employer preview, never a deterministic score — the candidate's reasoning is what is graded, through the same four criteria as every other task (no new grading category). Both `idealOrder` and `idealOrderRationale` are stripped before a task reaches a candidate. Currently used by sales (`INBOX_PRIORITIZATION`, `TEXT_AREA` interface); the generic role module stays text-only.
 
 ---
 

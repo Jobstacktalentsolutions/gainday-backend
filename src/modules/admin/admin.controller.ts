@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
+import { SignupBonusSettingsService } from '../credits/signup-bonus-settings.service';
+import { UpdateSignupBonusSettingsDto } from './dto/update-signup-bonus-settings.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -32,7 +34,23 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly signupBonusSettingsService: SignupBonusSettingsService,
+  ) {}
+
+  @Get('settings/signup-bonus')
+  async getSignupBonusSettings() {
+    return this.signupBonusSettingsService.get();
+  }
+
+  @Put('settings/signup-bonus')
+  async updateSignupBonusSettings(
+    @Body() dto: UpdateSignupBonusSettingsDto,
+    @CurrentUser() admin: any,
+  ) {
+    return this.signupBonusSettingsService.update(dto, admin.profileId);
+  }
 
   @Get('stats')
   async getStats(
@@ -57,10 +75,7 @@ export class AdminController {
   }
 
   @Delete('admins/:id')
-  async deleteAdmin(
-    @Param('id') id: string,
-    @CurrentUser() admin: any,
-  ) {
+  async deleteAdmin(@Param('id') id: string, @CurrentUser() admin: any) {
     return this.adminService.deleteAdmin(id, admin?.id);
   }
 
@@ -115,9 +130,7 @@ export class AdminController {
   }
 
   @Get('generation-reviews')
-  async listGenerationReviews(
-    @Query() query: ListGenerationReviewsQueryDto,
-  ) {
+  async listGenerationReviews(@Query() query: ListGenerationReviewsQueryDto) {
     return this.adminService.listGenerationReviewItems(query);
   }
 

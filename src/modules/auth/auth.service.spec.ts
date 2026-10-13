@@ -18,6 +18,7 @@ describe('AuthService.resendVerificationEmail', () => {
     {} as never,
     {} as never,
     notificationsService as never,
+    {} as never,
   );
 
   const unverified = (token: string | null, issuedMsAgo?: number) => ({

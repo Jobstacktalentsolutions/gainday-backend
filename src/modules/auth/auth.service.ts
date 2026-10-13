@@ -1,6 +1,7 @@
 import {
   Inject,
   Injectable,
+  Logger,
   ConflictException,
   BadRequestException,
   UnauthorizedException,
@@ -11,6 +12,7 @@ import { EmployerProfileService } from '../users/employer-profile.service';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
 import { AdminProfileService } from '../users/admin-profile.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { UserRole, AuthProvider, users } from '../../db/schema';
 import { SignupEmployerDto } from './dto/signup-employer.dto';
 import { SignupJobSeekerDto } from './dto/signup-job-seeker.dto';
@@ -26,6 +28,8 @@ const RESEND_VERIFICATION_COOLDOWN_MS = 60 * 1000;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly usersService: AuthUsersService,
@@ -34,6 +38,7 @@ export class AuthService {
     private readonly adminProfileService: AdminProfileService,
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
+    private readonly creditLedgerService: CreditLedgerService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -111,6 +116,7 @@ export class AuthService {
       Date.now() + EMAIL_VERIFICATION_TTL_MS,
     );
 
+    let employerProfileId!: string;
     const user = await this.db.transaction(async (tx) => {
       const [newUser] = await tx
         .insert(users)
@@ -124,7 +130,7 @@ export class AuthService {
         })
         .returning();
 
-      await this.employerProfileService.create(
+      const employerProfile = await this.employerProfileService.create(
         {
           userId: newUser.id,
           fullName,
@@ -132,9 +138,12 @@ export class AuthService {
         },
         tx,
       );
+      employerProfileId = employerProfile.id;
 
       return newUser;
     });
+
+    await this.grantSignupBonusSafely(employerProfileId);
 
     await this.notificationsService.sendVerificationEmail(
       email,
@@ -296,7 +305,8 @@ export class AuthService {
 
     if (liveToken && emailVerificationExpires) {
       // Issue time is derived from the expiry, which is refreshed on each send.
-      const issuedAt = emailVerificationExpires.getTime() - EMAIL_VERIFICATION_TTL_MS;
+      const issuedAt =
+        emailVerificationExpires.getTime() - EMAIL_VERIFICATION_TTL_MS;
       if (now - issuedAt < RESEND_VERIFICATION_COOLDOWN_MS) {
         return;
       }
@@ -359,6 +369,7 @@ export class AuthService {
           return newUser;
         });
       } else {
+        let employerProfileId!: string;
         user = await this.db.transaction(async (tx) => {
           const [newUser] = await tx
             .insert(users)
@@ -371,19 +382,39 @@ export class AuthService {
             })
             .returning();
 
-          await this.employerProfileService.create(
+          const employerProfile = await this.employerProfileService.create(
             {
               userId: newUser.id,
               fullName,
             },
             tx,
           );
+          employerProfileId = employerProfile.id;
 
           return newUser;
         });
+
+        await this.grantSignupBonusSafely(employerProfileId);
       }
     }
 
     return this.login(user);
+  }
+
+  /**
+   * Best-effort: granting the signup bonus must never block or fail the signup it's attached
+   * to, so a failure here is logged, not thrown. See CreditLedgerService.grantSignupBonus for
+   * why it also isn't nested inside the signup transaction itself.
+   */
+  private async grantSignupBonusSafely(
+    employerProfileId: string,
+  ): Promise<void> {
+    try {
+      await this.creditLedgerService.grantSignupBonus(employerProfileId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to grant signup bonus for employer ${employerProfileId}: ${error instanceof Error ? error.message : error}`,
+      );
+    }
   }
 }

@@ -8,6 +8,7 @@ import {
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CreditsModule } from '../credits/credits.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -32,6 +33,7 @@ const jwtModuleOptions: JwtModuleAsyncOptions = {
   imports: [
     forwardRef(() => UsersModule),
     NotificationsModule,
+    CreditsModule,
     PassportModule,
     JwtModule.registerAsync(jwtModuleOptions),
   ],

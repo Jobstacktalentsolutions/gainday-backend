@@ -21,14 +21,15 @@ export type CandidateSimulationTask = Omit<
   objectiveComponent: CandidateObjectiveComponent | null;
 };
 
-// The one field per component type that hands the candidate the correct answer outright.
+// The field(s) per component type that hand the candidate the correct answer outright.
 // Never sent to a candidate before they've submitted — see sanitizeTaskForCandidate.
-const ANSWER_KEY_FIELDS: Record<ObjectiveComponentType, string> = {
-  SINGLE_BEST_ACTION: 'correctOptionIndex',
-  MULTI_SELECT_UNDER_CONSTRAINT: 'correctOptionIndices',
-  NUMERIC_INPUT: 'correctValue',
-  CLASSIFICATION: 'correctMapping',
-  PROCEDURAL_SEQUENCING: 'correctOrder',
+const ANSWER_KEY_FIELDS: Record<ObjectiveComponentType, string[]> = {
+  SINGLE_BEST_ACTION: ['correctOptionIndex'],
+  MULTI_SELECT_UNDER_CONSTRAINT: ['correctOptionIndices'],
+  NUMERIC_INPUT: ['correctValue'],
+  CLASSIFICATION: ['correctMapping'],
+  PROCEDURAL_SEQUENCING: ['correctOrder'],
+  PRIORITY_RANKING: ['idealOrder', 'idealOrderRationale'],
 };
 
 function resolvePatternType(task: SimulationTask, roleRegistry: RoleRegistry) {
@@ -66,7 +67,9 @@ export function sanitizeTaskForCandidate(
   }
 
   const sanitized = { ...objectiveComponent };
-  delete sanitized[ANSWER_KEY_FIELDS[componentType]];
+  for (const field of ANSWER_KEY_FIELDS[componentType]) {
+    delete sanitized[field];
+  }
 
   return { ...rest, objectiveComponent: { ...sanitized, componentType } };
 }

@@ -58,6 +58,26 @@ const multiSelectUnderConstraintSchema = z.object({
     .describe('0-indexed positions of the ideal selection set.'),
 });
 
+const priorityRankingSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        label: z.string().describe('Short name of the item, e.g. who it is from.'),
+        description: z.string().describe('One-line detail the candidate ranks on.'),
+      }),
+    )
+    .min(2)
+    .describe('Items to rank, in shuffled presentation order.'),
+  idealOrder: z
+    .array(z.number())
+    .describe(
+      '0-indexed positions into `items`, highest priority first. The data must make some orderings clearly better than others.',
+    ),
+  idealOrderRationale: z
+    .string()
+    .describe('Why the ideal order is defensible — reference for graders, never shown to the candidate.'),
+});
+
 export const OBJECTIVE_COMPONENT_SCHEMAS: Record<
   ObjectiveComponentType,
   z.ZodTypeAny
@@ -67,6 +87,7 @@ export const OBJECTIVE_COMPONENT_SCHEMAS: Record<
   PROCEDURAL_SEQUENCING: proceduralSequencingSchema,
   SINGLE_BEST_ACTION: singleBestActionSchema,
   MULTI_SELECT_UNDER_CONSTRAINT: multiSelectUnderConstraintSchema,
+  PRIORITY_RANKING: priorityRankingSchema,
 };
 
 const writtenJustificationSchema = z.object({
