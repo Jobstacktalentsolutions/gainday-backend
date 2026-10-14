@@ -6,9 +6,11 @@ import {
   creditLedgerEntries,
   creditPurchases,
   employerProfiles,
+  submissions,
 } from '../../db/schema';
 import type { DbExecutor } from './db-executor.type';
 import { InsufficientCreditsError } from './insufficient-credits.error';
+import { SubmissionWithdrawnError } from './submission-withdrawn.error';
 import { SignupBonusSettingsService } from './signup-bonus-settings.service';
 
 // Postgres' unique_violation code — used to detect a repeated/concurrent signup bonus grant
@@ -98,6 +100,21 @@ export class CreditLedgerService {
       );
       if (newlyUnlockedIds.length === 0) {
         return [];
+      }
+
+      // Checked inside the transaction, before any credit is spent, so a candidate withdrawing
+      // at the same moment as the employer unlocking them can't slip through a stale read.
+      const withdrawn = await tx
+        .select({ id: submissions.id })
+        .from(submissions)
+        .where(
+          and(
+            inArray(submissions.id, newlyUnlockedIds),
+            eq(submissions.status, 'WITHDRAWN'),
+          ),
+        );
+      if (withdrawn.length > 0) {
+        throw new SubmissionWithdrawnError();
       }
 
       const balance = await this.getBalance(employerId, tx);

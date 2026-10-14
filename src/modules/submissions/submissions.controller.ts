@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -77,6 +78,43 @@ export class SubmissionsController {
       throw new ForbiddenException('This submission does not belong to you');
     }
     return submission;
+  }
+
+  @Get('applied-job-ids')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER)
+  async getAppliedJobIds(@CurrentUser() user: any) {
+    return this.submissionsService.findAppliedJobIds(user.profileId);
+  }
+
+  @Get('mine')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER)
+  async getMyApplications(@CurrentUser() user: any) {
+    return this.submissionsService.findApplicationsForCandidate(user.profileId);
+  }
+
+  @Get('mine/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER)
+  async getMyApplication(@Param('id') id: string, @CurrentUser() user: any) {
+    const application =
+      await this.submissionsService.findApplicationForCandidate(
+        id,
+        user.profileId,
+      );
+    if (!application) {
+      throw new NotFoundException('Application not found');
+    }
+    return application;
+  }
+
+  @Patch(':id/withdraw')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.JOB_SEEKER)
+  async withdraw(@Param('id') id: string, @CurrentUser() user: any) {
+    const submission = await this.assertOwnedByCandidate(id, user);
+    return this.submissionsService.withdraw(submission.id);
   }
 
   @Get('job/:jobId')

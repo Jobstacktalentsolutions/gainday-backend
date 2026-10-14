@@ -26,16 +26,16 @@ client accumulates in memory and reports the full log on `PUT /submissions/:id/s
 ```ts
 // submissions.schema.ts
 export interface AntiCheatEvent {
-  type: string;              // "tab-hidden" | "window-blur" | "fullscreen-exit" | "idle" | "server-stale-heartbeat"
-  taskId: string | null;     // which task was on screen when this happened; null if not meaningful
-  occurredAt: string;        // ISO 8601 — when the event was *recorded*
-  durationMs?: number;       // "idle" only — the spell's real measured length
+  type: string; // "tab-hidden" | "window-blur" | "fullscreen-exit" | "idle" | "server-stale-heartbeat"
+  taskId: string | null; // which task was on screen when this happened; null if not meaningful
+  occurredAt: string; // ISO 8601 — when the event was *recorded*
+  durationMs?: number; // "idle" only — the spell's real measured length
 }
 ```
 
 `antiCheatFlags` is a flat `AntiCheatEvent[]` — the full log for the run, not a rolled-up
 summary. This replaced an earlier `text[]` design that only ever held `"type ×count"` totals for
-the whole run, with no record of *when* something happened or which task was active. `type` is
+the whole run, with no record of _when_ something happened or which task was active. `type` is
 an open string rather than a DB enum on purpose: it's produced by several independent frontend
 listeners plus this backend's own server-observed check, and a Postgres enum would need a
 migration every time one more gets added.
@@ -57,20 +57,20 @@ resurrecting a log from a previous mount.
 
 Three listeners feed it, all wired up in `pages/TaskRunner.tsx` for the life of the run:
 
-| Listener | File | Fires on | `type` |
-|---|---|---|---|
-| Tab visibility | `hooks/useTabVisibilityGuard.ts` | `document.hidden` becoming true, or a `window blur` event | `tab-hidden`, `window-blur` |
-| Fullscreen exit | `hooks/useFullscreenGuard.ts` | `fullscreenchange` transitioning from fullscreen → not | `fullscreen-exit` |
-| Idle time | `hooks/useIdleDetection.ts` | see below — a gap between activity events reaching `IDLE_THRESHOLD_MS` (currently 5 minutes, set in `TaskRunner.tsx`) | `idle` (carries `durationMs`) |
+| Listener        | File                             | Fires on                                                                                                              | `type`                        |
+| --------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Tab visibility  | `hooks/useTabVisibilityGuard.ts` | `document.hidden` becoming true, or a `window blur` event                                                             | `tab-hidden`, `window-blur`   |
+| Fullscreen exit | `hooks/useFullscreenGuard.ts`    | `fullscreenchange` transitioning from fullscreen → not                                                                | `fullscreen-exit`             |
+| Idle time       | `hooks/useIdleDetection.ts`      | see below — a gap between activity events reaching `IDLE_THRESHOLD_MS` (currently 5 minutes, set in `TaskRunner.tsx`) | `idle` (carries `durationMs`) |
 
-Each call site knows *which task was current* via `currentTaskIdRef` in `TaskRunner.tsx` — a ref
+Each call site knows _which task was current_ via `currentTaskIdRef` in `TaskRunner.tsx` — a ref
 kept in sync by a small effect, since the three listeners above are wired up near the top of the
 component (unconditionally, per rules of hooks) before the `task` variable exists further down,
 past the loading/error early-returns.
 
 **Idle time is measured as real per-spell duration, not counted in fixed-size ticks.**
 `useIdleDetection` runs nothing on a timer while idle; instead it watches
-mousemove/mousedown/keydown/scroll/touchstart/wheel, and on *each* such event checks how long
+mousemove/mousedown/keydown/scroll/touchstart/wheel, and on _each_ such event checks how long
 it's been since the previous one. If that gap is >= `IDLE_THRESHOLD_MS`, the gap's real duration
 is reported as one idle spell (`recordIdleSpell(durationMs, taskId)`) and the clock resets. Two
 idle periods separated by even a moment of activity are two independent spells, each its own
@@ -189,7 +189,7 @@ real data, since an employer editing a task needs to see its correct answer.
   application-level scan.
 - **The exact idle threshold value is a guess, not a confirmed product decision.** Currently 5
   minutes (`IDLE_THRESHOLD_MS` in `TaskRunner.tsx`) — this came from clarifying an ambiguous
-  "5ms" in the original request; the per-spell-duration *mechanism* is confirmed, just not this
+  "5ms" in the original request; the per-spell-duration _mechanism_ is confirmed, just not this
   specific number.
 - **Heartbeat-staleness math assumes the 20s ping interval stays roughly as-is.** If
   `PING_INTERVAL_MS` in `useConnectionMonitor.ts` changes significantly,

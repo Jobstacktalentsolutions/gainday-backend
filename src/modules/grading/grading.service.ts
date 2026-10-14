@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
@@ -71,10 +71,22 @@ export class GradingService {
       );
     }
 
+    if (submission.status === 'WITHDRAWN') {
+      this.logger.log(
+        `Submission ${submissionId} was withdrawn — skipping grading`,
+      );
+      return;
+    }
+
     await this.db
       .update(submissions)
       .set({ status: 'GRADING', updatedAt: new Date() })
-      .where(eq(submissions.id, submissionId));
+      .where(
+        and(
+          eq(submissions.id, submissionId),
+          inArray(submissions.status, ['PENDING', 'GRADING']),
+        ),
+      );
 
     const tasksById = new Map(
       submission.simulation.tasks.map((t) => [t.id, t]),
@@ -178,7 +190,12 @@ export class GradingService {
       await this.db
         .update(submissions)
         .set({ status: 'PENDING', updatedAt: new Date() })
-        .where(eq(submissions.id, submissionId));
+        .where(
+          and(
+            eq(submissions.id, submissionId),
+            eq(submissions.status, 'GRADING'),
+          ),
+        );
       return;
     }
 
@@ -210,8 +227,22 @@ export class GradingService {
         taskScores: taskResults,
         updatedAt: new Date(),
       })
-      .where(eq(submissions.id, submissionId))
+      .where(
+        and(
+          eq(submissions.id, submissionId),
+          eq(submissions.status, 'GRADING'),
+        ),
+      )
       .returning();
+
+    // Nothing updated means the candidate withdrew while grading was running — the withdrawal
+    // wins, so the result is discarded rather than overwriting it.
+    if (!updated) {
+      this.logger.log(
+        `Submission ${submissionId} is no longer GRADING (likely withdrawn) — result discarded`,
+      );
+      return;
+    }
 
     this.logger.log(
       `Submission ${submissionId} graded: overallScore=${overallScore}, ${taskResults.length} task(s), domain=${capabilityDomain}`,

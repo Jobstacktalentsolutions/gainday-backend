@@ -96,10 +96,13 @@ Given the text-first constraint and the goal of proving the architecture end-to-
 | 2.3 Pipeline Prioritization | Table View + Response Panel |
 | 2.4 Closing/Negotiation Situational Judgment | Text Area |
 | 2.5 Account Planning | Rich Text Composer |
+| Inbox / Workload Prioritization (added after this research) | Text Area + ranking widget |
 | Section 3 (conversational, deferred) | Chat/message-thread — not built |
 
 **Build first:** Cold Outreach Email (2.1), Objection Handling — written (2.2), Pipeline Prioritization (2.3). These three are fully text-native, map cleanly onto the existing task-pattern taxonomy (objective + open-ended pairing), cover both SDR- and AE-relevant skills, and exercise all three current interface types.
 
 **Defer:** Closing/Negotiation Situational Judgment (2.4) and Account Planning (2.5) until the first three are validated — they're text-native too, so it's a low-cost addition later, not an architectural change.
+
+**Added since:** Inbox / Workload Prioritization (`INBOX_PRIORITIZATION`) — the candidate ranks several competing messages from highest to lowest priority using a reorder widget, then explains their top choice in a text area. The ranking is the `PRIORITY_RANKING` objective component, not a new interface type; the written reasoning is what gets graded, and the same "some orderings must be clearly better" caution as 2.3 applies.
 
 **Explicitly out of scope until a conversational architecture exists:** all of Section 3.

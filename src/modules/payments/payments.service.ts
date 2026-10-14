@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import {
+  ConflictException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -16,6 +17,7 @@ import { employerProfiles } from '../../db/schema';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { CreditPurchasesService } from '../credits/credit-purchases.service';
 import { InsufficientCreditsError } from '../credits/insufficient-credits.error';
+import { SubmissionWithdrawnError } from '../credits/submission-withdrawn.error';
 import {
   CREDIT_CURRENCY,
   CREDIT_PACKS,
@@ -72,6 +74,9 @@ export class PaymentsService {
     } catch (error) {
       if (error instanceof InsufficientCreditsError) {
         throw this.toPaymentRequired(error);
+      }
+      if (error instanceof SubmissionWithdrawnError) {
+        throw new ConflictException(error.message);
       }
       throw error;
     }

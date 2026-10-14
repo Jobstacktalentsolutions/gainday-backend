@@ -1,8 +1,13 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { eq, and, inArray } from 'drizzle-orm';
+import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
+import { eq, and, inArray, isNotNull, ne, desc } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { submissions, CandidateAnswer, AntiCheatEvent } from '../../db/schema';
+import {
+  submissions,
+  CandidateAnswer,
+  AntiCheatEvent,
+  SubmissionStatus,
+} from '../../db/schema';
 import { GradingService } from '../grading/grading.service';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { resolveCandidateContact } from './candidate-contact';
@@ -19,6 +24,14 @@ const HEARTBEAT_STALE_THRESHOLD_MS = 90_000;
 // just makes sure the backend never trusts that cap was actually applied client-side.
 const MAX_ANTI_CHEAT_EVENTS = 1000;
 
+// Statuses a candidate can still withdraw from. Once the employer has decided (SELECTED /
+// NOT_SELECTED), the candidate was disqualified, or they already withdrew, it's final.
+const WITHDRAWABLE_STATUSES: SubmissionStatus[] = [
+  'PENDING',
+  'GRADING',
+  'GRADED',
+];
+
 @Injectable()
 export class SubmissionsService {
   private readonly logger = new Logger(SubmissionsService.name);
@@ -34,6 +47,24 @@ export class SubmissionsService {
     simulationId: string,
     candidateId: string,
   ) {
+    // Withdrawing is permanent, and that includes re-applying to the same job.
+    const [withdrawn] = await this.db
+      .select({ id: submissions.id })
+      .from(submissions)
+      .where(
+        and(
+          eq(submissions.jobId, jobId),
+          eq(submissions.candidateId, candidateId),
+          eq(submissions.status, 'WITHDRAWN'),
+        ),
+      )
+      .limit(1);
+    if (withdrawn) {
+      throw new ConflictException(
+        'You withdrew your application for this job and cannot apply again',
+      );
+    }
+
     const now = new Date();
     const [submission] = await this.db
       .insert(submissions)
@@ -135,7 +166,10 @@ export class SubmissionsService {
    */
   async findByJobForEmployer(jobId: string, employerId: string) {
     const rows = await this.db.query.submissions.findMany({
-      where: eq(submissions.jobId, jobId),
+      where: and(
+        eq(submissions.jobId, jobId),
+        ne(submissions.status, 'WITHDRAWN'),
+      ),
       with: { candidate: { with: { user: true } } },
     });
     const unlockedIds = await this.creditLedger.findUnlockedSubmissionIds(
@@ -147,7 +181,7 @@ export class SubmissionsService {
 
   async findByIdForEmployer(id: string, employerId: string) {
     const row = await this.db.query.submissions.findFirst({
-      where: eq(submissions.id, id),
+      where: and(eq(submissions.id, id), ne(submissions.status, 'WITHDRAWN')),
       with: {
         job: true,
         simulation: true,
@@ -204,6 +238,111 @@ export class SubmissionsService {
       ),
       with: { simulation: true },
     });
+  }
+
+  /** Every job the candidate has an application for, withdrawn ones included, so the job board
+   *  keeps showing them as applied. */
+  async findAppliedJobIds(candidateId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ jobId: submissions.jobId })
+      .from(submissions)
+      .where(eq(submissions.candidateId, candidateId));
+    return [...new Set(rows.map((row) => row.jobId))];
+  }
+
+  /** The candidate's submitted applications, newest first. A run that was started but never
+   *  submitted has no `completedAt` and is not an application yet, so it's left out. */
+  async findApplicationsForCandidate(candidateId: string) {
+    const rows = await this.db.query.submissions.findMany({
+      where: and(
+        eq(submissions.candidateId, candidateId),
+        isNotNull(submissions.completedAt),
+      ),
+      with: { job: { with: { employer: true } } },
+      orderBy: desc(submissions.completedAt),
+    });
+    return rows.map((row) => this.toCandidateApplication(row));
+  }
+
+  async findApplicationForCandidate(id: string, candidateId: string) {
+    const row = await this.db.query.submissions.findFirst({
+      where: and(
+        eq(submissions.id, id),
+        eq(submissions.candidateId, candidateId),
+        isNotNull(submissions.completedAt),
+      ),
+      with: { job: { with: { employer: true } } },
+    });
+    if (!row) {
+      return null;
+    }
+    const { job } = row;
+    return {
+      ...this.toCandidateApplication(row),
+      job: {
+        description: job.description,
+        location: job.location,
+        employmentType: job.employmentType,
+        isRemoteFriendly: job.isRemoteFriendly,
+        skillLevel: job.skillLevel,
+        requiredSkills: job.requiredSkills,
+        salaryRange: job.salaryRange,
+        applicationDeadline: job.applicationDeadline?.toISOString() ?? null,
+      },
+    };
+  }
+
+  /** Permanent. The status guard is in the WHERE so a concurrent employer decision or grading
+   *  result can't be overwritten between the read and the write. */
+  async withdraw(submissionId: string) {
+    const [updated] = await this.db
+      .update(submissions)
+      .set({ status: 'WITHDRAWN', updatedAt: new Date() })
+      .where(
+        and(
+          eq(submissions.id, submissionId),
+          inArray(submissions.status, WITHDRAWABLE_STATUSES),
+        ),
+      )
+      .returning();
+    if (!updated) {
+      throw new ConflictException(
+        'This application can no longer be withdrawn',
+      );
+    }
+    return updated;
+  }
+
+  private toCandidateApplication(
+    row: typeof submissions.$inferSelect & {
+      job: {
+        id: string;
+        title: string | null;
+        employer: { companyName: string | null };
+      };
+    },
+  ) {
+    const isFinal: SubmissionStatus[] = [
+      'WITHDRAWN',
+      'SELECTED',
+      'NOT_SELECTED',
+      'DISQUALIFIED',
+    ];
+    return {
+      id: row.id,
+      jobId: row.job.id,
+      jobTitle: row.job.title,
+      companyName: row.job.employer.companyName,
+      status: row.status,
+      // completedAt is non-null for every row these queries return.
+      submittedAt: row.completedAt!.toISOString(),
+      // The last write to the row once it has reached a final status; null while it is still
+      // being graded or awaiting a decision.
+      decidedAt: isFinal.includes(row.status)
+        ? row.updatedAt.toISOString()
+        : null,
+      rating: row.overallScore,
+    };
   }
 
   async updateStatus(
