@@ -30,10 +30,14 @@ export const envValidationSchema = Joi.object({
   }),
   JWT_EXPIRES_IN: Joi.string(),
 
-  // Stripe's own SDK has no functional fallback for a missing key — it throws on construction
-  // — so these are required in every environment, not just production.
-  STRIPE_SECRET_KEY: Joi.string().required(),
-  STRIPE_WEBHOOK_SECRET: Joi.string().required(),
+  // Stripe's own SDK has no functional fallback for a missing key — it throws on construction.
+  // We validate that test keys exist in dev/test, and live keys exist in production (with fallback to generic keys).
+  STRIPE_SECRET_KEY: Joi.string(),
+  STRIPE_WEBHOOK_SECRET: Joi.string(),
+  STRIPE_TEST_SECRET_KEY: Joi.string(),
+  STRIPE_TEST_WEBHOOK_SECRET: Joi.string(),
+  STRIPE_PROD_SECRET_KEY: Joi.string(),
+  STRIPE_PROD_WEBHOOK_SECRET: Joi.string(),
 
   BREVO_API_KEY: Joi.string().when('NODE_ENV', {
     is: 'production',
@@ -84,6 +88,35 @@ export const envValidationSchema = Joi.object({
   // check because Joi's per-key `.when` can't express "one of these two keys", only one key
   // depending on another.
   .custom((value: Record<string, unknown>, helpers) => {
+    const isProduction = value.NODE_ENV === 'production';
+    if (isProduction) {
+      if (!value.STRIPE_PROD_SECRET_KEY && !value.STRIPE_SECRET_KEY) {
+        return helpers.message({
+          custom:
+            '"STRIPE_PROD_SECRET_KEY" (or "STRIPE_SECRET_KEY") is required when NODE_ENV is "production"',
+        });
+      }
+      if (!value.STRIPE_PROD_WEBHOOK_SECRET && !value.STRIPE_WEBHOOK_SECRET) {
+        return helpers.message({
+          custom:
+            '"STRIPE_PROD_WEBHOOK_SECRET" (or "STRIPE_WEBHOOK_SECRET") is required when NODE_ENV is "production"',
+        });
+      }
+    } else {
+      if (!value.STRIPE_TEST_SECRET_KEY && !value.STRIPE_SECRET_KEY) {
+        return helpers.message({
+          custom:
+            '"STRIPE_TEST_SECRET_KEY" (or "STRIPE_SECRET_KEY") is required in non-production environments',
+        });
+      }
+      if (!value.STRIPE_TEST_WEBHOOK_SECRET && !value.STRIPE_WEBHOOK_SECRET) {
+        return helpers.message({
+          custom:
+            '"STRIPE_TEST_WEBHOOK_SECRET" (or "STRIPE_WEBHOOK_SECRET") is required in non-production environments',
+        });
+      }
+    }
+
     const provider = (value.AI_PROVIDER as string | undefined) ?? 'gemini';
     if (
       provider === 'gemini' &&

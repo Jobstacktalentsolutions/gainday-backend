@@ -18,16 +18,22 @@ import { jobSeekerProfiles } from './job-seeker-profiles.schema';
 
 export const submissionStatusEnum = pgEnum('submission_status', [
   'PENDING',
-  'SCORING',
-  'SCORED',
+  'GRADING',
+  'GRADED',
   'DISQUALIFIED',
+  'WITHDRAWN',
+  'SELECTED',
+  'NOT_SELECTED',
 ]);
 
 export const SubmissionStatus = {
   PENDING: 'PENDING',
-  SCORING: 'SCORING',
-  SCORED: 'SCORED',
+  GRADING: 'GRADING',
+  GRADED: 'GRADED',
   DISQUALIFIED: 'DISQUALIFIED',
+  WITHDRAWN: 'WITHDRAWN',
+  SELECTED: 'SELECTED',
+  NOT_SELECTED: 'NOT_SELECTED',
 } as const;
 export type SubmissionStatus =
   (typeof SubmissionStatus)[keyof typeof SubmissionStatus];

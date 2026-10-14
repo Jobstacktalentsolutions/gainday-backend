@@ -89,8 +89,15 @@ export default () => {
       supportEmail: process.env.SUPPORT_EMAIL || 'support@gainday.com',
     },
     stripe: {
-      secretKey: process.env.STRIPE_SECRET_KEY || '',
-      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+      mode: process.env.NODE_ENV === 'production' ? 'live' : 'test',
+      secretKey:
+        process.env.NODE_ENV === 'production'
+          ? process.env.STRIPE_PROD_SECRET_KEY || process.env.STRIPE_SECRET_KEY || ''
+          : process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY || '',
+      webhookSecret:
+        process.env.NODE_ENV === 'production'
+          ? process.env.STRIPE_PROD_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET || ''
+          : process.env.STRIPE_TEST_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET || '',
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,

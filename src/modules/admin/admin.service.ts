@@ -119,7 +119,7 @@ export class AdminService {
       this.db
         .select({ scoredSubmissions: count() })
         .from(submissions)
-        .where(eq(submissions.status, 'SCORED')),
+        .where(eq(submissions.status, 'GRADED')),
       this.db
         .select({ jobsFilled: count() })
         .from(jobs)
@@ -592,7 +592,7 @@ export class AdminService {
     const totalPages = Math.ceil(totalCount / limit);
 
     const items = jobRows.map((job) => {
-      const scored = job.submissions?.filter((s) => s.status === 'SCORED') || [];
+      const scored = job.submissions?.filter((s) => s.status === 'GRADED') || [];
       const avgScore =
         scored.length > 0
           ? Math.round(
@@ -675,7 +675,7 @@ export class AdminService {
     }
 
     const scoredSubmissions = job.submissions.filter(
-      (s) => s.status === 'SCORED' && s.overallScore !== null,
+      (s) => s.status === 'GRADED' && s.overallScore !== null,
     );
     const avgScore =
       scoredSubmissions.length > 0
@@ -1020,7 +1020,7 @@ export class AdminService {
 
     const submissionsList = profile?.submissions || [];
     const scoredSubmissions = submissionsList.filter(
-      (s) => s.status === 'SCORED' && s.overallScore !== null,
+      (s) => s.status === 'GRADED' && s.overallScore !== null,
     );
     const avgScore =
       scoredSubmissions.length > 0

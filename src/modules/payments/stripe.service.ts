@@ -19,6 +19,8 @@ export class StripeService {
     if (!secretKey) {
       this.logger.warn('Stripe secret key not configured');
     }
+    const mode = configService.get<string>('stripe.mode', 'test');
+    this.logger.log(`Stripe service initialized in ${mode.toUpperCase()} mode`);
     this.stripe = new Stripe(secretKey);
   }
 

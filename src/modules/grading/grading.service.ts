@@ -73,7 +73,7 @@ export class GradingService {
 
     await this.db
       .update(submissions)
-      .set({ status: 'SCORING', updatedAt: new Date() })
+      .set({ status: 'GRADING', updatedAt: new Date() })
       .where(eq(submissions.id, submissionId));
 
     const tasksById = new Map(
@@ -204,7 +204,7 @@ export class GradingService {
     const [updated] = await this.db
       .update(submissions)
       .set({
-        status: 'SCORED',
+        status: 'GRADED',
         overallScore,
         categoryScores,
         taskScores: taskResults,

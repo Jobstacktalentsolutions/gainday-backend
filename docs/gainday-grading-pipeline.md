@@ -28,7 +28,7 @@ run against real candidate data. See Section 8 ("What blocks this from running t
    `GradingService.gradeSubmission(submissionId)` — everything from here on is one method.
 5. `gradeSubmission`:
    - Loads the submission with its `job`, `simulation`, and `candidate` (+ `candidate.user`)
-     relations. Sets `submissions.status = 'SCORING'`.
+     relations. Sets `submissions.status = 'GRADING'`.
    - For each `CandidateAnswer` in `submission.answers`, finds the matching `SimulationTask` by
      `taskId` in `submission.simulation.tasks`.
    - For each matched task, loads its `question_bank` row via `task.questionBankId`, ensures that
@@ -218,7 +218,7 @@ than persisting a meaningless score.
 
 On successful roll-up, `gradeSubmission` writes to `submissions`:
 
-- `status: 'SCORED'`
+- `status: 'GRADED'`
 - `overallScore` (0-100)
 - `categoryScores` (0-10 per category, with rationale/evidence)
 - `taskScores`: the full per-task breakdown (`TaskGradingResult[]` — `taskId`, `questionBankId`,

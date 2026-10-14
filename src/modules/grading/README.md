@@ -64,7 +64,7 @@ scaled to 0-100.
 `GradingProcessor` is the BullMQ worker. `GradingService.gradeSubmission()`: loads the submission
 + its simulation's tasks, grades every answer whose task has a `questionBankId` (see "What's NOT
 done" below for tasks that don't), rolls up the results, persists `submissions.overallScore` /
-`categoryScores` / `taskScores` (status → `SCORED`), updates the candidate's
+`categoryScores` / `taskScores` (status → `GRADED`), updates the candidate's
 `job_seeker_profiles.capabilityScores` via the existing `JobSeekerProfileService`, and emails the
 candidate their results (including the per-task `summary` breakdown) via
 `NotificationsService.sendScoringResultsEmail` / `templates/emails/scoring-results.ejs`.
