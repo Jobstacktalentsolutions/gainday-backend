@@ -29,7 +29,7 @@ const ANSWER_KEY_FIELDS: Record<ObjectiveComponentType, string[]> = {
   NUMERIC_INPUT: ['correctValue'],
   CLASSIFICATION: ['correctMapping'],
   PROCEDURAL_SEQUENCING: ['correctOrder'],
-  PRIORITY_RANKING: ['idealOrder', 'idealOrderRationale'],
+  PRIORITY_RANKING: [], // no answer key — good orderings are defined by the grading anchors
 };
 
 function resolvePatternType(task: SimulationTask, roleRegistry: RoleRegistry) {

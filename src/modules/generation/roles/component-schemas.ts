@@ -67,15 +67,9 @@ const priorityRankingSchema = z.object({
       }),
     )
     .min(2)
-    .describe('Items to rank, in shuffled presentation order.'),
-  idealOrder: z
-    .array(z.number())
     .describe(
-      '0-indexed positions into `items`, highest priority first. The data must make some orderings clearly better than others.',
+      'Items to rank, in shuffled presentation order. Each item must carry enough signal (deadlines, impact, seniority) that some orderings are clearly better than others.',
     ),
-  idealOrderRationale: z
-    .string()
-    .describe('Why the ideal order is defensible — reference for graders, never shown to the candidate.'),
 });
 
 export const OBJECTIVE_COMPONENT_SCHEMAS: Record<
