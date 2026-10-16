@@ -16,5 +16,6 @@ The top-scoring anchor (highest score point) MUST demonstrate sound, concrete do
 Mid and low-scoring anchors MUST reflect real candidate pitfalls (e.g. defaulting to price cuts, generic platitudes without a clear counter-strategy, or missing key trade-offs).
 Avoid manufacturing an artificial "perfect" answer that no real candidate response would actually resemble; real strong answers often trade off one dimension for another.
 
-Generate anchors at these score points: ${anchorScorePoints.join(', ')}.`;
+Generate anchors at these score points (a 0-100 scale, where 0 is a response with a real,
+identifiable flaw in every criterion and 100 is genuinely excellent): ${anchorScorePoints.join(', ')}.`;
 }

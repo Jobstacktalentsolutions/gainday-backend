@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-// Scored 0-10 to match the anchor score points (anchorScorePoints in ai.config.ts), not the
-// submission-level 0-100 overallScore — see roll-up.ts for that separate conversion.
+// Whole numbers 0-100, on the same scale as the anchor score points (anchorScorePoints in
+// ai.config.ts) and the submission-level overallScore — see roll-up.ts.
 const categoryScoreDetailSchema = z.object({
-  score: z.number().min(0).max(10),
+  score: z.number().int().min(0).max(100),
   rationale: z.string(),
   evidence: z.string(),
 });

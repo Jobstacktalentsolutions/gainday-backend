@@ -53,7 +53,7 @@
               if (Object.prototype.hasOwnProperty.call(categoryScores, key)) {
                 var rawVal = categoryScores[key];
                 var numVal = typeof rawVal === 'number' ? rawVal : (rawVal && rawVal.score ? rawVal.score : 0);
-                var pct = numVal <= 10 ? Math.round(numVal * 10) : Math.round(numVal);
+                var pct = Math.round(numVal);
                 var label = rawMap[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, function(str){ return str.toUpperCase(); });
                 categories.push({ label: label, score: Math.min(100, Math.max(0, pct)) });
               }

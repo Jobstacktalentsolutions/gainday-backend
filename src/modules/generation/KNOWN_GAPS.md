@@ -43,4 +43,4 @@ different dressing) start accumulating across generation runs, or if a role's
 content leans heavily on reusing similar scenarios with different graded
 components. At that point, decide deliberately how to textify structured
 fields for embedding (e.g., flattened description, or just the anchor
-score-0/score-10 responses as bookends) rather than embedding raw JSON.
+score-0/score-100 responses as bookends) rather than embedding raw JSON.

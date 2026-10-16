@@ -1,14 +1,17 @@
+import { generationConfig } from '../../../config/ai.config';
 import { AnchorCriteriaFraming } from '../roles/anchor-role-config.interface';
 
 export function buildTaskGradingPrompt(
   criteriaFraming: AnchorCriteriaFraming,
 ): string {
   return `You are grading a candidate's response to a job-simulation task. You are given the task
-itself, a set of anchor responses spanning the score range (0, 3, 5, 7, 10) — reference points
+itself, a set of anchor responses spanning the score range (${generationConfig.anchorScorePoints.join(', ')}) — reference points
 showing what a response at each level actually looks like — and the candidate's real submitted
 response.
 
-Score the candidate's response 0-10 on each of these four criteria, framed for this role:
+Score the candidate's response on each of these four criteria, framed for this role, using a whole
+number from 0 to 100 (no decimals) — you are not limited to the anchor points; a response between
+two anchors gets a score between them:
 - Problem-solving: ${criteriaFraming.problemSolving}
 - Judgment/execution: ${criteriaFraming.judgmentExecution}
 - Written communication: ${criteriaFraming.writtenCommunication}
@@ -16,7 +19,7 @@ Score the candidate's response 0-10 on each of these four criteria, framed for t
 
 Use the anchors as calibration points — place the candidate's response relative to them rather
 than scoring in a vacuum. The hardest, most important distinction is in the middle of the range
-(e.g. telling a 6 from a 7), not at the extremes. For each criterion, give a short rationale (why
+(e.g. telling a 55 from a 65), not at the extremes. For each criterion, give a short rationale (why
 this score) and a specific piece of evidence quoted or closely paraphrased from the candidate's
 actual response — never a generic statement that could apply to any answer.
 

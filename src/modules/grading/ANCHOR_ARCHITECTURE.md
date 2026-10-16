@@ -40,6 +40,7 @@ rest of this) giving role-specific framing for the 4 shared criteria, substitute
 prompt above.
 
 **Finance:**
+
 ```ts
 {
   problemSolving:
@@ -54,6 +55,7 @@ prompt above.
 ```
 
 **Sales:**
+
 ```ts
 {
   problemSolving:
@@ -195,8 +197,8 @@ interface AnchorFeedbackItem {
 }
 
 interface AnchorCorrectnessResult {
-  sound: boolean;       // true only if every anchor is sound
-  reasons: string[];    // flat summary, kept for admin-review logging
+  sound: boolean; // true only if every anchor is sound
+  reasons: string[]; // flat summary, kept for admin-review logging
   anchorFeedback: AnchorFeedbackItem[]; // one entry per anchor, same order
 }
 ```
@@ -231,7 +233,7 @@ somewhere:
 - **Only anchor-correctness failures are correctable.** Duplicate and relevance failures always
   mean the task content itself is wrong — not patchable, drop and try a different candidate
   from the overgenerated pool (existing `regeneration-router.ts` behavior).
-- **Routing condition**: `!isDuplicate && relevant && !anchorsSound` (i.e. the *only* thing that
+- **Routing condition**: `!isDuplicate && relevant && !anchorsSound` (i.e. the _only_ thing that
   failed is anchor correctness) AND no correction has been attempted yet for this candidate.
 - **1 correction attempt per candidate**, tracked via a `correctionAttempted` boolean in graph
   state, reset whenever a fresh candidate is picked (both on slot-advance and on retry-with-a-

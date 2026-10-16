@@ -1,5 +1,11 @@
-import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
-import { eq, and, inArray, isNotNull, ne, desc } from 'drizzle-orm';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { eq, and, inArray, isNotNull, ne, desc, asc, sql } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
@@ -7,10 +13,21 @@ import {
   CandidateAnswer,
   AntiCheatEvent,
   SubmissionStatus,
+  jobs,
+  jobExtractions,
 } from '../../db/schema';
 import { GradingService } from '../grading/grading.service';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { resolveCandidateContact } from './candidate-contact';
+import {
+  buildTaskResults,
+  capabilityPoints,
+  deriveIntegrityStatus,
+  runningAverage,
+  summarizeIntegrityEvents,
+  toCategoryScores,
+  toDisplayId,
+} from './employer-submission.view';
 
 // A heartbeat older than this by the time the candidate submits means the client went quiet
 // (tab closed, machine slept, network down, or deliberately stopped pinging) for longer than a
@@ -161,29 +178,43 @@ export class SubmissionsService {
   }
 
   /**
-   * Employer-facing list for a job. Candidates stay anonymous (no identity fields at all) until
-   * `employerId` has unlocked them � see toEmployerView.
+   * Employer-facing list for a job: submitted applications only (a run that was started but
+   * never submitted isn't one, and withdrawn ones are hidden from employers). Candidates stay
+   * anonymous — no name, no contact — until `employerId` has unlocked them.
    */
   async findByJobForEmployer(jobId: string, employerId: string) {
     const rows = await this.db.query.submissions.findMany({
       where: and(
         eq(submissions.jobId, jobId),
         ne(submissions.status, 'WITHDRAWN'),
+        isNotNull(submissions.completedAt),
       ),
       with: { candidate: { with: { user: true } } },
     });
-    const unlockedIds = await this.creditLedger.findUnlockedSubmissionIds(
-      employerId,
-      rows.map((row) => row.id),
+    const [unlockedIds, capabilityHistories] = await Promise.all([
+      this.creditLedger.findUnlockedSubmissionIds(
+        employerId,
+        rows.map((row) => row.id),
+      ),
+      this.findCapabilityHistories(jobId, rows),
+    ]);
+    return rows.map((row) =>
+      this.toEmployerListItem(
+        row,
+        unlockedIds.has(row.id),
+        capabilityHistories.get(row.id) ?? [],
+      ),
     );
-    return rows.map((row) => this.toEmployerView(row, unlockedIds.has(row.id)));
   }
 
   async findByIdForEmployer(id: string, employerId: string) {
     const row = await this.db.query.submissions.findFirst({
-      where: and(eq(submissions.id, id), ne(submissions.status, 'WITHDRAWN')),
+      where: and(
+        eq(submissions.id, id),
+        ne(submissions.status, 'WITHDRAWN'),
+        isNotNull(submissions.completedAt),
+      ),
       with: {
-        job: true,
         simulation: true,
         candidate: { with: { user: true } },
       },
@@ -191,33 +222,138 @@ export class SubmissionsService {
     if (!row) {
       return null;
     }
-    const unlockedIds = await this.creditLedger.findUnlockedSubmissionIds(
-      employerId,
-      [id],
-    );
-    return this.toEmployerView(row, unlockedIds.has(id));
+    const [unlockedIds, capabilityHistories] = await Promise.all([
+      this.creditLedger.findUnlockedSubmissionIds(employerId, [id]),
+      this.findCapabilityHistories(row.jobId, [row]),
+    ]);
+    const isUnlocked = unlockedIds.has(id);
+    return {
+      ...this.toEmployerListItem(
+        row,
+        isUnlocked,
+        capabilityHistories.get(id) ?? [],
+      ),
+      jobId: row.jobId,
+      tasks: buildTaskResults(row.simulation.tasks, row.taskScores),
+      integrityEvents: summarizeIntegrityEvents(row.antiCheatFlags),
+      // Only ever populated once unlocked, so the pay-to-unlock rule is enforced here on the
+      // server rather than by what the frontend chooses to render.
+      contact: isUnlocked ? this.toEmployerContact(row) : null,
+    };
   }
 
-  // Strips the candidate's identity (profile and guest details) and only hands back contact
-  // details for unlocked submissions, so the pay-to-unlock rule is enforced here on the server
-  // rather than by what the frontend chooses to render.
-  private toEmployerView<
-    T extends Parameters<typeof resolveCandidateContact>[0],
-  >(row: T, isUnlocked: boolean) {
-    const { candidate, guestInfo, ...rest } = row;
+  private toEmployerContact(
+    row: Parameters<typeof resolveCandidateContact>[0],
+  ) {
+    const contact = resolveCandidateContact(row);
+    return contact
+      ? { email: contact.email, phone: contact.phoneNumber }
+      : null;
+  }
+
+  private toEmployerListItem(
+    row: typeof submissions.$inferSelect &
+      Parameters<typeof resolveCandidateContact>[0],
+    isUnlocked: boolean,
+    capabilityHistory: number[],
+  ) {
     return {
-      ...rest,
-      isUnlocked,
-      contact: isUnlocked
-        ? resolveCandidateContact({ candidate, guestInfo })
+      id: row.id,
+      displayId: toDisplayId(row.id),
+      status: row.status,
+      // Null while locked.
+      candidateName: isUnlocked
+        ? (resolveCandidateContact(row)?.fullName ?? null)
         : null,
+      isUnlocked,
+      // completedAt is non-null for every row the employer queries return.
+      submittedAt: row.completedAt!.toISOString(),
+      timeTakenSeconds: row.timeTakenSeconds,
+      // Null until graded.
+      overallScore: row.overallScore,
+      categoryScores: row.categoryScores
+        ? toCategoryScores(row.categoryScores)
+        : null,
+      capabilityScore: capabilityHistory.at(-1) ?? null,
+      capabilityHistory,
+      integrityStatus: deriveIntegrityStatus(row.status, row.antiCheatFlags),
     };
+  }
+
+  /**
+   * Per submission, the candidate's capability score after each of their applications in this
+   * job's domain up to and including that one (oldest first; the last entry is the current
+   * score). Guest submissions and ungraded ones have no history.
+   */
+  private async findCapabilityHistories(
+    jobId: string,
+    rows: { id: string; candidateId: string | null }[],
+  ): Promise<Map<string, number[]>> {
+    const candidateIds = [
+      ...new Set(rows.flatMap((row) => row.candidateId ?? [])),
+    ];
+    if (candidateIds.length === 0) {
+      return new Map();
+    }
+
+    // Same domain lookup the grading pipeline uses (GradingService.gradeSubmission).
+    const domainOf = sql<string>`coalesce(${jobExtractions.category}, ${jobs.role}, 'Unspecified')`;
+    const [{ domain }] = await this.db
+      .select({ domain: domainOf })
+      .from(jobs)
+      .leftJoin(jobExtractions, eq(jobExtractions.jobId, jobs.id))
+      .where(eq(jobs.id, jobId));
+
+    const graded = await this.db
+      .select({
+        id: submissions.id,
+        candidateId: submissions.candidateId,
+        categoryScores: submissions.categoryScores,
+      })
+      .from(submissions)
+      .innerJoin(jobs, eq(jobs.id, submissions.jobId))
+      .leftJoin(jobExtractions, eq(jobExtractions.jobId, jobs.id))
+      .where(
+        and(
+          inArray(submissions.candidateId, candidateIds),
+          isNotNull(submissions.categoryScores),
+          isNotNull(submissions.completedAt),
+          ne(submissions.status, 'DISQUALIFIED'),
+          sql`${domainOf} = ${domain}`,
+        ),
+      )
+      .orderBy(asc(submissions.completedAt));
+
+    const histories = new Map<string, number[]>();
+    const gradedByCandidate = new Map<string | null, typeof graded>();
+    for (const row of graded) {
+      const candidateRows = gradedByCandidate.get(row.candidateId) ?? [];
+      candidateRows.push(row);
+      gradedByCandidate.set(row.candidateId, candidateRows);
+    }
+    for (const candidateRows of gradedByCandidate.values()) {
+      const running = runningAverage(
+        candidateRows.map((row) => capabilityPoints(row.categoryScores!)),
+      );
+      candidateRows.forEach((row, index) => {
+        histories.set(row.id, running.slice(0, index + 1));
+      });
+    }
+    return histories;
   }
 
   async findById(id: string) {
     const submission = await this.db.query.submissions.findFirst({
       where: eq(submissions.id, id),
-      with: { job: true, simulation: true, candidate: true },
+      with: {
+        job: {
+          with: { employer: true },
+        },
+        simulation: true,
+        candidate: {
+          with: { user: true },
+        },
+      },
     });
     return submission ?? null;
   }
@@ -355,5 +491,81 @@ export class SubmissionsService {
       .where(eq(submissions.id, submissionId))
       .returning();
     return submission;
+  }
+
+  /**
+   * The candidate-facing result for a graded submission. Ownership is checked by the controller.
+   * Everything here comes from the stored grading result — nothing is filled in when it is
+   * missing; a submission that hasn't finished grading has no result to show yet.
+   */
+  async getCandidateResult(submissionId: string) {
+    const submission = await this.db.query.submissions.findFirst({
+      where: eq(submissions.id, submissionId),
+      with: { job: { with: { employer: true } }, simulation: true },
+    });
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    const { overallScore, categoryScores, taskScores, completedAt } =
+      submission;
+    if (
+      overallScore === null ||
+      categoryScores === null ||
+      taskScores === null ||
+      completedAt === null
+    ) {
+      throw new ConflictException(
+        'Results are not available until grading is complete',
+      );
+    }
+
+    const capabilityHistories = await this.findCapabilityHistories(
+      submission.jobId,
+      [submission],
+    );
+    const capabilityHistory = capabilityHistories.get(submission.id) ?? [];
+
+    const { problemSolving, judgmentExecution, writtenCommunication } =
+      toCategoryScores(categoryScores);
+
+    return {
+      id: submission.id,
+      status: submission.status,
+      overallScore,
+      completedDate: completedAt.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
+      job: {
+        id: submission.job.id,
+        title: submission.job.title,
+        companyName: submission.job.employer.companyName,
+        location: submission.job.location,
+        employmentType: submission.job.employmentType,
+      },
+      metrics: [
+        {
+          label: 'PROBLEM SOLVING & JUDGEMENT',
+          score: Math.round((problemSolving + judgmentExecution) / 2),
+        },
+        { label: 'EXECUTION', score: judgmentExecution },
+        { label: 'WRITTEN COMMUNICATION', score: writtenCommunication },
+      ],
+      // Null when there is no history, e.g. a disqualified submission.
+      cumulativeCapabilityScore: capabilityHistory.at(-1) ?? null,
+      capabilityHistory,
+      taskEvidence: buildTaskResults(
+        submission.simulation.tasks,
+        taskScores,
+      ).map(({ taskId, taskNumber, title, score, evidence }) => ({
+        taskId,
+        taskNumber,
+        title,
+        score,
+        summary: evidence,
+      })),
+    };
   }
 }

@@ -46,28 +46,29 @@ One LLM call per (task, candidate answer, that task's own 5 anchors) — never a
 every task in one call." Uses `GRADING_MODEL` at temperature 0. Output: the same 4-axis
 `CategoryScores` shape used everywhere else in the schema (`problemSolving`, `judgmentExecution`,
 `writtenCommunication`, `commercialDomainAwareness`, each `{score, rationale, evidence}`, scored
-0-10 to match the anchor scale), plus a `summary` — one or two candidate-facing sentences
+as whole numbers 0-100 against anchors at 0, 20, 40, 60, 80 and 100), plus a `summary` — one or two candidate-facing sentences
 explaining that specific task's score, written directly to the candidate ("You..."). This is what
 gets shown in the results email per task.
 
 ## Roll-up (`roll-up.ts`)
 
-Deterministic, no LLM call. Per-task `categoryScores` (0-10 scale) are averaged per category
-across all graded tasks into the submission-level `categoryScores` (still 0-10), with a
+Deterministic, no LLM call. Per-task `categoryScores` (0-100) are averaged per category
+across all graded tasks into the submission-level `categoryScores` (rounded to whole numbers), with a
 synthesized rationale/evidence string (not fabricated by a model) listing each task's score for
 that category. `overallScore` is a weighted sum of the 4 rolled-up category scores
 (`gradingConfig.categoryWeights` — 0.4/0.2/0.2/0.2, carried forward from the old scoring stub)
-scaled to 0-100.
+rounded to a whole number (0-100).
 
 ## Orchestration (`grading.service.ts`, `grading.processor.ts`)
 
 `GradingProcessor` is the BullMQ worker. `GradingService.gradeSubmission()`: loads the submission
-+ its simulation's tasks, grades every answer whose task has a `questionBankId` (see "What's NOT
-done" below for tasks that don't), rolls up the results, persists `submissions.overallScore` /
-`categoryScores` / `taskScores` (status → `GRADED`), updates the candidate's
-`job_seeker_profiles.capabilityScores` via the existing `JobSeekerProfileService`, and emails the
-candidate their results (including the per-task `summary` breakdown) via
-`NotificationsService.sendScoringResultsEmail` / `templates/emails/scoring-results.ejs`.
+
+- its simulation's tasks, grades every answer whose task has a `questionBankId` (see "What's NOT
+  done" below for tasks that don't), rolls up the results, persists `submissions.overallScore` /
+  `categoryScores` / `taskScores` (status → `GRADED`), updates the candidate's
+  `job_seeker_profiles.capabilityScores` via the existing `JobSeekerProfileService`, and emails the
+  candidate their results (including the per-task `summary` breakdown) via
+  `NotificationsService.sendScoringResultsEmail` / `templates/emails/scoring-results.ejs`.
 
 This replaced the old `src/modules/scoring/` module entirely (`ScoringService.scoreSubmission()`
 returned hardcoded numbers — see git history if you need to see what it looked like; it's deleted).

@@ -58,7 +58,7 @@ export interface CategoryScores {
 }
 
 /** One task's grading result — see src/modules/grading/. Each score in `categoryScores` here is
- *  on the same 0-10 scale as the anchors it was graded against (not the 0-100 scale of the
+ *  on the same 0-100 scale as the anchors it was graded against (and as the
  *  submission-level `overallScore`, which is a separate weighted rollup — see
  *  grading/roll-up.ts). `summary` is the candidate-facing one-or-two-sentence reason shown/
  *  emailed to them for this specific task. */

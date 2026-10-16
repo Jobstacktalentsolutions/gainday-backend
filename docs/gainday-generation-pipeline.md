@@ -124,9 +124,9 @@ For each of the selected tasks, the generation agent produces a structured objec
 ### 6.2 Anchor Responses — 5-Point Scale (now produced by the grading pipeline)
 
 > **Note:** this section describes the anchor design, which is unchanged, but anchors are generated and critiqued by the grading pipeline, not per-task generation. The critic in Section 7 therefore no longer performs the anchor-correctness check at generation time; that check now lives in grading (`AnchorGenerationService`, per-role `anchorCorrectnessPrompt`).
-A single "good response = 10/10" and "bad response = 0/10" pair is not sufficient. The hardest grading problem is distinguishing mid-range answers (a 6 from a 7) — exactly where real candidate responses cluster. Two extreme anchors give a grader nothing to calibrate against there.
+A single "good response = 100/100" and "bad response = 0/100" pair is not sufficient. The hardest grading problem is distinguishing mid-range answers (a 55 from a 65) — exactly where real candidate responses cluster. Two extreme anchors give a grader nothing to calibrate against there.
 
-**Anchors generated per task: minimum 4–5 points across the range** — e.g. scores of 0, 3, 5, 7, 10 — not just the two poles.
+**Anchors generated per task: minimum 4–5 points across the range** — e.g. scores of 0, 20, 40, 60, 80, 100 — not just the two poles.
 
 Each anchor response is scored against four criteria:
 1. **Problem-solving**
@@ -136,7 +136,7 @@ Each anchor response is scored against four criteria:
 
 These four criteria are shared across roles, but their interpretation is role-specific (Section 2.2) — e.g. "commercial/domain awareness" for a sales objection-handling task means something different than for a finance reconciliation task, and the role module should frame the criterion accordingly rather than applying one generic definition everywhere.
 
-A "10/10" anchor should score maximally on all four criteria. **Caution:** a response that is simultaneously perfect across all four is a narrow target — real strong answers often trade off (e.g. commercially sharp but less polished prose). The generation prompt should avoid manufacturing an artificially "perfect" anchor that doesn't resemble any answer a real grader would actually encounter.
+A "100/100" anchor should score maximally on all four criteria. **Caution:** a response that is simultaneously perfect across all four is a narrow target — real strong answers often trade off (e.g. commercially sharp but less polished prose). The generation prompt should avoid manufacturing an artificially "perfect" anchor that doesn't resemble any answer a real grader would actually encounter.
 
 These anchors are reference points for the grading model at scoring time — they define what a good vs. mediocre vs. poor response looks like, not just good vs. bad. (Grading itself — how a candidate's actual submission gets scored against these anchors — is a separate process from generation and is not covered in this document.)
 
@@ -150,7 +150,7 @@ The critic agent is a separate step from generation. It validates each generated
 - **Novelty check:** the generated question is compared against the existing question bank using pgvector similarity search (Postgres vector extension) to retrieve semantically similar stored questions.
 - **Duplicate check:** flags near-identical matches from the novelty search above a similarity threshold.
 - **Relevance check:** confirms the generated task genuinely aligns with the extracted Category and Intent (not just novel, but actually on-target).
-- **Anchor correctness check (moved to grading as of 2026-08-30; not run by the generation critic — the rationale below still applies there):** because there is no external grounding source, the good/bad/mid-range anchor responses (Section 6.2) are themselves LLM-generated and could be subtly wrong. The critic verifies they are sound — an incorrect "10/10" anchor would silently corrupt every future grading decision made against it. What "sound" means is role-specific: factual/numeric correctness for finance, sound sales practice for sales (Section 2.2) — the role module defines the correctness check, not one generic definition.
+- **Anchor correctness check (moved to grading as of 2026-08-30; not run by the generation critic — the rationale below still applies there):** because there is no external grounding source, the good/bad/mid-range anchor responses (Section 6.2) are themselves LLM-generated and could be subtly wrong. The critic verifies they are sound — an incorrect "100/100" anchor would silently corrupt every future grading decision made against it. What "sound" means is role-specific: factual/numeric correctness for finance, sound sales practice for sales (Section 2.2) — the role module defines the correctness check, not one generic definition.
 
 ### 7.2 Regeneration loop
 - If a task fails critique (duplicate, irrelevant, or anchor-correctness failure), the generation agent selects another candidate from the original overgenerated pool (Section 4) rather than restarting extraction.

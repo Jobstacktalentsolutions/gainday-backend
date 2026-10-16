@@ -96,7 +96,7 @@ was deliberately **not** revived here — the implemented loop always fully rege
 
 ### 2.2 Generating the anchor set
 
-Exactly `generationConfig.anchorScorePoints` anchors (**`[0, 3, 5, 7, 10]`**, 5 points) are
+Exactly `generationConfig.anchorScorePoints` anchors (**`[0, 20, 40, 60, 80, 100]`**, 6 points) are
 generated in one structured-output call, each with a `responseText` (a realistic example answer
 at that score) and per-criterion framing text explaining *why* it earns that score. Model:
 `TASK_GENERATION_MODEL` (temperature 0.9 — creative, the same larger/more-reliable-at-deep-JSON
@@ -108,7 +108,7 @@ order in application code instead. The whole array is wrapped in `z.object({ anc
 because Groq rejects a bare array at the schema root.
 
 Prompt (`prompts/anchor-generation.prompt.ts`) explicitly warns against manufacturing an
-artificially "perfect" 10/10 anchor that trades off nothing — real strong answers usually
+artificially "perfect" 100/100 anchor that trades off nothing — real strong answers usually
 sacrifice one dimension for another.
 
 ### 2.3 Critiquing the anchor set
@@ -159,7 +159,7 @@ anchors.
 ```ts
 {
   categoryScores: {
-    problemSolving:              { score: number /* 0-10 */, rationale: string, evidence: string },
+    problemSolving:              { score: number /* whole number 0-100 */, rationale: string, evidence: string },
     judgmentExecution:           { score, rationale, evidence },
     writtenCommunication:        { score, rationale, evidence },
     commercialDomainAwareness:   { score, rationale, evidence },
@@ -168,8 +168,9 @@ anchors.
 }
 ```
 
-Each category score is **0-10**, matching the anchor scale (not the 0-100 scale used for the
-submission-level `overallScore` — see Section 4). `rationale`/`evidence` must cite something
+Each category score is a **whole number 0-100** (the grader picks any integer, using the anchors at
+0, 20, 40, 60, 80 and 100 as calibration points), the same scale as the submission-level
+`overallScore` — see Section 4. `rationale`/`evidence` must cite something
 specific from the candidate's actual response, never a generic statement. `summary` is the
 "why did I get this score" line shown per task in the results email (Section 5) — this is the
 concrete answer to "can the candidate see a concise reason per question."
@@ -186,12 +187,12 @@ entire reason anchors exist per the generation pipeline doc.
 `roll-up.ts`'s `rollUpTaskScores` is plain arithmetic over the per-task results already computed
 in Section 3 — there is no LLM call here on purpose. For each of the 4 categories:
 
-- **Score**: the average of that category's score across every graded task, rounded to 2
-  decimal places. Stays on the **0-10 scale**.
+- **Score**: the average of that category's score across every graded task, rounded to a
+  whole number. Stays on the **0-100 scale**.
 - **Rationale**: a synthesized (not model-generated) sentence, e.g. *"Average of the per-task
   problem-solving scores across 4 task(s)."*
 - **Evidence**: a synthesized list of each task's score for that category, e.g. *"Onboarding
-  Friction Analysis: 7/10; Retention Strategy Priority: 8/10; ..."*.
+  Friction Analysis: 70/100; Retention Strategy Priority: 80/100; ..."*.
 
 **`overallScore`** is a weighted sum of the 4 rolled-up category scores, using
 `gradingConfig.categoryWeights` (`src/config/ai.config.ts`):
@@ -203,11 +204,10 @@ in Section 3 — there is no LLM call here on purpose. For each of the 4 categor
 | Written communication | 0.2 |
 | Commercial/domain awareness | 0.2 |
 
-(carried forward unchanged from the old scoring stub's weighting), then **scaled from 0-10 to
-0-100** — this is the only place the scale changes, and it's why `submissions.categoryScores` and
-`submissions.overallScore` are intentionally on different scales: category scores stay directly
-comparable to any individual task's score (0-10 throughout), while the single headline number
-shown to employers/candidates is framed "out of 100."
+(carried forward unchanged from the old scoring stub's weighting), rounded to a whole number. Every score in the pipeline is on the same 0-100 scale, so category
+scores stay directly comparable to any individual task's score and to the headline "out of 100"
+number shown to employers/candidates. (The capability score — see "Remaining Gaps" — is the
+only thing out of 1000: a candidate's average across applications, times 10.)
 
 If **zero** tasks could be graded for a submission (e.g. every task lacks a `questionBankId` —
 Section 8), grading logs an error and reverts the submission's status back to `PENDING` rather
@@ -221,7 +221,7 @@ On successful roll-up, `gradeSubmission` writes to `submissions`:
 
 - `status: 'GRADED'`
 - `overallScore` (0-100)
-- `categoryScores` (0-10 per category, with rationale/evidence)
+- `categoryScores` (0-100 per category, with rationale/evidence)
 - `taskScores`: the full per-task breakdown (`TaskGradingResult[]` — `taskId`, `questionBankId`,
   `categoryScores`, `summary`), i.e. everything behind the rolled-up numbers, for future
   drill-down UI or audit.
@@ -234,7 +234,7 @@ history, keyed by domain, using the same 4-category shape as everywhere else in 
 Finally, if a candidate email is resolvable (`candidate.user.email` or, for a guest submission,
 `guestInfo.email`), `NotificationsService.sendScoringResultsEmail` is called with the overall
 score, the 4 category scores, **and** the per-task `{title, summary}` breakdown — rendered by
-`templates/emails/scoring-results.ejs`, which shows the numeric breakdown (".../10" per category)
+`templates/emails/scoring-results.ejs`, which shows the numeric breakdown (".../100" per category)
 followed by a "Task by task" section listing each task's title and its one-or-two-sentence
 `summary`. This is the actual delivery mechanism for "why did I get this score" reasoning reaching
 the candidate.
@@ -257,7 +257,7 @@ export const gradingConfig = {
 };
 ```
 
-Reused from `generationConfig`: `anchorScorePoints: [0, 3, 5, 7, 10]` (the anchor generation call
+Reused from `generationConfig`: `anchorScorePoints: [0, 20, 40, 60, 80, 100]` (the anchor generation call
 targets these exact points).
 
 Model wiring (`ai.constants.ts` / `ai.module.ts`):
@@ -325,6 +325,15 @@ Two gaps that used to block this pipeline are now closed:
 
 What is still open: no real candidate submission has run through anchor generation and grading
 end to end, and `anchorsNeedReview` has no admin UI yet (Section 2.1).
+
+**Capability score and commercial/domain awareness (open):** the employer-facing capability
+score (`employer-submission.view.ts`) averages a candidate's graded applications in the job's
+domain, each worth 1000 points, using only the three categories that apply across every domain
+(problem solving, judgment/execution, written communication). Commercial/domain awareness is left
+out because a candidate's earlier results can come from other domains, so mixing them in would
+skew the score. It still needs a proper treatment (for example, only averaging it over
+applications in the same domain). The average is also deliberately flat for now — every
+application weighs the same; weighting newer applications more is planned.
 
 **Anchors and ranking tasks:** tasks with a `PRIORITY_RANKING` objective component carry no
 stored ideal order. What a strong, mid and weak ranking looks like is decided during anchor

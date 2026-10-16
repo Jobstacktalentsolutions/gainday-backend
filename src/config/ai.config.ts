@@ -4,9 +4,7 @@ export const aiConfig = {
   // changes which model answers GENERATION_MODEL/CRITIC_MODEL/TASK_GENERATION_MODEL/GRADING_MODEL
   // — EMBEDDINGS always uses Gemini's embedding model regardless of this setting (see ai.module.ts).
   provider: (process.env.AI_PROVIDER || 'gemini') as
-    | 'gemini'
-    | 'groq'
-    | 'fireworks',
+    'gemini' | 'groq' | 'fireworks',
 
   gemini: {
     // Light Tier: High speed and lowest cost for straightforward text & extraction
@@ -80,7 +78,8 @@ export const generationConfig = {
   maxCriticAttempts: 3,
   duplicateSimilarityThreshold: 0.92,
   noveltyCheckTopK: 5,
-  anchorScorePoints: [0, 3, 5, 7, 10],
+  // The grader scores whole numbers 0-100; anchors show what 0, 20, 40, 60, 80 and 100 look like.
+  anchorScorePoints: [0, 20, 40, 60, 80, 100],
 };
 
 export const gradingConfig = {
@@ -89,7 +88,7 @@ export const gradingConfig = {
   // anyway (grading must not be permanently blocked by one bad question) and
   // question_bank.anchorsNeedReview is set true for admin follow-up.
   maxAnchorAttempts: 3,
-  // Weights applied to the 4 (0-10 scale) category scores when rolling a submission's per-task
+  // Weights applied to the 4 (0-100 scale) category scores when rolling a submission's per-task
   // results up into the single 0-100 overallScore shown to employers/candidates.
   categoryWeights: {
     problemSolving: 0.4,

@@ -27,7 +27,7 @@ order or bucket — not merely a plausible-sounding one.
 
 Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given),
 report in anchorFeedback whether it is sound, and if not, exactly what is wrong (e.g. "the stated
-total is off by $200", "score doesn't match reasoning quality — this reads like a 5/10 answer but
-is scored 10"). Set issue to null for sound anchors. The top-level "sound" field is true only if
+total is off by $200", "score doesn't match reasoning quality — this reads like a 50/100 answer but
+is scored 100"). Set issue to null for sound anchors. The top-level "sound" field is true only if
 every anchor is sound.`,
 };
