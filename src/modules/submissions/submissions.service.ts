@@ -376,13 +376,19 @@ export class SubmissionsService {
     });
   }
 
-  /** Every job the candidate has an application for, withdrawn ones included, so the job board
-   *  keeps showing them as applied. */
+  /** Every job the candidate has submitted an application for, withdrawn ones included, so the
+   *  job board keeps showing them as applied. A run that was started but never submitted isn't
+   *  an application (see findApplicationsForCandidate), so it doesn't count. */
   async findAppliedJobIds(candidateId: string): Promise<string[]> {
     const rows = await this.db
       .select({ jobId: submissions.jobId })
       .from(submissions)
-      .where(eq(submissions.candidateId, candidateId));
+      .where(
+        and(
+          eq(submissions.candidateId, candidateId),
+          isNotNull(submissions.completedAt),
+        ),
+      );
     return [...new Set(rows.map((row) => row.jobId))];
   }
 
