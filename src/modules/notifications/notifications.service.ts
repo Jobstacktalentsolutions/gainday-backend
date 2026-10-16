@@ -136,10 +136,11 @@ export class NotificationsService {
     companyName?: string | null,
   ): Promise<void> {
     const appUrl = this.configService.get<string>('email.appUrl');
+    const passportUrl = `${appUrl}/candidate/passport`;
     const resultUrl = submissionId
       ? `${appUrl}/job-board/submissions/${submissionId}/result`
-      : `${appUrl}/candidate/profile`;
-    const dashboardUrl = resultUrl;
+      : passportUrl;
+    const dashboardUrl = passportUrl;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({
@@ -152,6 +153,7 @@ export class NotificationsService {
         overallScore,
         categoryScores,
         taskBreakdown,
+        passportUrl,
         dashboardUrl,
         resultUrl,
         year,
