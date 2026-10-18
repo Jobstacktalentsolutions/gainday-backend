@@ -10,16 +10,6 @@ import { gradingConfig } from '../../config/ai.config';
 import { GradingService } from './grading.service';
 import { GRADING_QUEUE, SWEEP_STUCK_GRADING_JOB } from './grading.constants';
 
-// A queue job in any of these states will still run (or is running), so the submission is not
-// stuck — it is just waiting its turn or backing off between retries.
-const LIVE_JOB_STATES = [
-  'waiting',
-  'active',
-  'delayed',
-  'prioritized',
-  'waiting-children',
-];
-
 /**
  * Safety net for submissions that fall out of the grading queue: a lost Redis job, a worker that
  * was down when the job was enqueued, or a job whose retries were exhausted without anyone
@@ -67,16 +57,8 @@ export class GradingSweeperService implements OnModuleInit {
 
     let requeued = 0;
     for (const { id } of stuck) {
-      const existing = await this.gradingQueue.getJob(`grade-${id}`);
-      if (existing) {
-        const state = await existing.getState();
-        if (LIVE_JOB_STATES.includes(state)) continue;
-        // BullMQ ignores an add() whose job id already exists, so a finished or failed job
-        // has to be removed before the submission can be queued again.
-        await existing.remove();
-      }
-      await this.gradingService.queueGrading(id);
-      requeued++;
+      // Skips a submission whose job will still run, and clears a finished or failed one first.
+      if (await this.gradingService.queueGrading(id)) requeued++;
     }
 
     if (stuck.length > 0) {

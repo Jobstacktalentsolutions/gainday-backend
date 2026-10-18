@@ -373,8 +373,18 @@ between attempts comes from a custom BullMQ backoff, `gradingBackoffStrategy`
 Progress is saved per task, so a retry resumes with the tasks already graded instead of paying
 for them again.
 
-**Terminal failure.** `GradingProcessor` listens for the worker's `failed` event; once a job's
-attempts are used up it calls `GradingService.markGradingFailed`, which sets `GRADING_FAILED`
+**Stalled jobs are recovered, not reported.** If a worker dies mid-grading (for example a dev
+server restart), BullMQ marks the job *stalled* and, after its stall limit, fails it without using
+any of the attempts above or scheduling a retry. `GradingProcessor.onFailed` recognises that case
+(the job is `failed` while attempts remain) and calls `GradingService.recoverStalledGrading`, which
+queues the submission again; grading resumes from the tasks already saved. The job carries a
+`stallRecoveries` counter, and after `maxStallRecoveries` (**3**) the submission is reported as
+`GRADING_FAILED` instead, so a worker that keeps dying cannot loop forever. A submission already
+graded, withdrawn or decided is left alone.
+
+**Terminal failure.** `GRADING_FAILED` means every attempt was used up. `GradingProcessor` listens
+for the worker's `failed` event; once a job's attempts are exhausted it calls
+`GradingService.markGradingFailed`, which sets `GRADING_FAILED`
 (only if the submission is still `PENDING` or `GRADING`, so it never overwrites a graded,
 withdrawn or decided submission) and logs the last error. The same status is used when no task
 could be graded at all (Section 4). The error is logged, not stored on the row.
@@ -383,8 +393,10 @@ could be graded at all (Section 4). The error is logged, not stored on the row.
 grading queue (every `sweepIntervalMs`, 10 min). Each sweep finds submitted (`completedAt` set)
 `PENDING`/`GRADING` submissions untouched for longer than `stuckThresholdMs` (30 min) that have
 no live queue job (waiting, active, delayed, ...) and re-queues them. This covers a lost Redis
-job or a worker that was down at enqueue time. Because BullMQ ignores an `add` for an existing
-job id, a finished or failed `grade-<id>` job is removed before re-queueing. The sweeper never
+job, a worker that was down at enqueue time, or a stalled failure handled by a process that has no
+recovery code. `GradingService.queueGrading` does the re-queueing: it skips a submission whose job
+will still run, and because BullMQ ignores an `add` for an existing job id, it removes a finished
+or failed `grade-<id>` job first. The sweeper never
 touches `GRADING_FAILED`, so a submission that keeps failing is retried a bounded number of times
 rather than forever.
 

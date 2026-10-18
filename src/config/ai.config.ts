@@ -91,6 +91,10 @@ export const gradingConfig = {
   // BullMQ attempts per grading job. After the last one fails the submission is marked
   // GRADING_FAILED (see GradingProcessor).
   maxJobAttempts: 10,
+  // How many times a stalled grading job (its worker died mid-grading) is queued again before the
+  // submission is reported as GRADING_FAILED. Separate from the attempts above: BullMQ fails a
+  // stalled job without using them.
+  maxStallRecoveries: 3,
   // Base delay for the exponential retry backoff of an ordinary grading failure.
   retryBackoffBaseMs: 15_000,
   // Base and cap for the (longer) backoff used when the failure is an API rate limit / quota

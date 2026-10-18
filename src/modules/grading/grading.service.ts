@@ -13,7 +13,12 @@ import {
   AdminNotificationSeverity,
   TaskGradingResult,
 } from '../../db/schema';
-import { GRADE_SUBMISSION_JOB, GRADING_QUEUE } from './grading.constants';
+import {
+  GRADE_SUBMISSION_JOB,
+  GRADING_QUEUE,
+  LIVE_JOB_STATES,
+} from './grading.constants';
+import { gradingConfig } from '../../config/ai.config';
 import { AnchorGenerationService } from './anchors/anchor-generation.service';
 import { TaskGradingService } from './task-grading.service';
 import { rollUpTaskScores } from './roll-up';
@@ -44,14 +49,56 @@ export class GradingService {
   /** Enqueued from SubmissionsService.submitAnswers() — the actual anchor-generation-on-first-
    *  submission behavior falls naturally out of this being async and per-submission: the first
    *  submission against a job to reach a given task finds no anchors and generates them; every
-   *  submission after that (for the same job) just finds them already there. */
-  async queueGrading(submissionId: string): Promise<void> {
+   *  submission after that (for the same job) just finds them already there.
+   *
+   *  Returns false, without queueing, when the submission already has a job that will still run.
+   *  BullMQ ignores an add() whose job id exists, so a finished or failed job is removed first. */
+  async queueGrading(
+    submissionId: string,
+    stallRecoveries = 0,
+  ): Promise<boolean> {
+    const jobId = `grade-${submissionId}`;
+    const existing = await this.gradingQueue.getJob(jobId);
+    if (existing) {
+      if (LIVE_JOB_STATES.includes(await existing.getState())) return false;
+      await existing.remove();
+    }
+
     this.logger.log(`Queueing grading for submission ${submissionId}`);
     await this.gradingQueue.add(
       GRADE_SUBMISSION_JOB,
-      { submissionId },
-      { jobId: `grade-${submissionId}` },
+      { submissionId, stallRecoveries },
+      { jobId },
     );
+    return true;
+  }
+
+  /** A grading job that failed with attempts to spare was not an ordinary failure (those are
+   *  retried): its worker died mid-grading and BullMQ gave up after too many stalls. Grading saves
+   *  progress per task, so queue it again and it resumes. Bounded, so a worker that keeps dying
+   *  cannot loop forever; past the bound the submission is reported as GRADING_FAILED. */
+  async recoverStalledGrading(
+    submissionId: string,
+    stallRecoveries: number,
+  ): Promise<void> {
+    const [row] = await this.db
+      .select({ status: submissions.status })
+      .from(submissions)
+      .where(eq(submissions.id, submissionId));
+    if (!row || !['PENDING', 'GRADING'].includes(row.status)) return;
+
+    if (stallRecoveries >= gradingConfig.maxStallRecoveries) {
+      await this.markGradingFailed(
+        submissionId,
+        `the grading worker stalled ${stallRecoveries + 1} times in a row`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `Submission ${submissionId}: grading job stalled — re-queueing (recovery ${stallRecoveries + 1} of ${gradingConfig.maxStallRecoveries})`,
+    );
+    await this.queueGrading(submissionId, stallRecoveries + 1);
   }
 
   /** Terminal failure: retries are exhausted (or nothing could ever be graded), so the submission

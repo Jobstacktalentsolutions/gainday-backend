@@ -65,8 +65,12 @@ const priorityRankingSchema = z.object({
   items: z
     .array(
       z.object({
-        label: z.string().describe('Short name of the item, e.g. who it is from.'),
-        description: z.string().describe('One-line detail the candidate ranks on.'),
+        label: z
+          .string()
+          .describe('Short name of the item, e.g. who it is from.'),
+        description: z
+          .string()
+          .describe('One-line detail the candidate ranks on.'),
       }),
     )
     .min(2)

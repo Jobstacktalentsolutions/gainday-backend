@@ -3,6 +3,7 @@
 export interface GradingConfig {
   maxAnchorAttempts: number;
   maxJobAttempts: number;
+  maxStallRecoveries: number;
   retryBackoffBaseMs: number;
   rateLimitBackoffBaseMs: number;
   rateLimitBackoffMaxMs: number;

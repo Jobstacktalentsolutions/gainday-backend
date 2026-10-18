@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
 // Anchor generation/critique was removed from this schema on 2026-08-30 — anchors are a
-// grading-time concern, not a generation-time one, and grading doesn't exist yet. See
-// src/modules/grading/README.md and ANCHOR_ARCHITECTURE.md for the full design (prompt text,
-// schema shape, and why) preserved for whenever grading is built.
+// grading-time concern, not a generation-time one. See src/modules/grading/README.md and
+// ANCHOR_ARCHITECTURE.md for the full design (prompt text, schema shape, and why).
 
 export const taskGenerationSchema = (
   allowedTypeKeys: [string, ...string[]],
@@ -15,7 +14,13 @@ export const taskGenerationSchema = (
     taskType: z.enum(allowedTypeKeys),
     title: z.string(),
     scenarioDescription: z.string().describe('GitHub-flavored Markdown.'),
-    questionPrompt: z.string().describe('GitHub-flavored Markdown.'),
+    // The one place the no-coaching rule is repeated outside the prompt: field descriptions travel
+    // with the schema the model fills in, and this is the field where it gets broken.
+    questionPrompt: z
+      .string()
+      .describe(
+        'GitHub-flavored Markdown. One instruction: the deliverable, its recipient, format or length. No lists of points to cover, example tactics, or hints.',
+      ),
     businessProblemDerived: z.boolean(),
     objectiveComponent: objectiveComponentSchema
       ? objectiveComponentSchema

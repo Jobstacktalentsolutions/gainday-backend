@@ -10,17 +10,29 @@ import {
 import { RoleModule } from './roles/role-module.interface';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 
+/**
+ * What the candidate reads must not coach them. Shared by the generate and modify prompts so the
+ * two cannot drift. What a strong, mid and weak answer looks like is decided later, when the
+ * grading anchors are generated — none of it belongs in the task itself.
+ */
+const CANDIDATE_FACING_TEXT_RULES = `The candidate reads the title, scenarioDescription, questionPrompt and any interfacePayload
+text, so none of it may coach them — what makes an answer good is judged later, from separate grading anchors.
+- scenarioDescription: the situation, the facts, and the stimulus (the other person's message, or the data).
+- questionPrompt: one instruction stating the deliverable, its recipient, and its format or length.
+Never include a list of points the answer should cover ("Your response should: 1. acknowledge …"),
+example tactics ("e.g., a pilot", "without cutting price"), or hints about what a strong answer does or
+is evaluated on. A word limit or deadline is a fact, not a hint.`;
+
+const MARKDOWN_RULES = `Free-text fields are GitHub-flavored Markdown. Use lists, bold or italics only to present the
+material itself (emails, line items, data), never HTML, and never to list what the answer should contain.`;
+
 const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simulation task,
 matching the given candidate's taskType. Produce a scenario and the task components appropriate
 to that taskType.
 
-- Never include tips, hints, solution strategies, or example tactics. State WHAT deliverable is required, not HOW to solve it.
+${CANDIDATE_FACING_TEXT_RULES}
 
-Free-text fields (scenarioDescription, questionPrompt, and any markdown-documented field in
-interfacePayload) are GitHub-flavored Markdown. Use markdown syntax (bold, italics,
-bullet/numbered lists) only where structure genuinely aids readability — e.g. presenting several
-distinct emails, line items, or steps — never HTML, and never as decoration on plain prose that
-reads fine without it.`;
+${MARKDOWN_RULES}`;
 
 export interface GenerateTaskContentParams {
   model: BaseChatModel;
@@ -85,7 +97,7 @@ export async function generateTaskContent(
 
   const guidanceClause = guidance
     ? `\n\nThe employer has requested the following specific direction for this task — ` +
-      `prioritize it over default variety: ${guidance}`
+      `prioritize it over default variety unless it conflicts with the rules above: ${guidance}`
     : '';
 
   const result = await structuredModel.invoke([
@@ -134,11 +146,11 @@ and every other detail that the request doesn't touch exactly as they are. Only 
 requires it for internal consistency (e.g. a changed number that other fields reference) should you
 adjust a field you weren't directly asked to change.
 
-- Never include tips, hints, solution strategies, or example tactics in questionPrompt or scenarioDescription. State WHAT deliverable is required, not HOW to solve it.
+${CANDIDATE_FACING_TEXT_RULES}
 
-Free-text fields (scenarioDescription, questionPrompt, and any markdown-documented field in
-interfacePayload) are GitHub-flavored Markdown. Preserve existing markdown structure unless the
-requested change specifically calls for different structure.`;
+If the existing text already breaks these rules, fix that as part of the edit.
+
+${MARKDOWN_RULES} Preserve existing markdown structure unless the change calls for different structure.`;
 
 export interface ModifyTaskContentParams {
   model: BaseChatModel;
