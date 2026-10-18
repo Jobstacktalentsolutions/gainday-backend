@@ -4,7 +4,11 @@ import { Job as BullJob } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { jobs, simulations } from '../../db/schema';
+import {
+  jobs,
+  simulations,
+  DEFAULT_SIMULATION_TIME_LIMIT_MINUTES,
+} from '../../db/schema';
 import { GENERATION_QUEUE } from './generation.constants';
 import { GenerationService } from './generation.service';
 
@@ -42,6 +46,11 @@ export class GenerationProcessor extends WorkerHost {
         .values({
           jobId,
           tasks: result.finalizedTasks,
+          // Flat for now (see DEFAULT_SIMULATION_TIME_LIMIT_MINUTES) — not derived from task
+          // count. Set explicitly here rather than left to the column default so a "regenerate
+          // all" re-run (the onConflictDoUpdate below) doesn't need to touch it either way: it's
+          // only ever written once, on first insert.
+          timeLimitMinutes: DEFAULT_SIMULATION_TIME_LIMIT_MINUTES,
         })
         .onConflictDoUpdate({
           target: simulations.jobId,

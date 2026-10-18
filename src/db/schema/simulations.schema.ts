@@ -6,6 +6,14 @@ import { submissions } from './submissions.schema';
 import { MarkdownString } from './question-bank.schema';
 import { InterfaceType } from '../../modules/generation/roles/interface-type';
 
+// Shown to both employers (Review & Publish, the simulation builder) and candidates (job details,
+// the pre-simulation screen, the in-run countdown) as the estimated/allotted time for a
+// simulation's tasks. A flat number for now, not derived from task count or content — revisit if
+// task count ever becomes variable per job. This is a job/simulation-domain constant, not a
+// generation-pipeline one (see config/ai.config.ts's generationConfig), since it isn't a
+// parameter of how tasks get generated — it's an attribute of the simulation itself.
+export const DEFAULT_SIMULATION_TIME_LIMIT_MINUTES = 30;
+
 export type ObjectiveComponentType =
   | 'NUMERIC_INPUT'
   | 'CLASSIFICATION'
@@ -51,7 +59,9 @@ export const simulations = pgTable('simulations', {
     .unique()
     .references(() => jobs.id, { onDelete: 'cascade' }),
   tasks: jsonb('tasks').$type<SimulationTask[]>().notNull(),
-  timeLimitMinutes: integer('time_limit_minutes').notNull().default(30),
+  timeLimitMinutes: integer('time_limit_minutes')
+    .notNull()
+    .default(DEFAULT_SIMULATION_TIME_LIMIT_MINUTES),
 });
 
 export const simulationsRelations = relations(simulations, ({ one, many }) => ({
