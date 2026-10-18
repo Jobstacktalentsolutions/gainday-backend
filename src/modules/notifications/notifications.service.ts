@@ -163,6 +163,36 @@ export class NotificationsService {
     this.logger.log(`Scoring results email enqueued for ${candidateEmail}`);
   }
 
+  async sendAdminCriticalAlertEmail(
+    to: string,
+    alert: {
+      severity: string;
+      title: string;
+      message: string;
+      details?: string | null;
+    },
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>('email.appUrl');
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: `[${alert.severity}] ${alert.title}`,
+      template: 'admin-alert',
+      context: {
+        severity: alert.severity,
+        title: alert.title,
+        message: alert.message,
+        details: alert.details ?? null,
+        notificationsUrl: `${appUrl}/admin/notifications`,
+        appUrl,
+        year,
+      },
+    });
+
+    this.logger.log(`Admin ${alert.severity} alert email enqueued for ${to}`);
+  }
+
   async sendSupportInquiryEmail(
     name: string,
     userEmail: string,

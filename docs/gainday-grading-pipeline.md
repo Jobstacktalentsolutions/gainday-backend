@@ -210,8 +210,8 @@ number shown to employers/candidates. (The capability score — see "Remaining G
 only thing out of 1000: a candidate's average across applications, times 10.)
 
 If **zero** tasks could be graded for a submission (e.g. every task lacks a `questionBankId` —
-Section 8), grading logs an error and reverts the submission's status back to `PENDING` rather
-than persisting a meaningless score.
+Section 8), grading marks the submission `GRADING_FAILED` (Section 9) rather than persisting a
+meaningless score. Nothing gradable is not transient, so it is not retried.
 
 ---
 
@@ -242,6 +242,9 @@ the candidate.
 ---
 
 ## 6. Configuration Reference
+
+Failure-handling settings (retry attempts, backoff, sweeper interval and threshold) live in the
+same `gradingConfig` object — see Section 9.
 
 `src/config/ai.config.ts`:
 
@@ -348,3 +351,53 @@ code rather than by an LLM) and deliberately dropped, partly because `CandidateA
 structured field to check it against in the first place (`responseBody` is free text only). If
 this gets revisited, it depends on the candidate-answer-capture UI (gap 1) existing first and
 capturing structured objective answers, not just free text.
+
+---
+
+## 9. Failure Handling
+
+**Submission statuses during grading:** `PENDING` (submitted, queued — or a run that was started
+but never submitted, which has no `completedAt`), `GRADING` (a worker has picked it up),
+`GRADED` (scored), and `GRADING_FAILED` (terminal: grading gave up). The employer's submissions
+table shows these as "Queued", "Grading…", the score, and "Grading failed"; candidates see
+"Grading failed" on their application and a message to contact support.
+
+**Retries.** Each grading job gets `gradingConfig.maxJobAttempts` (**10**) attempts. The delay
+between attempts comes from a custom BullMQ backoff, `gradingBackoffStrategy`
+(`utils/grading-backoff.ts`, registered on the worker in `GradingProcessor`):
+- an ordinary failure backs off exponentially from `retryBackoffBaseMs` (15s);
+- an API rate-limit / quota failure (detected by `classifyRateLimitError`) waits for the
+  provider's own `retry-after` when it sent one, otherwise exponentially from
+  `rateLimitBackoffBaseMs` (60s), capped at `rateLimitBackoffMaxMs` (30 min).
+
+Progress is saved per task, so a retry resumes with the tasks already graded instead of paying
+for them again.
+
+**Terminal failure.** `GradingProcessor` listens for the worker's `failed` event; once a job's
+attempts are used up it calls `GradingService.markGradingFailed`, which sets `GRADING_FAILED`
+(only if the submission is still `PENDING` or `GRADING`, so it never overwrites a graded,
+withdrawn or decided submission) and logs the last error. The same status is used when no task
+could be graded at all (Section 4). The error is logged, not stored on the row.
+
+**Stuck-submission sweeper.** `GradingSweeperService` registers a BullMQ job scheduler on the
+grading queue (every `sweepIntervalMs`, 10 min). Each sweep finds submitted (`completedAt` set)
+`PENDING`/`GRADING` submissions untouched for longer than `stuckThresholdMs` (30 min) that have
+no live queue job (waiting, active, delayed, ...) and re-queues them. This covers a lost Redis
+job or a worker that was down at enqueue time. Because BullMQ ignores an `add` for an existing
+job id, a finished or failed `grade-<id>` job is removed before re-queueing. The sweeper never
+touches `GRADING_FAILED`, so a submission that keeps failing is retried a bounded number of times
+rather than forever.
+
+**Admin notification.** When `markGradingFailed` changes a submission it also creates a
+`CRITICAL` row in `admin_notifications` (`AdminNotificationsService`), with the failure reason in
+`details` and `{ submissionId, jobId }` in `metadata`, and emails every active admin
+(`[CRITICAL] Grading failed`, template `admin-alert.ejs`). Admins read and acknowledge these under
+**Notifications** in the admin portal (`/admin/notifications`; severity `INFO`/`WARNING`/`CRITICAL`,
+unread badge in the sidebar, shared read state across admins). Creating the notification or
+sending the email is best-effort: a failure there is logged and never undoes the status change.
+The reason is capped at 2000 characters.
+
+**Not built yet:** there is no admin action to retry a `GRADING_FAILED` submission. Moving it back
+to `PENDING` and calling `GradingService.queueGrading` (after removing the old queue job) is what
+a retry would do.
+

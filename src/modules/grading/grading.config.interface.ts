@@ -2,6 +2,12 @@
  *  src/config/ai.config.ts, wired in via src/config/configuration.ts. */
 export interface GradingConfig {
   maxAnchorAttempts: number;
+  maxJobAttempts: number;
+  retryBackoffBaseMs: number;
+  rateLimitBackoffBaseMs: number;
+  rateLimitBackoffMaxMs: number;
+  sweepIntervalMs: number;
+  stuckThresholdMs: number;
   categoryWeights: {
     problemSolving: number;
     judgmentExecution: number;

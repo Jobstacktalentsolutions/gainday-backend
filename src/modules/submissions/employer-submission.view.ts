@@ -1,5 +1,6 @@
 import type {
   AntiCheatEvent,
+  CandidateAnswer,
   CategoryScores,
   SimulationTask,
   SubmissionStatus,
@@ -112,6 +113,34 @@ export function buildTaskResults(
         evidence: result.summary,
       },
     ];
+  });
+}
+
+/** Every task in the simulation's order with the candidate's answer, so the employer can read
+ *  the work even when it has not been graded (yet, or at all). `score` and `evidence` are null
+ *  for a task without a grading result; `answer` is null when the candidate left it blank. */
+export function buildEmployerTaskResults(
+  simulationTasks: Pick<SimulationTask, 'id' | 'title' | 'questionPrompt'>[],
+  answers: CandidateAnswer[],
+  taskScores: TaskGradingResult[] | null,
+) {
+  const resultByTaskId = new Map(
+    (taskScores ?? []).map((result) => [result.taskId, result]),
+  );
+  const answerByTaskId = new Map(
+    answers.map((answer) => [answer.taskId, answer.responseBody]),
+  );
+  return simulationTasks.map((task, index) => {
+    const result = resultByTaskId.get(task.id);
+    return {
+      taskId: task.id,
+      taskNumber: index + 1,
+      title: task.title,
+      questionPrompt: task.questionPrompt,
+      answer: answerByTaskId.get(task.id)?.trim() || null,
+      score: result ? taskScorePercent(result) : null,
+      evidence: result ? result.summary : null,
+    };
   });
 }
 

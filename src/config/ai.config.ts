@@ -88,6 +88,20 @@ export const gradingConfig = {
   // anyway (grading must not be permanently blocked by one bad question) and
   // question_bank.anchorsNeedReview is set true for admin follow-up.
   maxAnchorAttempts: 3,
+  // BullMQ attempts per grading job. After the last one fails the submission is marked
+  // GRADING_FAILED (see GradingProcessor).
+  maxJobAttempts: 10,
+  // Base delay for the exponential retry backoff of an ordinary grading failure.
+  retryBackoffBaseMs: 15_000,
+  // Base and cap for the (longer) backoff used when the failure is an API rate limit / quota
+  // error and the provider didn't say how long to wait.
+  rateLimitBackoffBaseMs: 60_000,
+  rateLimitBackoffMaxMs: 30 * 60_000,
+  // The stuck-submission sweeper (GradingSweeperService) runs this often and re-queues any
+  // submitted PENDING/GRADING submission untouched for longer than the threshold that has no
+  // live queue job.
+  sweepIntervalMs: 10 * 60_000,
+  stuckThresholdMs: 30 * 60_000,
   // Weights applied to the 4 (0-100 scale) category scores when rolling a submission's per-task
   // results up into the single 0-100 overallScore shown to employers/candidates.
   categoryWeights: {

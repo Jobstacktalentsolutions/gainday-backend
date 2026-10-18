@@ -9,13 +9,17 @@ import {
   submissions,
   questionBank,
   jobExtractions,
+  jobs,
+  AdminNotificationSeverity,
   TaskGradingResult,
 } from '../../db/schema';
-import { GRADING_QUEUE } from './grading.constants';
+import { GRADE_SUBMISSION_JOB, GRADING_QUEUE } from './grading.constants';
 import { AnchorGenerationService } from './anchors/anchor-generation.service';
 import { TaskGradingService } from './task-grading.service';
 import { rollUpTaskScores } from './roll-up';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AdminNotificationsService } from '../notifications/admin-notifications.service';
+import { toDisplayId } from '../submissions/employer-submission.view';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
 
 import { AnchorRoleRegistry } from './roles/anchor-role-registry';
@@ -32,6 +36,7 @@ export class GradingService {
     private readonly taskGradingService: TaskGradingService,
     private readonly roleRegistry: AnchorRoleRegistry,
     private readonly notificationsService: NotificationsService,
+    private readonly adminNotificationsService: AdminNotificationsService,
     private readonly jobSeekerProfileService: JobSeekerProfileService,
     private readonly configService: ConfigService,
   ) {}
@@ -43,10 +48,53 @@ export class GradingService {
   async queueGrading(submissionId: string): Promise<void> {
     this.logger.log(`Queueing grading for submission ${submissionId}`);
     await this.gradingQueue.add(
-      'grade-submission',
+      GRADE_SUBMISSION_JOB,
       { submissionId },
       { jobId: `grade-${submissionId}` },
     );
+  }
+
+  /** Terminal failure: retries are exhausted (or nothing could ever be graded), so the submission
+   *  is parked in GRADING_FAILED instead of looking like it is still being graded. Guarded so it
+   *  never overwrites a submission that was graded, withdrawn or decided in the meantime. */
+  async markGradingFailed(submissionId: string, reason: string): Promise<void> {
+    const [updated] = await this.db
+      .update(submissions)
+      .set({ status: 'GRADING_FAILED', updatedAt: new Date() })
+      .where(
+        and(
+          eq(submissions.id, submissionId),
+          inArray(submissions.status, ['PENDING', 'GRADING']),
+        ),
+      )
+      .returning({ id: submissions.id, jobId: submissions.jobId });
+    if (!updated) return;
+
+    this.logger.error(
+      `Submission ${submissionId} marked GRADING_FAILED: ${reason}`,
+    );
+
+    // Admins need to know — nothing else surfaces a submission that gave up grading. Failing to
+    // notify must not undo or mask the status change above.
+    try {
+      const [job] = await this.db
+        .select({ title: jobs.title })
+        .from(jobs)
+        .where(eq(jobs.id, updated.jobId));
+      await this.adminNotificationsService.create({
+        severity: AdminNotificationSeverity.CRITICAL,
+        type: 'GRADING_FAILED',
+        title: 'Grading failed',
+        message: `Submission ${toDisplayId(submissionId)} for "${job?.title ?? 'an untitled job'}" could not be graded. The candidate and the employer see it as "Grading failed".`,
+        details: reason,
+        metadata: { submissionId, jobId: updated.jobId },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to create the admin notification for submission ${submissionId}`,
+        err,
+      );
+    }
   }
 
   async gradeSubmission(submissionId: string): Promise<void> {
@@ -184,18 +232,12 @@ export class GradingService {
     }
 
     if (taskResults.length === 0) {
-      this.logger.error(
-        `Submission ${submissionId}: no tasks could be graded — reverting to PENDING`,
+      // Nothing gradable is not transient — retrying (or re-queueing from the sweeper) cannot
+      // change it — so fail it outright rather than leaving it PENDING forever.
+      await this.markGradingFailed(
+        submissionId,
+        'no tasks could be graded (none matched a question_bank row)',
       );
-      await this.db
-        .update(submissions)
-        .set({ status: 'PENDING', updatedAt: new Date() })
-        .where(
-          and(
-            eq(submissions.id, submissionId),
-            eq(submissions.status, 'GRADING'),
-          ),
-        );
       return;
     }
 

@@ -1,5 +1,6 @@
 import type { AntiCheatEvent } from '../../db/schema';
 import {
+  buildEmployerTaskResults,
   capabilityPoints,
   deriveIntegrityStatus,
   runningAverage,
@@ -78,5 +79,58 @@ describe('employer submission view', () => {
   it('averages applications equally as they accumulate', () => {
     expect(runningAverage([800, 600, 700])).toEqual([800, 700, 700]);
     expect(runningAverage([])).toEqual([]);
+  });
+
+  describe('buildEmployerTaskResults', () => {
+    const tasks = [
+      { id: 't1', title: 'First', questionPrompt: 'Do one' },
+      { id: 't2', title: 'Second', questionPrompt: 'Do two' },
+    ];
+    const answers = [
+      { taskId: 't1', responseBody: ' my answer ', timeSpentSeconds: 10 },
+    ];
+
+    it('lists every task with its answer and no grade when nothing was graded', () => {
+      expect(buildEmployerTaskResults(tasks, answers, null)).toEqual([
+        {
+          taskId: 't1',
+          taskNumber: 1,
+          title: 'First',
+          questionPrompt: 'Do one',
+          answer: 'my answer',
+          score: null,
+          evidence: null,
+        },
+        {
+          taskId: 't2',
+          taskNumber: 2,
+          title: 'Second',
+          questionPrompt: 'Do two',
+          answer: null,
+          score: null,
+          evidence: null,
+        },
+      ]);
+    });
+
+    it('adds the score and summary for a graded task', () => {
+      const graded = {
+        taskId: 't1',
+        questionBankId: 'q1',
+        summary: 'You did well.',
+        categoryScores: {
+          problemSolving: detail(80),
+          judgmentExecution: detail(60),
+          writtenCommunication: detail(70),
+          commercialDomainAwareness: detail(90),
+        },
+      };
+      const [first, second] = buildEmployerTaskResults(tasks, answers, [
+        graded,
+      ]);
+      expect(first.score).toBe(75);
+      expect(first.evidence).toBe('You did well.');
+      expect(second.score).toBeNull();
+    });
   });
 });

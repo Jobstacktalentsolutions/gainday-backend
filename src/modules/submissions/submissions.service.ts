@@ -20,6 +20,7 @@ import { GradingService } from '../grading/grading.service';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { resolveCandidateContact } from './candidate-contact';
 import {
+  buildEmployerTaskResults,
   buildTaskResults,
   capabilityPoints,
   deriveIntegrityStatus,
@@ -47,6 +48,7 @@ const WITHDRAWABLE_STATUSES: SubmissionStatus[] = [
   'PENDING',
   'GRADING',
   'GRADED',
+  'GRADING_FAILED',
 ];
 
 @Injectable()
@@ -64,6 +66,19 @@ export class SubmissionsService {
     simulationId: string,
     candidateId: string,
   ) {
+    const [job] = await this.db
+      .select({ status: jobs.status })
+      .from(jobs)
+      .where(eq(jobs.id, jobId));
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    if (job.status !== 'ACTIVE') {
+      throw new ConflictException(
+        'This job is no longer accepting applications',
+      );
+    }
+
     // Withdrawing is permanent, and that includes re-applying to the same job.
     const [withdrawn] = await this.db
       .select({ id: submissions.id })
@@ -234,7 +249,11 @@ export class SubmissionsService {
         capabilityHistories.get(id) ?? [],
       ),
       jobId: row.jobId,
-      tasks: buildTaskResults(row.simulation.tasks, row.taskScores),
+      tasks: buildEmployerTaskResults(
+        row.simulation.tasks,
+        row.answers,
+        row.taskScores,
+      ),
       integrityEvents: summarizeIntegrityEvents(row.antiCheatFlags),
       // Only ever populated once unlocked, so the pay-to-unlock rule is enforced here on the
       // server rather than by what the frontend chooses to render.

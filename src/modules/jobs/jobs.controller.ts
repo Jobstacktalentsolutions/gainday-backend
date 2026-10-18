@@ -96,6 +96,13 @@ export class JobsController {
     return this.jobsService.saveDetails(user.profileId, dto, id);
   }
 
+  @Patch(':id/close')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  async closeJob(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.jobsService.closeJob(id, user.profileId);
+  }
+
   @Put(':id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER, UserRole.ADMIN)

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Alert</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'Admin Alert' }) %>
+
+      <div class="content">
+        <p class="intro">
+          <strong style="color: #b42318; text-transform: uppercase; letter-spacing: 0.5px;"><%= severity %></strong>
+          &mdash; <%= title %>
+        </p>
+
+        <div style="background-color: #ffffff; border: 1px solid #fecdca; border-left: 4px solid #b42318; padding: 16px; border-radius: 6px; font-size: 14px; color: #111019; line-height: 1.6;">
+          <%= message %>
+        </div>
+
+        <% if (details) { %>
+        <div style="margin: 20px 0;">
+          <div style="font-size: 13px; font-weight: 700; color: #494866; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+            Reason
+          </div>
+          <div style="background-color: #f8f9fc; border: 1px solid #e2e4ed; padding: 16px; border-radius: 6px; font-size: 13px; color: #111019; white-space: pre-wrap; font-family: monospace; line-height: 1.5;">
+<%= details %>
+          </div>
+        </div>
+        <% } %>
+
+        <div class="divider"></div>
+
+        <p style="font-size: 13px; color: #767592;">
+          View and acknowledge this in the admin portal:
+          <a href="<%= notificationsUrl %>" style="color: #1817fe; text-decoration: underline;">Notifications</a>
+        </p>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."submission_status" ADD VALUE 'GRADING_FAILED' BEFORE 'DISQUALIFIED';

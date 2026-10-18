@@ -123,7 +123,7 @@ export class AdminService {
       this.db
         .select({ jobsFilled: count() })
         .from(jobs)
-        .where(eq(jobs.status, 'INACTIVE')),
+        .where(eq(jobs.status, 'CLOSED')),
       this.db
         .select({ flaggedAntiCheatCount: count() })
         .from(submissions)
@@ -146,9 +146,7 @@ export class AdminService {
         .select({ createdAt: users.createdAt })
         .from(users)
         .where(eq(users.role, 'JOB_SEEKER')),
-      this.db
-        .select({ createdAt: submissions.createdAt })
-        .from(submissions),
+      this.db.select({ createdAt: submissions.createdAt }).from(submissions),
     ]);
 
     const recentJobs = recentJobsList.map((j) => ({
@@ -157,8 +155,7 @@ export class AdminService {
       company: j.employer?.companyName || 'Unknown Company',
       applicantsCount: j.submissions?.length || 0,
       status: (j.status === 'ACTIVE' ? 'active' : 'pending') as
-        | 'active'
-        | 'pending',
+        'active' | 'pending',
     }));
 
     const analytics = this.buildAnalyticsSeries(
@@ -205,7 +202,14 @@ export class AdminService {
       // 24 hourly buckets
       for (let i = 23; i >= 0; i--) {
         const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), 0, 0).getTime();
+        const start = new Date(
+          d.getFullYear(),
+          d.getMonth(),
+          d.getDate(),
+          d.getHours(),
+          0,
+          0,
+        ).getTime();
         const end = start + 60 * 60 * 1000;
         const hourStr = `${d.getHours().toString().padStart(2, '0')}:00`;
         buckets.push({
@@ -222,7 +226,14 @@ export class AdminService {
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).getTime();
+        const start = new Date(
+          d.getFullYear(),
+          d.getMonth(),
+          d.getDate(),
+          0,
+          0,
+          0,
+        ).getTime();
         const end = start + 24 * 60 * 60 * 1000;
         const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
         buckets.push({
@@ -236,10 +247,30 @@ export class AdminService {
       }
     } else if (timeframe === 'month') {
       // 30 daily buckets (or 15 two-day steps)
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       for (let i = 29; i >= 0; i--) {
         const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).getTime();
+        const start = new Date(
+          d.getFullYear(),
+          d.getMonth(),
+          d.getDate(),
+          0,
+          0,
+          0,
+        ).getTime();
         const end = start + 24 * 60 * 60 * 1000;
         const label = `${monthNames[d.getMonth()]} ${d.getDate()}`;
         buckets.push({
@@ -253,7 +284,20 @@ export class AdminService {
       }
     } else if (timeframe === 'year' || timeframe === 'all') {
       // 12 monthly buckets
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       const monthsCount = timeframe === 'all' ? 12 : 12;
       for (let i = monthsCount - 1; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -375,8 +419,7 @@ export class AdminService {
           createdAt: user.createdAt,
           name: emp?.fullName || user.email.split('@')[0],
           status: (user.isActive ? 'active' : 'suspended') as
-            | 'active'
-            | 'suspended',
+            'active' | 'suspended',
           employerProfile: {
             companyName: emp?.companyName || 'Not specified',
             isVerified: user.isEmailVerified,
@@ -397,8 +440,7 @@ export class AdminService {
           createdAt: user.createdAt,
           name: cand?.fullName || user.email.split('@')[0],
           status: (user.isActive ? 'active' : 'suspended') as
-            | 'active'
-            | 'suspended',
+            'active' | 'suspended',
           candidateProfile: {
             phoneNumber: cand?.phoneNumber,
             submissionsCount: cand?.submissions?.length || 0,
@@ -422,11 +464,12 @@ export class AdminService {
           createdAt: user.createdAt,
           name: adm?.fullName || 'Admin User',
           status: (user.isActive ? 'active' : 'suspended') as
-            | 'active'
-            | 'suspended',
+            'active' | 'suspended',
           adminProfile: {
             fullName: adm?.fullName || 'Admin User',
-            adminRole: isSuperAdmin ? 'SUPER_ADMIN' : ((adm?.adminRole as any) || 'MANAGER'),
+            adminRole: isSuperAdmin
+              ? 'SUPER_ADMIN'
+              : (adm?.adminRole as any) || 'MANAGER',
             isSuperAdmin,
           },
         };
@@ -553,18 +596,13 @@ export class AdminService {
         conditions.push(eq(jobs.status, 'ACTIVE'));
       } else if (normalized === 'DRAFT') {
         conditions.push(eq(jobs.status, 'DRAFT'));
-      } else if (normalized === 'CLOSED' || normalized === 'INACTIVE') {
-        conditions.push(eq(jobs.status, 'INACTIVE'));
+      } else if (normalized === 'CLOSED') {
+        conditions.push(eq(jobs.status, 'CLOSED'));
       }
     }
     if (query.search && query.search.trim()) {
       const s = `%${query.search.trim()}%`;
-      conditions.push(
-        or(
-          ilike(jobs.title, s),
-          ilike(jobs.role, s),
-        ),
-      );
+      conditions.push(or(ilike(jobs.title, s), ilike(jobs.role, s)));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -592,12 +630,15 @@ export class AdminService {
     const totalPages = Math.ceil(totalCount / limit);
 
     const items = jobRows.map((job) => {
-      const scored = job.submissions?.filter((s) => s.status === 'GRADED') || [];
+      const scored =
+        job.submissions?.filter((s) => s.status === 'GRADED') || [];
       const avgScore =
         scored.length > 0
           ? Math.round(
-              scored.reduce((acc, s) => acc + (Number(s.overallScore) || 0), 0) /
-                scored.length,
+              scored.reduce(
+                (acc, s) => acc + (Number(s.overallScore) || 0),
+                0,
+              ) / scored.length,
             )
           : null;
       const flaggedCount =
@@ -725,7 +766,8 @@ export class AdminService {
         totalApplicants: job.submissions.length,
         scoredApplicants: scoredSubmissions.length,
         averageScore: avgScore,
-        flaggedApplicants: job.submissions.filter((s) => s.isAntiCheatFlagged).length,
+        flaggedApplicants: job.submissions.filter((s) => s.isAntiCheatFlagged)
+          .length,
       },
       submissions: job.submissions.map((sub) => ({
         id: sub.id,
@@ -746,13 +788,19 @@ export class AdminService {
         timeTakenSeconds: sub.timeTakenSeconds,
         categoryScores: sub.categoryScores,
         taskScores: sub.taskScores,
+        // The candidate's raw answers, so an admin can read the work of a submission that has no
+        // grade (for example one that ended in GRADING_FAILED).
+        answers: sub.answers,
         completedAt: sub.completedAt,
         createdAt: sub.createdAt,
       })),
     };
   }
 
-  async updateJobStatus(jobId: string, status: (typeof jobs.status.enumValues)[number]) {
+  async updateJobStatus(
+    jobId: string,
+    status: (typeof jobs.status.enumValues)[number],
+  ) {
     const [updated] = await this.db
       .update(jobs)
       .set({ status, updatedAt: new Date() })
@@ -771,7 +819,9 @@ export class AdminService {
     suspensionReason?: string,
   ) {
     if (currentAdminId && userId === currentAdminId && !isActive) {
-      throw new BadRequestException('You cannot disable your own admin account');
+      throw new BadRequestException(
+        'You cannot disable your own admin account',
+      );
     }
 
     const targetUser = await this.db.query.users.findFirst({
@@ -786,14 +836,18 @@ export class AdminService {
       targetUser.email === 'enweremproper@gmail.com';
 
     if (isSuperAdmin && !isActive) {
-      throw new BadRequestException('The Super Admin account cannot be disabled.');
+      throw new BadRequestException(
+        'The Super Admin account cannot be disabled.',
+      );
     }
 
     const [user] = await this.db
       .update(users)
       .set({
         isActive,
-        suspensionReason: isActive ? null : (suspensionReason || 'Account suspended by administrator.'),
+        suspensionReason: isActive
+          ? null
+          : suspensionReason || 'Account suspended by administrator.',
         suspendedAt: isActive ? null : new Date(),
         updatedAt: new Date(),
       })
@@ -843,7 +897,10 @@ export class AdminService {
     const conditions: any[] = [];
     if (query.status) {
       conditions.push(
-        eq(generationReviewItems.status, query.status as GenerationReviewStatus),
+        eq(
+          generationReviewItems.status,
+          query.status as GenerationReviewStatus,
+        ),
       );
     }
 
@@ -1041,7 +1098,8 @@ export class AdminService {
       suspendedAt: user.suspendedAt,
       createdAt: user.createdAt,
       name: profile?.fullName || user.email.split('@')[0],
-      status: (user.isActive ? 'active' : 'suspended') as 'active' | 'suspended',
+      status: (user.isActive ? 'active' : 'suspended') as
+        'active' | 'suspended',
       profile: {
         id: profile?.id,
         fullName: profile?.fullName || user.email.split('@')[0],
@@ -1052,14 +1110,18 @@ export class AdminService {
         totalApplications: submissionsList.length,
         completedSubmissions: scoredSubmissions.length,
         averageScore: avgScore,
-        antiCheatFlaggedCount: submissionsList.filter((s) => s.isAntiCheatFlagged).length,
+        antiCheatFlaggedCount: submissionsList.filter(
+          (s) => s.isAntiCheatFlagged,
+        ).length,
       },
       submissions: submissionsList.map((sub) => ({
         id: sub.id,
         jobId: sub.jobId,
         jobTitle: sub.job?.title || 'Untitled Role',
         companyName: sub.job?.employer?.companyName || 'Unknown Company',
-        simulationTitle: sub.job?.title ? `${sub.job.title} Simulation` : 'Job Simulation',
+        simulationTitle: sub.job?.title
+          ? `${sub.job.title} Simulation`
+          : 'Job Simulation',
         status: sub.status,
         overallScore: sub.overallScore ? Number(sub.overallScore) : null,
         categoryScores: sub.categoryScores,
@@ -1202,10 +1264,7 @@ export class AdminService {
     return updated;
   }
 
-  async replyToSupportMessage(
-    id: string,
-    dto: ReplySupportMessageDto,
-  ) {
+  async replyToSupportMessage(id: string, dto: ReplySupportMessageDto) {
     const [msg] = await this.db
       .select()
       .from(supportMessages)

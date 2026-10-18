@@ -18,20 +18,16 @@ export const jobStatusEnum = pgEnum('job_status', [
   'DRAFT',
   'GENERATING',
   'ACTIVE',
-  'INACTIVE',
-  'SHORTLIST_READY',
+  'CLOSED',
   'GENERATION_FAILED',
-  'TERMINATED',
 ]);
 
 export const JobStatus = {
   DRAFT: 'DRAFT',
   GENERATING: 'GENERATING',
   ACTIVE: 'ACTIVE',
-  INACTIVE: 'INACTIVE',
-  SHORTLIST_READY: 'SHORTLIST_READY',
+  CLOSED: 'CLOSED',
   GENERATION_FAILED: 'GENERATION_FAILED',
-  TERMINATED: 'TERMINATED',
 } as const;
 export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus];
 

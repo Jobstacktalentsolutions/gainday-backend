@@ -3,12 +3,20 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { and, desc, eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { jobs, Job, NewJob, SalaryRange, JobStatus, UserRole } from '../../db/schema';
+import {
+  jobs,
+  Job,
+  NewJob,
+  SalaryRange,
+  JobStatus,
+  UserRole,
+} from '../../db/schema';
 import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
 
@@ -98,6 +106,29 @@ export class JobsService {
     return job;
   }
 
+  /**
+   * Employer-triggered: stops a live job taking applications and takes it off the job board.
+   * Applications already made, and runs already in progress, are untouched. The status guard is
+   * in the WHERE so only the owner's ACTIVE job can be closed.
+   */
+  async closeJob(jobId: string, employerId: string): Promise<Job> {
+    const [job] = await this.db
+      .update(jobs)
+      .set({ status: 'CLOSED', updatedAt: new Date() })
+      .where(
+        and(
+          eq(jobs.id, jobId),
+          eq(jobs.employerId, employerId),
+          eq(jobs.status, 'ACTIVE'),
+        ),
+      )
+      .returning();
+    if (!job) {
+      throw new ConflictException('Only your live jobs can be closed');
+    }
+    return job;
+  }
+
   async findAllActive() {
     return this.db.query.jobs.findMany({
       where: eq(jobs.status, 'ACTIVE'),
@@ -145,7 +176,7 @@ export class JobsService {
 
     if (job.status === JobStatus.ACTIVE) {
       throw new BadRequestException(
-        'Live jobs cannot be deleted. Please make the job inactive first.',
+        'Live jobs cannot be deleted. Please close the job first.',
       );
     }
 

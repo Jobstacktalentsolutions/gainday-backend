@@ -46,7 +46,7 @@ export class JobDescriptionParserService {
     @Inject(GENERATION_MODEL) private readonly generationModel: BaseChatModel,
   ) {}
 
-  async parse(rawText: string): Promise<ParsedJobDescription> {
+  async parse(rawText: string): Promise<Partial<ParsedJobDescription>> {
     logger.log(`Parsing raw job description (${rawText.length} chars)`);
 
     const model = withGeminiSafeStructuredOutput(
@@ -63,6 +63,43 @@ export class JobDescriptionParserService {
       `Parsed job description: title="${result.title ?? 'null'}", role=${result.role ?? 'null'}, businessProblem=${result.businessProblem ? 'present' : 'null'}`,
     );
 
-    return result;
+    return this.omitUnspecified({
+      ...result,
+      deadline: this.normalizeDeadline(result.deadline),
+    });
+  }
+
+  // Strict structured output forces the model to emit every field, so a field the text never
+  // mentioned comes back as null or as an "empty" filler (0 salary, "" string, [] list). Those
+  // aren't real values — drop them so the response only carries what the posting actually
+  // specified, instead of the frontend prefilling the form with filler. `false` is kept: it is a
+  // legitimate answer for isRemoteFriendly (explicitly on-site).
+  private omitUnspecified(
+    parsed: ParsedJobDescription,
+  ): Partial<ParsedJobDescription> {
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, value]) => {
+        if (value === null || value === 0) return false;
+        if (typeof value === 'string') return value.trim() !== '';
+        if (Array.isArray(value)) return value.length > 0;
+        return true;
+      }),
+    );
+  }
+
+  // Normalizes whatever date format the model read from the text into a strict "YYYY-MM-DD"
+  // string so the DTOs' @IsISO8601() validators never see a malformed value. A value JS's Date
+  // can't parse is dropped to null rather than passed through broken or invented — logged so a
+  // persistent parsing miss is visible instead of silently becoming a null deadline.
+  private normalizeDeadline(raw: string | null): string | null {
+    if (!raw) return null;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+      logger.warn(
+        `Model returned an unparsable deadline value "${raw}" — dropping to null`,
+      );
+      return null;
+    }
+    return parsed.toISOString().slice(0, 10);
   }
 }
