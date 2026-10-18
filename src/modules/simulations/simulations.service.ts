@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { Embeddings } from '@langchain/core/embeddings';
 import { DRIZZLE } from '../../db/db.constants';
@@ -40,6 +40,10 @@ export class SimulationsService {
     simulationId: string,
     tasks: SimulationTask[],
   ): Promise<Simulation> {
+    if (tasks.length > 4) {
+      throw new BadRequestException('A simulation may have at most 4 tasks');
+    }
+
     const existingSimulation = await this.findById(simulationId);
     if (!existingSimulation) {
       throw new Error('Simulation not found');

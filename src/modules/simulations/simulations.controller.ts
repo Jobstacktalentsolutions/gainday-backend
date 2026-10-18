@@ -7,6 +7,7 @@ import {
   Sse,
   Body,
   UseGuards,
+  BadRequestException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -27,7 +28,7 @@ interface RegenerateTaskEvent {
   data: { type: 'status' | 'task' | 'done' | 'error'; payload: unknown };
 }
 
-const MAX_REGENERATE_ALL_COUNT = 20;
+const MAX_SIMULATION_TASKS = 4;
 
 @Controller('simulations')
 export class SimulationsController {
@@ -154,9 +155,15 @@ export class SimulationsController {
         try {
           await this.assertCanEditJob(jobId, user);
 
+          if (body?.count && body.count > MAX_SIMULATION_TASKS) {
+            throw new BadRequestException(
+              `A simulation may have at most ${MAX_SIMULATION_TASKS} tasks`,
+            );
+          }
+
           const count = Math.max(
             1,
-            Math.min(Math.floor(body?.count) || 1, MAX_REGENERATE_ALL_COUNT),
+            Math.min(Math.floor(body?.count) || 1, MAX_SIMULATION_TASKS),
           );
 
           for (let i = 0; i < count; i++) {
@@ -201,6 +208,11 @@ export class SimulationsController {
     if (user.role !== UserRole.ADMIN && job.employerId !== user.profileId) {
       throw new ForbiddenException(
         'You may only edit simulations for your own jobs',
+      );
+    }
+    if (Array.isArray(body?.tasks) && body.tasks.length > MAX_SIMULATION_TASKS) {
+      throw new BadRequestException(
+        `A simulation may have at most ${MAX_SIMULATION_TASKS} tasks (got ${body.tasks.length})`,
       );
     }
     const validatedTasks = validateSimulationTasks(
