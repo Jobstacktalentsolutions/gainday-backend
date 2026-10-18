@@ -93,7 +93,7 @@ Each task is built from one or both of two component types:
 
 **Objective components** — have a real, defensible correct answer, machine-gradable, no LLM judgment call required at grading time:
 - Numeric input (calculate a value, checked against a tolerance range)
-- Correct classification/categorization (sort items into correct buckets)
+- Classification/categorization (sort items into buckets). No answer key is stored at generation time — the generator only produces the items and buckets, and the grading anchors define what a strong bucketing looks like. When the task shows a table, each item must equal the first-column value of one row, and the candidate picks the bucket on that row
 - Procedural sequencing (order steps that have a genuinely correct process order)
 - Single-best-action selection (pick the one correct action among plausible distractors)
 - Multi-select under constraint (e.g. "choose 2 of 3," graded against an ideal set membership)

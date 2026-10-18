@@ -24,12 +24,15 @@ const numericInputSchema = z.object({
   unit: z.string().nullable(),
 });
 
+// No answer key is stored: what a strong, mid and weak bucketing looks like is decided later,
+// during anchor generation, which sees the full task content.
 const classificationSchema = z.object({
-  items: z.array(z.string()).describe('Items the candidate must classify.'),
+  items: z
+    .array(z.string())
+    .describe(
+      'Items the candidate must classify. When the task shows a table, each item must exactly equal the first-column value of one table row, so the candidate can choose its bucket on that row.',
+    ),
   buckets: z.array(z.string()).describe('Valid classification buckets.'),
-  correctMapping: z
-    .array(z.object({ item: z.string(), bucket: z.string() }))
-    .describe('The correct item -> bucket assignment for grading.'),
 });
 
 const proceduralSequencingSchema = z.object({

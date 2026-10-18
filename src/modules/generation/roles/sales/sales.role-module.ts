@@ -51,9 +51,11 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
     description:
       'A mock CRM lead list (deal stage, last contact, deal size, urgency signals) is given; ' +
-      'candidate prioritizes the leads and justifies the order. The underlying data must make ' +
-      'some orderings clearly better than others — not an ambiguous set where any order is ' +
-      'defensible (this is what keeps it from becoming an excluded pure-ranking mechanic).',
+      'candidate sorts the leads into priority buckets on the table itself and justifies their ' +
+      'choices. The underlying data must make some placements clearly better than others — not ' +
+      'an ambiguous set where any bucketing is defensible (this is what keeps it from becoming ' +
+      'an excluded pure-ranking mechanic). Keep it to roughly 6-8 leads, and ask the candidate to ' +
+      'justify only their highest-priority picks so the answer fits a short written response.',
     interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
   },
   {

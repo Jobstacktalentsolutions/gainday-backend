@@ -27,6 +27,7 @@ const ANSWER_KEY_FIELDS: Record<ObjectiveComponentType, string[]> = {
   SINGLE_BEST_ACTION: ['correctOptionIndex'],
   MULTI_SELECT_UNDER_CONSTRAINT: ['correctOptionIndices'],
   NUMERIC_INPUT: ['correctValue'],
+  // New tasks no longer store a mapping; still stripped so older rows that have one never leak it.
   CLASSIFICATION: ['correctMapping'],
   PROCEDURAL_SEQUENCING: ['correctOrder'],
   PRIORITY_RANKING: [], // no answer key — good orderings are defined by the grading anchors
