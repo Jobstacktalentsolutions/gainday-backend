@@ -779,9 +779,7 @@ export class AdminService {
           sub.candidate?.fullName ||
           sub.candidate?.user?.email?.split('@')[0] ||
           'Anonymous Candidate',
-        candidateEmail:
-          sub.candidate?.user?.email ||
-          'No email recorded',
+        candidateEmail: sub.candidate?.user?.email || 'No email recorded',
         overallScore: sub.overallScore ? Number(sub.overallScore) : null,
         status: sub.status,
         isAntiCheatFlagged: sub.isAntiCheatFlagged,

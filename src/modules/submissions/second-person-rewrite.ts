@@ -62,7 +62,7 @@ const matchCase = (source: string, replacement: string) =>
  * The grader writes each task summary to the candidate ("You..."); employers read the same text
  * about the candidate, so "you" is swapped for the candidate's pronouns. A plain string
  * replacement (no model call), so unusual phrasing can still slip through. Without pronouns on
- * file (a guest, or a profile not yet completed) the neutral singular "they" is used.
+ * file (a profile not yet completed, or a deleted account) the neutral singular "they" is used.
  */
 export function rewriteSecondPersonForEmployer(
   text: string,

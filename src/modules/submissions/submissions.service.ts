@@ -293,8 +293,8 @@ export class SubmissionsService {
   }
 
   // Gender and pronouns are shown to employers even while the candidate is locked; the brief
-  // stays behind the unlock with the rest of the identifying details. Null for guest
-  // submissions, which have no profile.
+  // stays behind the unlock with the rest of the identifying details. Null once the
+  // candidate's account has been deleted.
   private toEmployerCandidateProfile(
     candidate: Pick<JobSeekerProfile, 'gender' | 'pronouns' | 'brief'> | null,
     isUnlocked: boolean,
@@ -350,7 +350,7 @@ export class SubmissionsService {
   /**
    * Per submission, the candidate's capability score after each of their applications in this
    * job's domain up to and including that one (oldest first; the last entry is the current
-   * score). Guest submissions and ungraded ones have no history.
+   * score). Ungraded ones, and ones whose candidate account was deleted, have no history.
    */
   private async findCapabilityHistories(
     jobId: string,

@@ -179,7 +179,7 @@ export class SubmissionsController {
         'You may only view submissions for your own jobs',
       );
     }
-    // Guest submissions have no candidate profile, so there's nothing to aggregate.
+    // The candidate's account was deleted, so there's nothing to aggregate.
     if (!submission.candidateId) {
       return null;
     }
