@@ -35,7 +35,7 @@ in a category with no pre-built anchor template. Using your own general and indu
 knowledge of what this category ("category" field on the task) actually involves, judge whether
 each anchor response is sound: does it reflect real, defensible practice in that specific field,
 scored consistently with its stated score (a "100/100" anchor should read like genuine strong
-performance in that field, not just confident prose; a "0/100" anchor should have a real,
+performance in that field, not just confident prose; a "20/100" anchor should have a real,
 identifiable flaw a practitioner would catch)?
 
 Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given),

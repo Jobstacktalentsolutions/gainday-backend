@@ -13,7 +13,10 @@ import {
 import { GRADING_MODEL, TASK_GENERATION_MODEL } from '../../ai/ai.constants';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
 import { GenerationConfig } from '../../generation/graph/generation-context';
-import { anchorGenerationSchema } from '../schemas/anchor-generation.schema';
+import {
+  anchorGenerationSchema,
+  findAnchorShapeProblem,
+} from '../schemas/anchor-generation.schema';
 import { anchorCritiqueSchema } from '../schemas/anchor-critique.schema';
 import { buildAnchorGenerationPrompt } from '../prompts/anchor-generation.prompt';
 import { AnchorRoleRegistry } from '../roles/anchor-role-registry';
@@ -87,6 +90,20 @@ export class AnchorGenerationService {
         roleConfig.criteriaFraming,
         generation.anchorScorePoints,
       );
+
+      // The schema cannot enforce the count and score order (strict Structured Outputs reject
+      // refinements), so it is checked here. A malformed set uses up an attempt and is never
+      // kept as the fallback to persist.
+      const shapeProblem = findAnchorShapeProblem(
+        anchors,
+        generation.anchorScorePoints,
+      );
+      if (shapeProblem) {
+        logger.warn(
+          `question_bank ${row.id}: anchor attempt ${attempt + 1} of ${grading.maxAnchorAttempts} discarded — ${shapeProblem}`,
+        );
+        continue;
+      }
       lastAnchors = anchors;
 
       const critique = await this.critiqueAnchors(
@@ -105,9 +122,17 @@ export class AnchorGenerationService {
       );
     }
 
+    // Every attempt was malformed, so there is nothing safe to persist. Fail the grading job so
+    // it is retried (and reported if it keeps happening) rather than saving a bad anchor set.
+    if (lastAnchors === null) {
+      throw new Error(
+        `question_bank ${row.id}: no well-formed anchor set after ${grading.maxAnchorAttempts} attempts`,
+      );
+    }
+
     // Cap exhausted — conclude the anchors (or possibly the underlying task itself) couldn't be
     // made sound within budget. Persist the last attempt rather than blocking grading entirely.
-    return { anchors: lastAnchors as AnchorResponse[], needsReview: true };
+    return { anchors: lastAnchors, needsReview: true };
   }
 
   private async generateAnchors(

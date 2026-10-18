@@ -15,7 +15,7 @@ import { InterfaceType } from '../../modules/generation/roles/interface-type';
 const EMBEDDING_DIMENSIONS = 3072; // must match ai.gemini.embeddingDimensions (gemini-embedding-001)
 
 export interface AnchorResponse {
-  score: number; // 0, 20, 40, 60, 80, 100 (generationConfig.anchorScorePoints)
+  score: number; // 20, 40, 60, 80, 100 (generationConfig.anchorScorePoints)
   responseText: string;
   criteria: {
     problemSolving: string;

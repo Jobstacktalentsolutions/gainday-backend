@@ -11,7 +11,8 @@ response.
 
 Score the candidate's response on each of these four criteria, framed for this role, using a whole
 number from 0 to 100 (no decimals) — you are not limited to the anchor points; a response between
-two anchors gets a score between them:
+two anchors gets a score between them, and one weaker than the lowest anchor (blank, off-topic, or
+worse) scores below it, down to 0:
 - Problem-solving: ${criteriaFraming.problemSolving}
 - Judgment/execution: ${criteriaFraming.judgmentExecution}
 - Written communication: ${criteriaFraming.writtenCommunication}

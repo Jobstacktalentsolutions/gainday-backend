@@ -96,7 +96,7 @@ was deliberately **not** revived here — the implemented loop always fully rege
 
 ### 2.2 Generating the anchor set
 
-Exactly `generationConfig.anchorScorePoints` anchors (**`[0, 20, 40, 60, 80, 100]`**, 6 points) are
+Exactly `generationConfig.anchorScorePoints` anchors (**`[20, 40, 60, 80, 100]`**, 5 points — there is deliberately no 0 anchor: a response worse than the lowest anchor, such as a blank or off-topic one, simply scores below it) are
 generated in one structured-output call, each with a `responseText` (a realistic example answer
 at that score) and per-criterion framing text explaining *why* it earns that score. Model:
 `TASK_GENERATION_MODEL` (temperature 0.9 — creative, the same larger/more-reliable-at-deep-JSON
@@ -169,7 +169,7 @@ anchors.
 ```
 
 Each category score is a **whole number 0-100** (the grader picks any integer, using the anchors at
-0, 20, 40, 60, 80 and 100 as calibration points), the same scale as the submission-level
+20, 40, 60, 80 and 100 as calibration points, and scoring below 20 for a response weaker than the lowest anchor), the same scale as the submission-level
 `overallScore` — see Section 4. `rationale`/`evidence` must cite something
 specific from the candidate's actual response, never a generic statement. `summary` is the
 "why did I get this score" line shown per task in the results email (Section 5) — this is the
@@ -260,7 +260,7 @@ export const gradingConfig = {
 };
 ```
 
-Reused from `generationConfig`: `anchorScorePoints: [0, 20, 40, 60, 80, 100]` (the anchor generation call
+Reused from `generationConfig`: `anchorScorePoints: [20, 40, 60, 80, 100]` (the anchor generation call
 targets these exact points).
 
 Model wiring (`ai.constants.ts` / `ai.module.ts`):

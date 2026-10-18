@@ -126,7 +126,7 @@ For each of the selected tasks, the generation agent produces a structured objec
 > **Note:** this section describes the anchor design, which is unchanged, but anchors are generated and critiqued by the grading pipeline, not per-task generation. The critic in Section 7 therefore no longer performs the anchor-correctness check at generation time; that check now lives in grading (`AnchorGenerationService`, per-role `anchorCorrectnessPrompt`).
 A single "good response = 100/100" and "bad response = 0/100" pair is not sufficient. The hardest grading problem is distinguishing mid-range answers (a 55 from a 65) — exactly where real candidate responses cluster. Two extreme anchors give a grader nothing to calibrate against there.
 
-**Anchors generated per task: minimum 4–5 points across the range** — e.g. scores of 0, 20, 40, 60, 80, 100 — not just the two poles.
+**Anchors generated per task: minimum 4–5 points across the range** — currently 20, 40, 60, 80 and 100 (no 0 anchor; a response worse than the lowest anchor scores below it) — not just the two poles.
 
 Each anchor response is scored against four criteria:
 1. **Problem-solving**

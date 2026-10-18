@@ -46,7 +46,7 @@ One LLM call per (task, candidate answer, that task's own 5 anchors) — never a
 every task in one call." Uses `GRADING_MODEL` at temperature 0. Output: the same 4-axis
 `CategoryScores` shape used everywhere else in the schema (`problemSolving`, `judgmentExecution`,
 `writtenCommunication`, `commercialDomainAwareness`, each `{score, rationale, evidence}`, scored
-as whole numbers 0-100 against anchors at 0, 20, 40, 60, 80 and 100), plus a `summary` — one or two candidate-facing sentences
+as whole numbers 0-100 against anchors at 20, 40, 60, 80 and 100), plus a `summary` — one or two candidate-facing sentences
 explaining that specific task's score, written directly to the candidate ("You..."). This is what
 gets shown in the results email per task.
 

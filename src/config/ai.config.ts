@@ -78,8 +78,10 @@ export const generationConfig = {
   maxCriticAttempts: 3,
   duplicateSimilarityThreshold: 0.92,
   noveltyCheckTopK: 5,
-  // The grader scores whole numbers 0-100; anchors show what 0, 20, 40, 60, 80 and 100 look like.
-  anchorScorePoints: [0, 20, 40, 60, 80, 100],
+  // The grader scores whole numbers 0-100; anchors show what 20, 40, 60, 80 and 100 look like.
+  // There is no 0 anchor: a response worse than the lowest one (blank, off-topic) simply scores
+  // below it, and a 0 anchor would cost a generated response to illustrate an obvious floor.
+  anchorScorePoints: [20, 40, 60, 80, 100],
 };
 
 export const gradingConfig = {
