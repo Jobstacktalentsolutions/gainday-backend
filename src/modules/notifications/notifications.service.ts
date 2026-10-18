@@ -247,16 +247,18 @@ export class NotificationsService {
     topic: string,
     message: string,
     messageId: string,
+    recipientEmail?: string,
   ): Promise<void> {
-    const supportEmail =
+    const defaultSupportEmail =
       this.configService.get<string>('email.supportEmail') ||
       'support@gainday.com';
+    const targetEmail = recipientEmail || defaultSupportEmail;
     const appUrl =
       this.configService.get<string>('email.appUrl') || 'http://localhost:3000';
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({
-      to: supportEmail,
+      to: targetEmail,
       subject: `[Support Request] ${topic}: ${name}`,
       template: 'support-request',
       context: {
@@ -272,7 +274,7 @@ export class NotificationsService {
     });
 
     this.logger.log(
-      `Support inquiry email enqueued for support team regarding ${userEmail}`,
+      `Support inquiry email enqueued for ${targetEmail} regarding user ${userEmail}`,
     );
   }
 
