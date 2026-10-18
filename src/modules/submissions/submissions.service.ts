@@ -14,6 +14,7 @@ import {
   CandidateAnswer,
   AntiCheatEvent,
   SubmissionStatus,
+  UserRole,
   jobs,
   jobExtractions,
   jobSeekerProfiles,
@@ -283,6 +284,41 @@ export class SubmissionsService {
     };
   }
 
+  async updateSelectionStatus(
+    id: string,
+    employerId: string,
+    selected: boolean,
+    userRole?: string,
+  ) {
+    const row = await this.db.query.submissions.findFirst({
+      where: eq(submissions.id, id),
+      with: { job: true },
+    });
+    if (!row) {
+      throw new NotFoundException('Submission not found');
+    }
+    if (userRole !== UserRole.ADMIN && row.job.employerId !== employerId) {
+      throw new ForbiddenException(
+        'You may only update submissions for your own jobs',
+      );
+    }
+    const newStatus: SubmissionStatus = selected ? 'SELECTED' : 'GRADED';
+    const [updated] = await this.db
+      .update(submissions)
+      .set({
+        status: newStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(submissions.id, id))
+      .returning();
+
+    return {
+      id: updated.id,
+      status: updated.status,
+      isSelected: updated.status === 'SELECTED',
+    };
+  }
+
   private toEmployerContact(
     row: Parameters<typeof resolveCandidateContact>[0],
   ) {
@@ -324,6 +360,7 @@ export class SubmissionsService {
       id: row.id,
       displayId: toDisplayId(row.id),
       status: row.status,
+      isSelected: row.status === 'SELECTED',
       // Null while locked.
       candidateName: isUnlocked
         ? (resolveCandidateContact(row)?.fullName ?? null)
@@ -344,6 +381,7 @@ export class SubmissionsService {
       capabilityScore: capabilityHistory.at(-1) ?? null,
       capabilityHistory,
       integrityStatus: deriveIntegrityStatus(row.status, row.antiCheatFlags),
+      integrityIssueCount: (row.antiCheatFlags ?? []).length,
     };
   }
 

@@ -215,4 +215,20 @@ export class SubmissionsController {
     }
     return view;
   }
+
+  @Patch(':id/select')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
+  async updateSelectionStatus(
+    @Param('id') id: string,
+    @Body() body: { selected: boolean },
+    @CurrentUser() user: any,
+  ) {
+    return this.submissionsService.updateSelectionStatus(
+      id,
+      user.profileId,
+      body.selected,
+      user.role,
+    );
+  }
 }
