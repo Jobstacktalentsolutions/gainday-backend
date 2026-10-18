@@ -89,6 +89,20 @@ export const envValidationSchema = Joi.object({
   // depending on another.
   .custom((value: Record<string, unknown>, helpers) => {
     const isProduction = value.NODE_ENV === 'production';
+
+    // Catches the specific, silent-at-runtime failure mode this was added for: a webhook secret
+    // left as the literal placeholder string from .env.example (e.g. "whsec_test_placeholder")
+    // looks "present" (it even has the right "whsec_" prefix) to a plain `.required()` check,
+    // but Stripe's real signature will never match it — every webhook call fails
+    // `constructWebhookEvent` and gets rejected with 400, and Stripe retries for up to 3 days
+    // before giving up, all without ever crediting a single purchase. Requires the real "whsec_"
+    // shape AND rejects the word "placeholder" specifically, since the committed .env.example
+    // value passes a bare prefix check.
+    const isRealWebhookSecret = (secret: unknown): boolean =>
+      typeof secret === 'string' &&
+      /^whsec_/.test(secret) &&
+      !/placeholder/i.test(secret);
+
     if (isProduction) {
       if (!value.STRIPE_PROD_SECRET_KEY && !value.STRIPE_SECRET_KEY) {
         return helpers.message({
@@ -96,10 +110,18 @@ export const envValidationSchema = Joi.object({
             '"STRIPE_PROD_SECRET_KEY" (or "STRIPE_SECRET_KEY") is required when NODE_ENV is "production"',
         });
       }
-      if (!value.STRIPE_PROD_WEBHOOK_SECRET && !value.STRIPE_WEBHOOK_SECRET) {
+      const webhookSecret =
+        value.STRIPE_PROD_WEBHOOK_SECRET ?? value.STRIPE_WEBHOOK_SECRET;
+      if (!webhookSecret) {
         return helpers.message({
           custom:
             '"STRIPE_PROD_WEBHOOK_SECRET" (or "STRIPE_WEBHOOK_SECRET") is required when NODE_ENV is "production"',
+        });
+      }
+      if (!isRealWebhookSecret(webhookSecret)) {
+        return helpers.message({
+          custom:
+            '"STRIPE_PROD_WEBHOOK_SECRET" is set but doesn\'t look like a real Stripe webhook secret (expected it to start with "whsec_") — copy the signing secret from the webhook endpoint in the Stripe Dashboard, not a placeholder',
         });
       }
     } else {
@@ -109,10 +131,18 @@ export const envValidationSchema = Joi.object({
             '"STRIPE_TEST_SECRET_KEY" (or "STRIPE_SECRET_KEY") is required in non-production environments',
         });
       }
-      if (!value.STRIPE_TEST_WEBHOOK_SECRET && !value.STRIPE_WEBHOOK_SECRET) {
+      const webhookSecret =
+        value.STRIPE_TEST_WEBHOOK_SECRET ?? value.STRIPE_WEBHOOK_SECRET;
+      if (!webhookSecret) {
         return helpers.message({
           custom:
             '"STRIPE_TEST_WEBHOOK_SECRET" (or "STRIPE_WEBHOOK_SECRET") is required in non-production environments',
+        });
+      }
+      if (!isRealWebhookSecret(webhookSecret)) {
+        return helpers.message({
+          custom:
+            '"STRIPE_TEST_WEBHOOK_SECRET" is set but doesn\'t look like a real Stripe webhook secret (expected it to start with "whsec_") — run `stripe listen --forward-to localhost:3000/payments/webhook` and copy the "whsec_..." it prints, not a placeholder',
         });
       }
     }

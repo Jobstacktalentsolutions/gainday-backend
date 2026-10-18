@@ -51,7 +51,14 @@ export class PaymentsService {
   }
 
   async getBalance(employerId: string) {
-    return { balance: await this.creditLedger.getBalance(employerId) };
+    const [balance, lastPurchaseAt] = await Promise.all([
+      this.creditLedger.getBalance(employerId),
+      this.creditLedger.getLastPurchaseAt(employerId),
+    ]);
+    return {
+      balance,
+      lastRechargedAt: lastPurchaseAt?.toISOString() ?? null,
+    };
   }
 
   /**
@@ -129,6 +136,15 @@ export class PaymentsService {
     return { purchaseId, clientSecret: session.clientSecret };
   }
 
+  /**
+   * The webhook (handleStripeEvent) is the primary, fast path for marking a purchase
+   * SUCCEEDED/FAILED, but it can be delayed or — in local dev without `stripe listen` forwarding
+   * events — never arrive at all. Rather than have the frontend's poll time out and strand the
+   * employer on "confirming" for a payment Stripe already settled, a still-PENDING purchase is
+   * reconciled against Stripe's own API on every read here: this is the actual source of truth,
+   * not our cached `status` column. grantPurchase/markFailed are both idempotent, so this is safe
+   * to run even if the webhook fires around the same time.
+   */
   async getPurchase(employerId: string, purchaseId: string) {
     const purchase = await this.creditPurchases.findForEmployer(
       employerId,
@@ -137,7 +153,25 @@ export class PaymentsService {
     if (!purchase) {
       throw new NotFoundException('Purchase not found');
     }
-    return purchase;
+    if (purchase.status !== 'PENDING') {
+      return purchase;
+    }
+
+    const session = await this.stripeService.retrieveCheckoutSession(
+      purchase.stripeCheckoutSessionId,
+    );
+    if (session.payment_status === 'paid') {
+      await this.creditLedger.grantPurchase(session.id);
+    } else if (session.status === 'expired') {
+      await this.creditPurchases.markFailed(session.id);
+    } else {
+      return purchase;
+    }
+
+    return (
+      (await this.creditPurchases.findForEmployer(employerId, purchaseId)) ??
+      purchase
+    );
   }
 
   async handleStripeEvent(event: Stripe.Event): Promise<void> {

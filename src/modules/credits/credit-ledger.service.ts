@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
@@ -45,6 +45,23 @@ export class CreditLedgerService {
       .from(creditLedgerEntries)
       .where(eq(creditLedgerEntries.employerId, employerId));
     return row.balance;
+  }
+
+  /** When the employer's credits were last topped up by an actual purchase — null if they've
+   *  never bought a pack (a signup bonus alone doesn't count as a "recharge"). */
+  async getLastPurchaseAt(employerId: string): Promise<Date | null> {
+    const [row] = await this.db
+      .select({ createdAt: creditLedgerEntries.createdAt })
+      .from(creditLedgerEntries)
+      .where(
+        and(
+          eq(creditLedgerEntries.employerId, employerId),
+          eq(creditLedgerEntries.type, 'PURCHASE'),
+        ),
+      )
+      .orderBy(desc(creditLedgerEntries.createdAt))
+      .limit(1);
+    return row?.createdAt ?? null;
   }
 
   async findUnlockedSubmissionIds(
