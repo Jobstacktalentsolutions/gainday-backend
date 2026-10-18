@@ -98,6 +98,25 @@ export class NotificationsService {
     this.logger.log(`Admin invite email enqueued for ${to}`);
   }
 
+  async sendAdmin2faEmail(to: string, otp: string): Promise<void> {
+    const appUrl =
+      this.configService.get<string>('email.appUrl') || 'http://localhost:5173';
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: `Your Gainday Admin Verification Code: ${otp}`,
+      template: 'admin-2fa',
+      context: {
+        otp,
+        appUrl,
+        year,
+      },
+    });
+
+    this.logger.log(`Admin 2FA verification email enqueued for ${to}`);
+  }
+
   async sendBatchNotification(
     employerEmail: string,
     candidateCount: number,
@@ -161,6 +180,35 @@ export class NotificationsService {
     });
 
     this.logger.log(`Scoring results email enqueued for ${candidateEmail}`);
+  }
+
+  async sendCandidateSelectedEmail(
+    to: string,
+    selection: {
+      candidateName: string;
+      jobTitle: string;
+      companyName: string | null;
+      submissionId: string;
+    },
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>('email.appUrl');
+    const year = new Date().getFullYear();
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: `You've been selected for ${selection.jobTitle}`,
+      template: 'candidate-selected',
+      context: {
+        candidateName: selection.candidateName,
+        jobTitle: selection.jobTitle,
+        companyName: selection.companyName,
+        applicationUrl: `${appUrl}/candidate/applications/${selection.submissionId}`,
+        appUrl,
+        year,
+      },
+    });
+
+    this.logger.log(`Candidate selected email enqueued for ${to}`);
   }
 
   async sendAdminCriticalAlertEmail(

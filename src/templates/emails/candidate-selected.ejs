@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You've been selected</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: "You've been selected" }) %>
+
+      <div class="content">
+        <p class="intro">
+          Hi <%= candidateName %>,<br><br>
+          Good news: <% if (companyName) { %><strong><%= companyName %></strong> has<% } else { %>the hiring team has<% } %> selected you for <strong><%= jobTitle %></strong>.
+        </p>
+
+        <div style="margin: 24px 0;">
+          <a href="<%= applicationUrl %>" style="display: inline-block; background-color: #1817fe; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none;">
+            View your application
+          </a>
+        </div>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

@@ -22,6 +22,7 @@ import {
 } from '../../db/schema';
 import { GradingService } from '../grading/grading.service';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
+import { CandidateNotificationsService } from '../notifications/candidate-notifications.service';
 import { RoleRegistry } from '../generation/roles/role-registry';
 import { sanitizeTaskForCandidate } from '../simulations/candidate-task.util';
 import { resolveCandidateContact } from './candidate-contact';
@@ -67,6 +68,7 @@ export class SubmissionsService {
     private readonly gradingService: GradingService,
     private readonly creditLedger: CreditLedgerService,
     private readonly roleRegistry: RoleRegistry,
+    private readonly candidateNotifications: CandidateNotificationsService,
   ) {}
 
   async createSubmission(
@@ -292,7 +294,10 @@ export class SubmissionsService {
   ) {
     const row = await this.db.query.submissions.findFirst({
       where: eq(submissions.id, id),
-      with: { job: true },
+      with: {
+        job: { with: { employer: true } },
+        candidate: { with: { user: true } },
+      },
     });
     if (!row) {
       throw new NotFoundException('Submission not found');
@@ -301,6 +306,17 @@ export class SubmissionsService {
       throw new ForbiddenException(
         'You may only update submissions for your own jobs',
       );
+    }
+    if (selected && userRole !== UserRole.ADMIN) {
+      const unlockedIds = await this.creditLedger.findUnlockedSubmissionIds(
+        employerId,
+        [id],
+      );
+      if (!unlockedIds.has(id)) {
+        throw new ForbiddenException(
+          'You must unlock this candidate before selecting them',
+        );
+      }
     }
     const newStatus: SubmissionStatus = selected ? 'SELECTED' : 'GRADED';
     const [updated] = await this.db
@@ -311,6 +327,20 @@ export class SubmissionsService {
       })
       .where(eq(submissions.id, id))
       .returning();
+
+    // Only the transition notifies, so re-selecting an already selected candidate stays quiet.
+    const contact = resolveCandidateContact(row);
+    if (selected && row.status !== 'SELECTED' && row.candidateId && contact) {
+      await this.candidateNotifications.notifySelected({
+        candidateId: row.candidateId,
+        candidateEmail: contact.email,
+        candidateName: contact.fullName,
+        submissionId: row.id,
+        jobId: row.jobId,
+        jobTitle: row.job.title ?? 'this role',
+        companyName: row.job.employer.companyName,
+      });
+    }
 
     return {
       id: updated.id,

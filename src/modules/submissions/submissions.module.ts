@@ -7,6 +7,7 @@ import { GradingModule } from '../grading/grading.module';
 import { CreditsModule } from '../credits/credits.module';
 import { CapabilityPassportModule } from '../capability-passport/capability-passport.module';
 import { GenerationModule } from '../generation/generation.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { GenerationModule } from '../generation/generation.module';
     CreditsModule,
     CapabilityPassportModule,
     GenerationModule,
+    NotificationsModule,
   ],
   controllers: [SubmissionsController],
   providers: [SubmissionsService],

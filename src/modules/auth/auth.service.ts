@@ -5,8 +5,10 @@ import {
   ConflictException,
   BadRequestException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { AuthUsersService } from '../users/auth-users.service';
 import { EmployerProfileService } from '../users/employer-profile.service';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
@@ -40,7 +42,35 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
     private readonly creditLedgerService: CreditLedgerService,
+    private readonly configService?: ConfigService,
   ) {}
+
+  private admin2faChallenges = new Map<
+    string,
+    {
+      challengeToken: string;
+      userId: string;
+      email: string;
+      otp: string;
+      expiresAt: number;
+      lastSentAt: number;
+      resendCount: number;
+    }
+  >();
+
+  private getAdmin2faConfig() {
+    return {
+      cooldownMs:
+        (this.configService?.get<number>('auth.admin2fa.cooldownSeconds') ??
+          60) * 1000,
+      maxResends:
+        this.configService?.get<number>('auth.admin2fa.maxResends') ?? 5,
+      ttlMs:
+        (this.configService?.get<number>('auth.admin2fa.ttlMinutes') ?? 10) *
+        60 *
+        1000,
+    };
+  }
 
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmailWithPassword(email);
@@ -56,11 +86,200 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (isPasswordValid) {
+      if (user.isActive === false) {
+        const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
+        throw new ForbiddenException(
+          `Your account has been suspended${reason}. Please contact support.`,
+        );
+      }
       const { password, ...result } = user;
       return result;
     }
 
     return null;
+  }
+
+  async initiateAdminLogin(email: string, password: string) {
+    const user = await this.validateUser(email, password);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedException(
+        'Access denied. Administrator privileges required.',
+      );
+    }
+
+    if (user.isActive === false) {
+      const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
+      throw new ForbiddenException(
+        `Administrator account has been suspended${reason}. Please contact support.`,
+      );
+    }
+
+    const config = this.getAdmin2faConfig();
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const challengeToken = crypto.randomUUID();
+    const now = Date.now();
+
+    // Clean up expired challenges
+    for (const [token, challenge] of this.admin2faChallenges.entries()) {
+      if (challenge.expiresAt < now) {
+        this.admin2faChallenges.delete(token);
+      }
+    }
+
+    this.admin2faChallenges.set(challengeToken, {
+      challengeToken,
+      userId: user.id,
+      email: user.email,
+      otp,
+      expiresAt: now + config.ttlMs,
+      lastSentAt: now,
+      resendCount: 0,
+    });
+
+    // Send 2FA email to admin
+    await this.notificationsService.sendAdmin2faEmail(user.email, otp);
+
+    return {
+      requires2FA: true,
+      challengeToken,
+      emailMasked: this.maskEmail(user.email),
+    };
+  }
+
+  async verifyAdmin2fa(challengeToken: string, otp: string) {
+    const challenge = this.admin2faChallenges.get(challengeToken);
+    if (!challenge) {
+      throw new BadRequestException(
+        '2FA verification session not found or expired. Please sign in again.',
+      );
+    }
+
+    if (Date.now() > challenge.expiresAt) {
+      this.admin2faChallenges.delete(challengeToken);
+      throw new BadRequestException(
+        '2FA verification session not found or expired. Please sign in again.',
+      );
+    }
+
+    if (challenge.otp !== otp.trim()) {
+      throw new BadRequestException(
+        'Invalid verification code. Please check your email and try again.',
+      );
+    }
+
+    // OTP verified successfully — clear challenge
+    this.admin2faChallenges.delete(challengeToken);
+
+    const user = await this.usersService.findById(challenge.userId);
+    if (!user || user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedException('Administrator account not found');
+    }
+
+    if (user.isActive === false) {
+      const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
+      throw new ForbiddenException(
+        `Administrator account has been suspended${reason}`,
+      );
+    }
+
+    return this.login(user);
+  }
+
+  async resendAdmin2fa(challengeToken: string) {
+    const challenge = this.admin2faChallenges.get(challengeToken);
+    if (!challenge) {
+      throw new BadRequestException(
+        '2FA verification session not found or expired. Please sign in again.',
+      );
+    }
+
+    const now = Date.now();
+    if (now > challenge.expiresAt) {
+      this.admin2faChallenges.delete(challengeToken);
+      throw new BadRequestException(
+        '2FA verification session not found or expired. Please sign in again.',
+      );
+    }
+
+    const config = this.getAdmin2faConfig();
+
+    if (challenge.resendCount >= config.maxResends) {
+      this.admin2faChallenges.delete(challengeToken);
+      throw new BadRequestException(
+        `Maximum resend limit of ${config.maxResends} attempts reached. Please sign in again.`,
+      );
+    }
+
+    if (now - challenge.lastSentAt < config.cooldownMs) {
+      const waitSeconds = Math.ceil(
+        (config.cooldownMs - (now - challenge.lastSentAt)) / 1000,
+      );
+      throw new BadRequestException(
+        `Please wait ${waitSeconds}s before requesting a new code.`,
+      );
+    }
+
+    const newOtp = crypto.randomInt(100000, 999999).toString();
+    challenge.otp = newOtp;
+    challenge.lastSentAt = now;
+    challenge.expiresAt = now + config.ttlMs;
+    challenge.resendCount = (challenge.resendCount || 0) + 1;
+
+    await this.notificationsService.sendAdmin2faEmail(challenge.email, newOtp);
+
+    return {
+      success: true,
+      message: 'A fresh verification code has been sent to your email.',
+      remainingResends: Math.max(0, config.maxResends - challenge.resendCount),
+    };
+  }
+
+  async setAdminInitialPassword(
+    userId: string,
+    dto: { newPassword: string; confirmNewPassword: string },
+  ) {
+    const { newPassword, confirmNewPassword } = dto;
+
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestException(
+        'Password must be at least 8 characters long',
+      );
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const user = await this.usersService.findByIdWithPassword(userId);
+    if (!user || user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedException('Administrator account not found');
+    }
+
+    if (user.password) {
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        throw new BadRequestException(
+          'New password cannot be the same as your temporary password',
+        );
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(user.id, hashedPassword);
+
+    const updatedUser = await this.usersService.findById(user.id);
+    return this.login(updatedUser);
+  }
+
+  private maskEmail(email: string): string {
+    const [user, domain] = email.split('@');
+    if (!domain) return email;
+    if (user.length <= 2) return `${user[0]}*@${domain}`;
+    return `${user[0]}${'*'.repeat(user.length - 2)}${user[user.length - 1]}@${domain}`;
   }
 
   private async findProfileForRole(userId: string, role: UserRole) {
@@ -86,6 +305,20 @@ export class AuthService {
     };
     const access_token = this.jwtService.sign(payload);
 
+    const isSuperAdmin =
+      user.role === UserRole.ADMIN &&
+      (user.email === process.env.ADMIN_EMAIL ||
+        user.email === 'admin@gainday.com' ||
+        user.email === 'enweremproper@gmail.com' ||
+        (profile as any)?.adminRole === 'SUPER_ADMIN');
+
+    const adminRole =
+      user.role === UserRole.ADMIN
+        ? isSuperAdmin
+          ? 'SUPER_ADMIN'
+          : (profile as any)?.adminRole || 'MANAGER'
+        : undefined;
+
     return {
       access_token,
       user: {
@@ -95,6 +328,9 @@ export class AuthService {
         profileId: profile?.id,
         fullName: profile?.fullName,
         companyName: (profile as any)?.companyName,
+        adminRole,
+        isSuperAdmin,
+        mustChangePassword: user.mustChangePassword ?? false,
         ...jobSeekerProfileFields(profile),
       },
     };
