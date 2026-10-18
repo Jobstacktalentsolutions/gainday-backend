@@ -55,6 +55,7 @@ import { EMBEDDINGS } from '../ai/ai.constants';
 import { Embeddings } from '@langchain/core/embeddings';
 import { embedTaskContent } from '../generation/utils/embedding.util';
 import { RoleRegistry } from '../generation/roles/role-registry';
+import { sanitizeTaskForCandidate } from '../simulations/candidate-task.util';
 
 @Injectable()
 export class AdminService {
@@ -154,8 +155,7 @@ export class AdminService {
       title: j.title || 'Untitled Role',
       company: j.employer?.companyName || 'Unknown Company',
       applicantsCount: j.submissions?.length || 0,
-      status: (j.status === 'ACTIVE' ? 'active' : 'pending') as
-        'active' | 'pending',
+      status: j.status === 'ACTIVE' ? 'active' : 'pending',
     }));
 
     const analytics = this.buildAnalyticsSeries(
@@ -418,8 +418,7 @@ export class AdminService {
           suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
           name: emp?.fullName || user.email.split('@')[0],
-          status: (user.isActive ? 'active' : 'suspended') as
-            'active' | 'suspended',
+          status: user.isActive ? 'active' : 'suspended',
           employerProfile: {
             companyName: emp?.companyName || 'Not specified',
             isVerified: user.isEmailVerified,
@@ -439,8 +438,7 @@ export class AdminService {
           suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
           name: cand?.fullName || user.email.split('@')[0],
-          status: (user.isActive ? 'active' : 'suspended') as
-            'active' | 'suspended',
+          status: user.isActive ? 'active' : 'suspended',
           candidateProfile: {
             phoneNumber: cand?.phoneNumber,
             submissionsCount: cand?.submissions?.length || 0,
@@ -463,13 +461,12 @@ export class AdminService {
           suspendedAt: user.suspendedAt,
           createdAt: user.createdAt,
           name: adm?.fullName || 'Admin User',
-          status: (user.isActive ? 'active' : 'suspended') as
-            'active' | 'suspended',
+          status: user.isActive ? 'active' : 'suspended',
           adminProfile: {
             fullName: adm?.fullName || 'Admin User',
             adminRole: isSuperAdmin
               ? 'SUPER_ADMIN'
-              : (adm?.adminRole as any) || 'MANAGER',
+              : adm?.adminRole || 'MANAGER',
             isSuperAdmin,
           },
         };
@@ -650,11 +647,12 @@ export class AdminService {
         company: job.employer?.companyName || 'Unknown Company',
         employerEmail: job.employer?.user?.email,
         isEmployerVerified: job.employer?.user?.isEmailVerified ?? false,
-        status: (job.status === 'ACTIVE'
-          ? 'live'
-          : job.status === 'DRAFT'
-            ? 'draft'
-            : 'closed') as 'live' | 'draft' | 'closed',
+        status:
+          job.status === 'ACTIVE'
+            ? 'live'
+            : job.status === 'DRAFT'
+              ? 'draft'
+              : 'closed',
         rawStatus: job.status,
         applicantCount: job.submissions?.length || 0,
         scoredApplicantCount: scored.length,
@@ -759,7 +757,12 @@ export class AdminService {
             id: job.simulation.id,
             timeLimitMinutes: job.simulation.timeLimitMinutes,
             taskCount: job.simulation.tasks?.length || 0,
-            tasks: job.simulation.tasks,
+            // Tagged with the objective component type and stripped of answer keys, so the
+            // admin review modal can render a candidate's answer with the same widgets the
+            // candidate used.
+            tasks: job.simulation.tasks.map((task) =>
+              sanitizeTaskForCandidate(task, this.roleRegistry),
+            ),
           }
         : null,
       stats: {
@@ -1098,8 +1101,7 @@ export class AdminService {
       suspendedAt: user.suspendedAt,
       createdAt: user.createdAt,
       name: profile?.fullName || user.email.split('@')[0],
-      status: (user.isActive ? 'active' : 'suspended') as
-        'active' | 'suspended',
+      status: user.isActive ? 'active' : 'suspended',
       profile: {
         id: profile?.id,
         fullName: profile?.fullName || user.email.split('@')[0],

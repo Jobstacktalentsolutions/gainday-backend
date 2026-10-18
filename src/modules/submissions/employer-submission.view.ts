@@ -1,3 +1,5 @@
+import { sql } from 'drizzle-orm';
+import type { CandidateSimulationTask } from '../simulations/candidate-task.util';
 import type {
   AntiCheatEvent,
   CandidateAnswer,
@@ -6,6 +8,8 @@ import type {
   SubmissionStatus,
   TaskGradingResult,
 } from '../../db/schema';
+import { jobs } from '../../db/schema/jobs.schema';
+import { jobExtractions } from '../../db/schema/job-extractions.schema';
 
 export type IntegrityStatus =
   'CLEAN' | 'MINOR_FLAGS' | 'PENDING' | 'REVIEW_NEEDED';
@@ -117,10 +121,20 @@ export function buildTaskResults(
 }
 
 /** Every task in the simulation's order with the candidate's answer, so the employer can read
- *  the work even when it has not been graded (yet, or at all). `score` and `evidence` are null
- *  for a task without a grading result; `answer` is null when the candidate left it blank. */
+ *  the work even when it has not been graded (yet, or at all). The task carries what is needed
+ *  to render the answer the way the candidate gave it (its interface and structured component,
+ *  already stripped of answer keys by the caller). `score` and `evidence` are null for a task
+ *  without a grading result; `answer` is null when the candidate submitted nothing for it. */
 export function buildEmployerTaskResults(
-  simulationTasks: Pick<SimulationTask, 'id' | 'title' | 'questionPrompt'>[],
+  simulationTasks: Pick<
+    CandidateSimulationTask,
+    | 'id'
+    | 'title'
+    | 'questionPrompt'
+    | 'interfaceType'
+    | 'interfacePayload'
+    | 'objectiveComponent'
+  >[],
   answers: CandidateAnswer[],
   taskScores: TaskGradingResult[] | null,
 ) {
@@ -128,16 +142,25 @@ export function buildEmployerTaskResults(
     (taskScores ?? []).map((result) => [result.taskId, result]),
   );
   const answerByTaskId = new Map(
-    answers.map((answer) => [answer.taskId, answer.responseBody]),
+    answers.map((answer) => [answer.taskId, answer]),
   );
   return simulationTasks.map((task, index) => {
     const result = resultByTaskId.get(task.id);
+    const answer = answerByTaskId.get(task.id);
     return {
       taskId: task.id,
       taskNumber: index + 1,
       title: task.title,
       questionPrompt: task.questionPrompt,
-      answer: answerByTaskId.get(task.id)?.trim() || null,
+      interfaceType: task.interfaceType,
+      interfacePayload: task.interfacePayload,
+      objectiveComponent: task.objectiveComponent,
+      answer: answer
+        ? {
+            objectiveResponse: answer.objectiveResponse,
+            textResponse: answer.textResponse,
+          }
+        : null,
       score: result ? taskScorePercent(result) : null,
       evidence: result ? result.summary : null,
     };
@@ -168,4 +191,26 @@ export function runningAverage(points: number[]): number[] {
     sum += point;
     return Math.round(sum / (index + 1));
   });
+}
+
+/**
+ * A job's capability domain: the extracted taxonomy category, falling back to the posted role
+ * text, falling back to a fixed label when neither exists. Shared between
+ * `SubmissionsService.findCapabilityHistories` (single-domain) and
+ * `CapabilityPassportService` (cross-domain, grouped by this) — built fresh per query rather
+ * than cached, since it's just a reference to the `jobs`/`jobExtractions` column objects, not a
+ * value.
+ */
+export function capabilityDomainSql() {
+  return sql<string>`coalesce(${jobExtractions.category}, ${jobs.role}, 'Unspecified')`;
+}
+
+/** A domain name turned into a stable id for `PassportDomain.id` — lowercase, non-alphanumeric
+ *  runs collapsed to a single hyphen, no leading/trailing hyphen. */
+export function slugifyDomain(domain: string): string {
+  const slug = domain
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return slug || 'unspecified';
 }

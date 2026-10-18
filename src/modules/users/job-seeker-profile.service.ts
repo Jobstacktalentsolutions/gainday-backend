@@ -7,6 +7,7 @@ import {
   JobSeekerProfile,
   NewJobSeekerProfile,
   CapabilityScores,
+  PassportNarrative,
 } from '../../db/schema';
 
 @Injectable()
@@ -80,5 +81,27 @@ export class JobSeekerProfileService {
       .where(eq(jobSeekerProfiles.id, profileId))
       .returning();
     return updated;
+  }
+
+  /** Null when no narrative has ever been generated for this candidate — see
+   *  PassportNarrativeService for the staleness check against `basedOnSubmissionIds`. */
+  async getPassportNarrative(
+    profileId: string,
+  ): Promise<PassportNarrative | null> {
+    const [profile] = await this.db
+      .select({ passportNarrative: jobSeekerProfiles.passportNarrative })
+      .from(jobSeekerProfiles)
+      .where(eq(jobSeekerProfiles.id, profileId));
+    return profile?.passportNarrative ?? null;
+  }
+
+  async setPassportNarrative(
+    profileId: string,
+    narrative: PassportNarrative,
+  ): Promise<void> {
+    await this.db
+      .update(jobSeekerProfiles)
+      .set({ passportNarrative: narrative, updatedAt: new Date() })
+      .where(eq(jobSeekerProfiles.id, profileId));
   }
 }

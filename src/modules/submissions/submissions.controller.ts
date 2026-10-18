@@ -13,6 +13,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { SubmissionsService } from './submissions.service';
+import { CapabilityPassportService } from '../capability-passport/capability-passport.service';
 import { JobsService } from '../jobs/jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -25,6 +26,7 @@ export class SubmissionsController {
   constructor(
     private readonly submissionsService: SubmissionsService,
     private readonly jobsService: JobsService,
+    private readonly capabilityPassportService: CapabilityPassportService,
   ) {}
 
   @Post('job/:jobId/start')
@@ -156,6 +158,35 @@ export class SubmissionsController {
       );
     }
     return this.submissionsService.getCandidateResult(id);
+  }
+
+  @Get(':id/passport')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
+  async getSubmissionPassport(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    const submission = await this.submissionsService.findById(id);
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+    if (
+      user.role !== UserRole.ADMIN &&
+      submission.job.employerId !== user.profileId
+    ) {
+      throw new ForbiddenException(
+        'You may only view submissions for your own jobs',
+      );
+    }
+    // Guest submissions have no candidate profile, so there's nothing to aggregate.
+    if (!submission.candidateId) {
+      return null;
+    }
+    const passport = await this.capabilityPassportService.getCandidatePassport(
+      submission.candidateId,
+    );
+    return this.capabilityPassportService.toEmployerSummary(passport);
   }
 
   @Get(':id')

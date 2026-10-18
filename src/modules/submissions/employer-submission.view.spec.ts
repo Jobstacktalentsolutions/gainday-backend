@@ -1,4 +1,5 @@
 import type { AntiCheatEvent } from '../../db/schema';
+import { InterfaceType } from '../generation/roles/interface-type';
 import {
   buildEmployerTaskResults,
   capabilityPoints,
@@ -82,22 +83,34 @@ describe('employer submission view', () => {
   });
 
   describe('buildEmployerTaskResults', () => {
+    const textTask = {
+      interfaceType: InterfaceType.TEXT_AREA,
+      interfacePayload: { interfaceType: 'TEXT_AREA', placeholder: null },
+      objectiveComponent: null,
+    };
     const tasks = [
-      { id: 't1', title: 'First', questionPrompt: 'Do one' },
-      { id: 't2', title: 'Second', questionPrompt: 'Do two' },
+      { id: 't1', title: 'First', questionPrompt: 'Do one', ...textTask },
+      { id: 't2', title: 'Second', questionPrompt: 'Do two', ...textTask },
     ];
     const answers = [
-      { taskId: 't1', responseBody: ' my answer ', timeSpentSeconds: 10 },
+      {
+        taskId: 't1',
+        responseBody: 'my answer',
+        objectiveResponse: null,
+        textResponse: 'my answer',
+        timeSpentSeconds: 10,
+      },
     ];
 
-    it('lists every task with its answer and no grade when nothing was graded', () => {
+    it('lists every task with its structured answer and no grade when nothing was graded', () => {
       expect(buildEmployerTaskResults(tasks, answers, null)).toEqual([
         {
           taskId: 't1',
           taskNumber: 1,
           title: 'First',
           questionPrompt: 'Do one',
-          answer: 'my answer',
+          ...textTask,
+          answer: { objectiveResponse: null, textResponse: 'my answer' },
           score: null,
           evidence: null,
         },
@@ -106,6 +119,7 @@ describe('employer submission view', () => {
           taskNumber: 2,
           title: 'Second',
           questionPrompt: 'Do two',
+          ...textTask,
           answer: null,
           score: null,
           evidence: null,

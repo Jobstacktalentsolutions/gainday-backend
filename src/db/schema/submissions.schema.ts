@@ -42,7 +42,15 @@ export type SubmissionStatus =
 
 export interface CandidateAnswer {
   taskId: string;
+  /** The answer flattened to plain text (structured part, then written part) — what the grader
+   *  reads. Kept alongside the two fields below, which are what review pages render from. */
   responseBody: string;
+  /** The candidate's answer to the task's structured (objective) part; its shape depends on the
+   *  task's objective component type. Null for a task with no objective component, or one the
+   *  candidate left untouched. */
+  objectiveResponse: unknown;
+  /** The candidate's written answer. */
+  textResponse: string;
   timeSpentSeconds: number;
 }
 

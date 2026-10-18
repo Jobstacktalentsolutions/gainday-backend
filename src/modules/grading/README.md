@@ -73,19 +73,13 @@ rounded to a whole number (0-100).
 This replaced the old `src/modules/scoring/` module entirely (`ScoringService.scoreSubmission()`
 returned hardcoded numbers — see git history if you need to see what it looked like; it's deleted).
 
-## What's NOT done — the actual blocker to using any of this
+## What's NOT done
 
-**There is no candidate-facing UI to take a simulation and submit answers.** Nothing in this
-module can run against real data until that exists. Specifically:
-
-- `CandidateAnswer.responseBody` is free text only — fine for open-ended tasks, but there's still
-  no structured way to capture an answer to an objective-component task (numeric input,
-  classification, sequencing, etc.). Objective-component grading (a deterministic correctness
-  check, separate from the LLM-graded 4-axis score) was scoped out of this build for that reason
-  — see git history for the `objectiveResult` design discussion if that gets picked back up.
-- `SimulationsService.updateSimulationTasks` (`PUT /simulations/:id`) doesn't persist an
-  employer-accepted task (from `GenerationService.regenerateTask()`) into `question_bank` — such
-  a task has `questionBankId: null` forever and `GradingService.gradeSubmission()` explicitly
-  skips grading it (logs a warning) rather than failing the whole submission. Fixing this means
-  `updateSimulationTasks` needs to insert any `questionBankId: null` task into `question_bank`
-  (compute its embedding, etc.) before saving it into the simulation.
+- The candidate runner and `PUT /simulations/:id` task persistence now exist (an accepted task is
+  written to `question_bank` on save), so this module can run against real submissions; none has
+  been exercised end to end yet. See `docs/gainday-grading-pipeline.md` Section 8.
+- `CandidateAnswer` carries the structured answer (`objectiveResponse`) and the written answer
+  (`textResponse`) as the candidate gave them, plus `responseBody`, the flattened text the grader
+  reads. Review pages render from the structured fields. Objective-component grading (a
+  deterministic correctness check, separate from the LLM-graded 4-axis score) is still not built:
+  every task goes through the LLM path against the anchors.

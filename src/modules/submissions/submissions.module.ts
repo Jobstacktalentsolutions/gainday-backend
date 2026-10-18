@@ -5,9 +5,18 @@ import { AuthModule } from '../auth/auth.module';
 import { JobsModule } from '../jobs/jobs.module';
 import { GradingModule } from '../grading/grading.module';
 import { CreditsModule } from '../credits/credits.module';
+import { CapabilityPassportModule } from '../capability-passport/capability-passport.module';
+import { GenerationModule } from '../generation/generation.module';
 
 @Module({
-  imports: [AuthModule, JobsModule, GradingModule, CreditsModule],
+  imports: [
+    AuthModule,
+    JobsModule,
+    GradingModule,
+    CreditsModule,
+    CapabilityPassportModule,
+    GenerationModule,
+  ],
   controllers: [SubmissionsController],
   providers: [SubmissionsService],
   exports: [SubmissionsService],

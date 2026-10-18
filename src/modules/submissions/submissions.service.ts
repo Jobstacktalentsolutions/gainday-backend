@@ -18,10 +18,13 @@ import {
 } from '../../db/schema';
 import { GradingService } from '../grading/grading.service';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
+import { RoleRegistry } from '../generation/roles/role-registry';
+import { sanitizeTaskForCandidate } from '../simulations/candidate-task.util';
 import { resolveCandidateContact } from './candidate-contact';
 import {
   buildEmployerTaskResults,
   buildTaskResults,
+  capabilityDomainSql,
   capabilityPoints,
   deriveIntegrityStatus,
   runningAverage,
@@ -59,6 +62,7 @@ export class SubmissionsService {
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly gradingService: GradingService,
     private readonly creditLedger: CreditLedgerService,
+    private readonly roleRegistry: RoleRegistry,
   ) {}
 
   async createSubmission(
@@ -249,8 +253,12 @@ export class SubmissionsService {
         capabilityHistories.get(id) ?? [],
       ),
       jobId: row.jobId,
+      // Stripped of answer keys the same way the candidate's own copy is; the review page only
+      // needs the interface and structured component to show the answer read-only.
       tasks: buildEmployerTaskResults(
-        row.simulation.tasks,
+        row.simulation.tasks.map((task) =>
+          sanitizeTaskForCandidate(task, this.roleRegistry),
+        ),
         row.answers,
         row.taskScores,
       ),
@@ -316,7 +324,7 @@ export class SubmissionsService {
     }
 
     // Same domain lookup the grading pipeline uses (GradingService.gradeSubmission).
-    const domainOf = sql<string>`coalesce(${jobExtractions.category}, ${jobs.role}, 'Unspecified')`;
+    const domainOf = capabilityDomainSql();
     const [{ domain }] = await this.db
       .select({ domain: domainOf })
       .from(jobs)
