@@ -183,6 +183,13 @@
       "when": 1792337194639,
       "tag": "0025_clean_tempest",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792337613385,
+      "tag": "0026_classy_master_chief",
+      "breakpoints": true
     }
   ]
 }
