@@ -19,6 +19,7 @@ export enum InterfaceType {
   RICH_TEXT_COMPOSER = 'RICH_TEXT_COMPOSER',
   TEXT_AREA = 'TEXT_AREA',
   TABLE_VIEW_RESPONSE_PANEL = 'TABLE_VIEW_RESPONSE_PANEL',
+  CSV_DATA_PANEL = 'CSV_DATA_PANEL',
 }
 
 // z.literal() compiles to JSON-Schema `const`, which Gemini's schema parser rejects
@@ -55,6 +56,22 @@ const tableViewResponsePanelSchema = z.object({
   placeholder: z.string().nullable(),
 });
 
+// The same candidate experience as TABLE_VIEW_RESPONSE_PANEL (a data table to work from, then a
+// written answer), but the data travels as CSV text: far shorter for a model to produce than a
+// nested array of rows, and the candidate can download it to open in a spreadsheet. Whether the
+// CSV is well-formed cannot be expressed here (strict Structured Outputs reject refinements), so
+// findCsvProblem (utils/csv.util.ts) checks it in the critic and when an employer edits a task.
+const csvDataPanelSchema = z.object({
+  interfaceType: z.enum([InterfaceType.CSV_DATA_PANEL]),
+  csv: z
+    .string()
+    .describe(
+      'The data set as CSV: one header row naming every column, then data rows, comma-separated, with any field that contains a comma wrapped in double quotes. At most 25 data rows.',
+    ),
+  // Required + nullable — see richTextComposerSchema above.
+  placeholder: z.string().nullable(),
+});
+
 /**
  * Per-type Zod schemas describing exactly what the frontend needs to render that interface —
  * the contract for `SimulationTask.interfacePayload`. This is a Record keyed by every
@@ -65,6 +82,7 @@ export const INTERFACE_SCHEMAS: Record<InterfaceType, z.ZodTypeAny> = {
   [InterfaceType.RICH_TEXT_COMPOSER]: richTextComposerSchema,
   [InterfaceType.TEXT_AREA]: textAreaSchema,
   [InterfaceType.TABLE_VIEW_RESPONSE_PANEL]: tableViewResponsePanelSchema,
+  [InterfaceType.CSV_DATA_PANEL]: csvDataPanelSchema,
 };
 
 export type RichTextComposerPayload = z.infer<typeof richTextComposerSchema>;
@@ -72,3 +90,4 @@ export type TextAreaPayload = z.infer<typeof textAreaSchema>;
 export type TableViewResponsePanelPayload = z.infer<
   typeof tableViewResponsePanelSchema
 >;
+export type CsvDataPanelPayload = z.infer<typeof csvDataPanelSchema>;

@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -15,6 +16,8 @@ import {
   SubmissionStatus,
   jobs,
   jobExtractions,
+  jobSeekerProfiles,
+  JobSeekerProfile,
 } from '../../db/schema';
 import { GradingService } from '../grading/grading.service';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
@@ -70,6 +73,16 @@ export class SubmissionsService {
     simulationId: string,
     candidateId: string,
   ) {
+    const [candidate] = await this.db
+      .select({ isProfileComplete: jobSeekerProfiles.isProfileComplete })
+      .from(jobSeekerProfiles)
+      .where(eq(jobSeekerProfiles.id, candidateId));
+    if (!candidate?.isProfileComplete) {
+      throw new ForbiddenException(
+        'Complete your profile before applying for a job',
+      );
+    }
+
     const [job] = await this.db
       .select({ status: jobs.status })
       .from(jobs)
@@ -261,6 +274,7 @@ export class SubmissionsService {
         ),
         row.answers,
         row.taskScores,
+        row.candidate ? row.candidate.pronouns : null,
       ),
       integrityEvents: summarizeIntegrityEvents(row.antiCheatFlags),
       // Only ever populated once unlocked, so the pay-to-unlock rule is enforced here on the
@@ -278,9 +292,31 @@ export class SubmissionsService {
       : null;
   }
 
+  // Gender and pronouns are shown to employers even while the candidate is locked; the brief
+  // stays behind the unlock with the rest of the identifying details. Null for guest
+  // submissions, which have no profile.
+  private toEmployerCandidateProfile(
+    candidate: Pick<JobSeekerProfile, 'gender' | 'pronouns' | 'brief'> | null,
+    isUnlocked: boolean,
+  ) {
+    if (!candidate) {
+      return null;
+    }
+    return {
+      gender: candidate.gender,
+      pronouns: candidate.pronouns,
+      brief: isUnlocked ? candidate.brief : null,
+    };
+  }
+
   private toEmployerListItem(
     row: typeof submissions.$inferSelect &
-      Parameters<typeof resolveCandidateContact>[0],
+      Parameters<typeof resolveCandidateContact>[0] & {
+        candidate: Pick<
+          JobSeekerProfile,
+          'gender' | 'pronouns' | 'brief'
+        > | null;
+      },
     isUnlocked: boolean,
     capabilityHistory: number[],
   ) {
@@ -292,6 +328,10 @@ export class SubmissionsService {
       candidateName: isUnlocked
         ? (resolveCandidateContact(row)?.fullName ?? null)
         : null,
+      candidateProfile: this.toEmployerCandidateProfile(
+        row.candidate,
+        isUnlocked,
+      ),
       isUnlocked,
       // completedAt is non-null for every row the employer queries return.
       submittedAt: row.completedAt!.toISOString(),

@@ -4,10 +4,12 @@ import type {
   AntiCheatEvent,
   CandidateAnswer,
   CategoryScores,
+  Pronouns,
   SimulationTask,
   SubmissionStatus,
   TaskGradingResult,
 } from '../../db/schema';
+import { rewriteSecondPersonForEmployer } from './second-person-rewrite';
 import { jobs } from '../../db/schema/jobs.schema';
 import { jobExtractions } from '../../db/schema/job-extractions.schema';
 
@@ -137,6 +139,7 @@ export function buildEmployerTaskResults(
   >[],
   answers: CandidateAnswer[],
   taskScores: TaskGradingResult[] | null,
+  pronouns: Pronouns | null,
 ) {
   const resultByTaskId = new Map(
     (taskScores ?? []).map((result) => [result.taskId, result]),
@@ -162,7 +165,9 @@ export function buildEmployerTaskResults(
           }
         : null,
       score: result ? taskScorePercent(result) : null,
-      evidence: result ? result.summary : null,
+      evidence: result
+        ? rewriteSecondPersonForEmployer(result.summary, pronouns)
+        : null,
     };
   });
 }

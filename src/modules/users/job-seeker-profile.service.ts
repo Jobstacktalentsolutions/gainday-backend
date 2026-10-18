@@ -71,13 +71,31 @@ export class JobSeekerProfileService {
     return updated;
   }
 
+  /** `isProfileComplete` is derived here, not accepted from the caller: the profile counts as
+   *  complete once `pronouns` — the only field candidates are required to fill — is set. */
   async update(
     profileId: string,
-    data: Partial<Pick<JobSeekerProfile, 'fullName' | 'phoneNumber'>>,
+    data: Partial<
+      Pick<
+        JobSeekerProfile,
+        'fullName' | 'phoneNumber' | 'gender' | 'pronouns' | 'brief'
+      >
+    >,
   ): Promise<JobSeekerProfile> {
+    const existing = await this.findById(profileId);
+    if (!existing) {
+      throw new Error('Job seeker profile not found');
+    }
+
+    const pronouns =
+      data.pronouns !== undefined ? data.pronouns : existing.pronouns;
     const [updated] = await this.db
       .update(jobSeekerProfiles)
-      .set({ ...data, updatedAt: new Date() })
+      .set({
+        ...data,
+        isProfileComplete: pronouns !== null,
+        updatedAt: new Date(),
+      })
       .where(eq(jobSeekerProfiles.id, profileId))
       .returning();
     return updated;

@@ -79,12 +79,6 @@ export interface TaskGradingResult {
   summary: string;
 }
 
-export interface GuestInfo {
-  fullName: string;
-  email: string;
-  phoneNumber?: string;
-}
-
 /**
  * One proctoring signal, tied to when and which task it happened during — replaces an earlier
  * design that only stored a flat `"type ×count"` summary string per violation type for the
@@ -124,7 +118,6 @@ export const submissions = pgTable(
     candidateId: uuid('candidate_id').references(() => jobSeekerProfiles.id, {
       onDelete: 'set null',
     }),
-    guestInfo: jsonb('guest_info').$type<GuestInfo>(),
     status: submissionStatusEnum('status')
       .notNull()
       .default('PENDING')

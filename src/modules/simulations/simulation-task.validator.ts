@@ -1,7 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
 import { z } from 'zod';
 import { SimulationTask } from '../../db/schema/simulations.schema';
-import { INTERFACE_SCHEMAS, InterfaceType } from '../generation/roles/interface-type';
+import {
+  CsvDataPanelPayload,
+  INTERFACE_SCHEMAS,
+  InterfaceType,
+} from '../generation/roles/interface-type';
+import { findCsvProblem } from '../generation/utils/csv.util';
 import {
   OBJECTIVE_COMPONENT_SCHEMAS,
   OPEN_ENDED_COMPONENT_SCHEMAS,
@@ -69,6 +74,17 @@ export function validateSimulationTasks(
       );
     }
 
+    if (task.interfaceType === InterfaceType.CSV_DATA_PANEL) {
+      const csvProblem = findCsvProblem(
+        (payloadResult.data as CsvDataPanelPayload).csv,
+      );
+      if (csvProblem) {
+        throw new BadRequestException(
+          `tasks[${index}].interfacePayload.csv is not a valid data table: ${csvProblem}`,
+        );
+      }
+    }
+
     let roleModule;
     try {
       roleModule = roleRegistry.resolve(task.category);
@@ -109,6 +125,6 @@ export function validateSimulationTasks(
       }
     }
 
-    return task as SimulationTask;
+    return task;
   });
 }

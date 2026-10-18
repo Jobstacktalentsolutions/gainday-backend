@@ -777,12 +777,10 @@ export class AdminService {
         candidateId: sub.candidate?.userId || sub.candidate?.id || null,
         candidateName:
           sub.candidate?.fullName ||
-          sub.guestInfo?.fullName ||
           sub.candidate?.user?.email?.split('@')[0] ||
           'Anonymous Candidate',
         candidateEmail:
           sub.candidate?.user?.email ||
-          sub.guestInfo?.email ||
           'No email recorded',
         overallScore: sub.overallScore ? Number(sub.overallScore) : null,
         status: sub.status,

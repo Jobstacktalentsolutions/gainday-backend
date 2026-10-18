@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../db/schema';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { jobSeekerProfileFields } from './job-seeker-profile-fields';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -47,6 +48,9 @@ export class UsersController {
       await this.jobSeekerProfileService.update(currentUser.profileId, {
         ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
         ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
+        ...(dto.gender !== undefined ? { gender: dto.gender } : {}),
+        ...(dto.pronouns !== undefined ? { pronouns: dto.pronouns } : {}),
+        ...(dto.brief !== undefined ? { brief: dto.brief.trim() || null } : {}),
       });
     }
 
@@ -65,6 +69,7 @@ export class UsersController {
       fullName: updatedProfile?.fullName,
       companyName: (updatedProfile as any)?.companyName,
       phoneNumber: (updatedProfile as any)?.phoneNumber,
+      ...jobSeekerProfileFields(updatedProfile),
     };
   }
 

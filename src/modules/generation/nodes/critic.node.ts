@@ -9,6 +9,8 @@ import { findSimilarQuestions } from '../critic/novelty-check';
 import { checkForDuplicate } from '../critic/duplicate-check';
 import { checkRelevance } from '../critic/relevance-check';
 import { embedTaskContent } from '../utils/embedding.util';
+import { findCsvProblem } from '../utils/csv.util';
+import { InterfaceType } from '../roles/interface-type';
 
 const logger = new Logger('GenerationPipeline:critic');
 
@@ -73,8 +75,23 @@ export function criticNode(ctx: GenerationContext) {
       }
     }
 
+    // A data panel is only usable if its CSV can be shown as a table. The schema cannot say so
+    // (strict Structured Outputs reject refinements), so it is checked here, and a failure
+    // regenerates the slot like any other critic failure.
+    let payloadValid = true;
+    if (draft.taskContent.interfaceType === InterfaceType.CSV_DATA_PANEL) {
+      const csvProblem = findCsvProblem(
+        (draft.taskContent.interfacePayload as { csv: string }).csv,
+      );
+      if (csvProblem) {
+        payloadValid = false;
+        failureReasons.push(`Invalid data table: ${csvProblem}.`);
+      }
+    }
+
     const criticResult: CriticResult = {
       passed:
+        payloadValid &&
         !duplicateResult.isDuplicate &&
         relevanceResult.relevant &&
         additionalRelevanceOk,

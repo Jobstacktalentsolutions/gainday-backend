@@ -74,7 +74,7 @@ unlocks again, free of any further payment.
 
 `GET /submissions/job/:jobId` and `GET /submissions/:id` (employer views) now:
 
-- no longer include `candidate` or `guestInfo` at all (candidates are anonymous while locked);
+- no longer include `candidate` at all (candidates are anonymous while locked);
 - include `isUnlocked: boolean`;
 - include `contact: { fullName, email, phoneNumber: string | null } | null` — non-null only when
   `isUnlocked` is true.

@@ -226,13 +226,12 @@ On successful roll-up, `gradeSubmission` writes to `submissions`:
   `categoryScores`, `summary`), i.e. everything behind the rolled-up numbers, for future
   drill-down UI or audit.
 
-If the submission has a `candidateId` (not a guest), `JobSeekerProfileService.updateCapabilityScores`
+If the submission still has a `candidateId` (it is nulled if the candidate's account is deleted), `JobSeekerProfileService.updateCapabilityScores`
 is called with the domain resolved as `job_extractions.category` (falls back to `job.role`, then
 `'Unspecified'`) — this updates the candidate's cross-job `job_seeker_profiles.capabilityScores`
 history, keyed by domain, using the same 4-category shape as everywhere else in the schema.
 
-Finally, if a candidate email is resolvable (`candidate.user.email` or, for a guest submission,
-`guestInfo.email`), `NotificationsService.sendScoringResultsEmail` is called with the overall
+Finally, if a candidate email is resolvable (`candidate.user.email`), `NotificationsService.sendScoringResultsEmail` is called with the overall
 score, the 4 category scores, **and** the per-task `{title, summary}` breakdown — rendered by
 `templates/emails/scoring-results.ejs`, which shows the numeric breakdown (".../100" per category)
 followed by a "Task by task" section listing each task's title and its one-or-two-sentence

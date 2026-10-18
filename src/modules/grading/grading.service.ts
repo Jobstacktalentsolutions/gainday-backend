@@ -360,8 +360,7 @@ export class GradingService {
       );
     }
 
-    const candidateEmail =
-      submission.candidate?.user?.email ?? submission.guestInfo?.email;
+    const candidateEmail = submission.candidate?.user?.email;
     if (candidateEmail) {
       await this.notificationsService.sendScoringResultsEmail(
         candidateEmail,

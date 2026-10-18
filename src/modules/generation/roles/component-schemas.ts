@@ -107,7 +107,9 @@ const draftedCommunicationSchema = z.object({
 const interpretationAnalysisSchema = z.object({
   dataToInterpret: z
     .string()
-    .describe('The data/scenario the candidate must interpret or analyze.'),
+    .describe(
+      'One or two sentences saying what the candidate must interpret or analyze. Never the data itself: a data set goes in the interface payload or the scenario, because the candidate does not see this field.',
+    ),
 });
 
 const stakeholderPushbackResponseSchema = z.object({

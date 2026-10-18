@@ -1,4 +1,12 @@
-import { jsonb, pgTable, uuid, varchar } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { users } from './users.schema';
@@ -39,6 +47,27 @@ export interface PassportNarrative {
   generatedAt: string;
 }
 
+export const genderEnum = pgEnum('gender', ['MALE', 'FEMALE', 'NON_BINARY']);
+export const pronounsEnum = pgEnum('pronouns', [
+  'HE_HIM',
+  'SHE_HER',
+  'THEY_THEM',
+]);
+
+export const Gender = {
+  MALE: 'MALE',
+  FEMALE: 'FEMALE',
+  NON_BINARY: 'NON_BINARY',
+} as const;
+export type Gender = (typeof Gender)[keyof typeof Gender];
+
+export const Pronouns = {
+  HE_HIM: 'HE_HIM',
+  SHE_HER: 'SHE_HER',
+  THEY_THEM: 'THEY_THEM',
+} as const;
+export type Pronouns = (typeof Pronouns)[keyof typeof Pronouns];
+
 export const jobSeekerProfiles = pgTable('job_seeker_profiles', {
   ...baseColumns,
   userId: uuid('user_id')
@@ -47,6 +76,12 @@ export const jobSeekerProfiles = pgTable('job_seeker_profiles', {
     .references(() => users.id, { onDelete: 'cascade' }),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   phoneNumber: varchar('phone_number', { length: 50 }),
+  // All optional at the DB level; the app requires `pronouns` before a candidate can apply, and
+  // `isProfileComplete` records that it has been filled (see JobSeekerProfileService.update).
+  gender: genderEnum('gender').$type<Gender>(),
+  pronouns: pronounsEnum('pronouns').$type<Pronouns>(),
+  brief: text('brief'),
+  isProfileComplete: boolean('is_profile_complete').notNull().default(false),
   capabilityScores: jsonb('capability_scores').$type<CapabilityScores>(),
   passportNarrative: jsonb('passport_narrative').$type<PassportNarrative>(),
 });

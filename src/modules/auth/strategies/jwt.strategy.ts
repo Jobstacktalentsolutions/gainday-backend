@@ -11,6 +11,7 @@ import { AuthUsersService } from '../../users/auth-users.service';
 import { EmployerProfileService } from '../../users/employer-profile.service';
 import { JobSeekerProfileService } from '../../users/job-seeker-profile.service';
 import { AdminProfileService } from '../../users/admin-profile.service';
+import { jobSeekerProfileFields } from '../../users/job-seeker-profile-fields';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { UserRole } from '../../../db/schema';
 
@@ -55,6 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       profileId: profile?.id,
       fullName: profile?.fullName,
       companyName: (profile as any)?.companyName,
+      ...jobSeekerProfileFields(profile),
     };
   }
 

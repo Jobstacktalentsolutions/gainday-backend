@@ -11,6 +11,7 @@ import { AuthUsersService } from '../users/auth-users.service';
 import { EmployerProfileService } from '../users/employer-profile.service';
 import { JobSeekerProfileService } from '../users/job-seeker-profile.service';
 import { AdminProfileService } from '../users/admin-profile.service';
+import { jobSeekerProfileFields } from '../users/job-seeker-profile-fields';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { UserRole, AuthProvider, users } from '../../db/schema';
@@ -94,6 +95,7 @@ export class AuthService {
         profileId: profile?.id,
         fullName: profile?.fullName,
         companyName: (profile as any)?.companyName,
+        ...jobSeekerProfileFields(profile),
       },
     };
   }

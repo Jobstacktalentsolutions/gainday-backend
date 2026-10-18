@@ -103,7 +103,7 @@ describe('employer submission view', () => {
     ];
 
     it('lists every task with its structured answer and no grade when nothing was graded', () => {
-      expect(buildEmployerTaskResults(tasks, answers, null)).toEqual([
+      expect(buildEmployerTaskResults(tasks, answers, null, null)).toEqual([
         {
           taskId: 't1',
           taskNumber: 1,
@@ -139,11 +139,14 @@ describe('employer submission view', () => {
           commercialDomainAwareness: detail(90),
         },
       };
-      const [first, second] = buildEmployerTaskResults(tasks, answers, [
-        graded,
-      ]);
+      const [first, second] = buildEmployerTaskResults(
+        tasks,
+        answers,
+        [graded],
+        'SHE_HER',
+      );
       expect(first.score).toBe(75);
-      expect(first.evidence).toBe('You did well.');
+      expect(first.evidence).toBe('She did well.');
       expect(second.score).toBeNull();
     });
   });

@@ -14,7 +14,7 @@ import { withGeminiSafeStructuredOutput } from '../../../ai/gemini-structured-ou
  * role modules exist as isolated, per-role config rather than one shared prompt (doc Section 2).
  * So this module trades content precision for coverage: it never throws, it only ever produces
  * write-in-your-own-words tasks (Text Area / Rich Text Composer — interfaces we already support
- * and can render/grade generically), and instead of hardcoded per-domain guidance strings, its
+ * and can render/grade generically), optionally reading a small CSV data set (the CSV data panel), and instead of hardcoded per-domain guidance strings, its
  * extraction/generation prompts explicitly instruct the model to *reason out* what a genuine
  * on-the-job assessment for THIS specific unseen category should look like, using its own general
  * domain knowledge, rather than forcing the category into Finance/Sales-shaped content.
@@ -27,15 +27,17 @@ export enum GenericTaskType {
   WRITTEN_JUSTIFICATION = 'WRITTEN_JUSTIFICATION',
   DRAFTED_COMMUNICATION = 'DRAFTED_COMMUNICATION',
   INTERPRETATION_ANALYSIS = 'INTERPRETATION_ANALYSIS',
+  DATA_INTERPRETATION = 'DATA_INTERPRETATION',
   STAKEHOLDER_PUSHBACK_RESPONSE = 'STAKEHOLDER_PUSHBACK_RESPONSE',
 }
 
 // Reuses the exact same open-ended component types (and therefore the exact same
 // OPEN_ENDED_COMPONENT_SCHEMAS / INTERFACE_SCHEMAS entries) Finance and Sales already use for
 // their write-in-your-own-words tasks — no new schema, no new frontend interface, just a
-// narrower slice of the existing taxonomy. No objective components: NUMERIC_INPUT,
-// CLASSIFICATION, etc. assume a structured render/grading surface (tables, tolerance ranges)
-// that only a purpose-built role module can safely define — never offered here.
+// narrower slice of the existing taxonomy, plus the CSV data panel for reading a small data set.
+// No objective components: NUMERIC_INPUT, CLASSIFICATION, etc. assume a structured render/grading
+// surface (tolerance ranges, bucket rows) that only a purpose-built role module can safely define
+// — never offered here.
 const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
   {
     key: GenericTaskType.WRITTEN_JUSTIFICATION,
@@ -57,8 +59,16 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     label: 'Interpretation / analysis',
     openEndedComponentType: 'INTERPRETATION_ANALYSIS',
     description:
-      'Interpret or analyze a described situation or data set, in writing.',
+      'Interpret or analyze a situation described in the scenario, in writing. There is no data set here; if the task needs one, it is a DATA_INTERPRETATION task.',
     interfaceType: InterfaceType.TEXT_AREA,
+  },
+  {
+    key: GenericTaskType.DATA_INTERPRETATION,
+    label: 'Data interpretation',
+    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
+    description:
+      'A small data set (a log, a report extract, a set of measurements) is given as CSV, shown to the candidate as a table; the candidate interprets it in writing. Only for roles whose real work involves reading data like this.',
+    interfaceType: InterfaceType.CSV_DATA_PANEL,
   },
   {
     key: GenericTaskType.STAKEHOLDER_PUSHBACK_RESPONSE,
@@ -90,8 +100,9 @@ export const GenericRoleModule: RoleModule = {
       'Since this role has no pre-built task template, invent the kind of on-the-job situation a ' +
       'real practitioner in this exact domain would actually face — a written deliverable, a ' +
       'judgment call they must explain, or an analysis they must produce. Every expected task must ' +
-      'be answerable entirely in writing (prose or short structured text) — never assume a table, ' +
-      'calculator, chart, or other structured input surface exists, since none is available for an ' +
+      'be answerable in writing. The only structured input available is a small CSV data set shown to ' +
+      'the candidate as a table (for a role whose real work involves reading data) — never assume a ' +
+      'calculator, chart, or any other structured input surface, since none is available for an ' +
       'unmodeled domain like this one. Favor the kind of task where the reasoning in the written ' +
       'answer is itself what reveals competence, since that is what a text response can actually ' +
       'assess well.',
