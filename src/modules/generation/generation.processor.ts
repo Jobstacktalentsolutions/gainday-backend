@@ -39,7 +39,10 @@ export class GenerationProcessor extends WorkerHost {
       .where(eq(jobs.id, jobId));
 
     try {
-      const result = await this.generationService.runGeneration(job);
+      const result = await this.generationService.runGeneration(
+        job,
+        (progress) => bullJob.updateProgress(progress),
+      );
 
       await this.db
         .insert(simulations)

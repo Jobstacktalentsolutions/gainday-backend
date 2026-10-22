@@ -89,11 +89,12 @@ export class JobSeekerProfileService {
 
     const pronouns =
       data.pronouns !== undefined ? data.pronouns : existing.pronouns;
+    const title = data.title !== undefined ? data.title : existing.title;
     const [updated] = await this.db
       .update(jobSeekerProfiles)
       .set({
         ...data,
-        isProfileComplete: pronouns !== null,
+        isProfileComplete: pronouns !== null && title !== null,
         updatedAt: new Date(),
       })
       .where(eq(jobSeekerProfiles.id, profileId))

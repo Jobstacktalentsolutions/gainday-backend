@@ -7,6 +7,7 @@ import {
   UseGuards,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthUsersService } from './auth-users.service';
 import { EmployerProfileService } from './employer-profile.service';
@@ -51,7 +52,7 @@ export class UsersController {
         ...(dto.gender !== undefined ? { gender: dto.gender } : {}),
         ...(dto.pronouns !== undefined ? { pronouns: dto.pronouns } : {}),
         ...(dto.brief !== undefined ? { brief: dto.brief.trim() || null } : {}),
-        ...(dto.title !== undefined ? { title: dto.title.trim() || null } : {}),
+        ...(dto.title !== undefined ? { title: this.requiredTitle(dto.title) } : {}),
       });
     }
 
@@ -72,6 +73,15 @@ export class UsersController {
       phoneNumber: (updatedProfile as any)?.phoneNumber,
       ...jobSeekerProfileFields(updatedProfile),
     };
+  }
+
+  // Job title drives job recommendations, so candidates can't clear it once set.
+  private requiredTitle(title: string): string {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Job title is required');
+    }
+    return trimmed;
   }
 
   @Get(':id')

@@ -26,6 +26,11 @@ import { RoleRegistry } from './roles/role-registry';
 import { buildGenerationGraph } from './graph/generation.graph';
 import { GenerationConfig } from './graph/generation-context';
 import { GenerationState } from './state/generation-state';
+import {
+  GenerationProgress,
+  GenerationProgressTracker,
+} from './generation-progress';
+import { generationBullJobId } from './generation-progress.service';
 import { Job } from '../../db/schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { TestGenerateDto } from './dto/test-generate.dto';
@@ -63,10 +68,18 @@ export class GenerationService {
 
   async queueGeneration(jobId: string): Promise<void> {
     this.logger.log(`Queueing simulation generation for Job ID ${jobId}`);
+    // BullMQ ignores add() when a job with the same id already exists, so a failed run must be
+    // cleared first or a retry would silently do nothing.
+    const previous = await this.generationQueue.getJob(
+      generationBullJobId(jobId),
+    );
+    if (previous && (await previous.isFailed())) {
+      await previous.remove();
+    }
     await this.generationQueue.add(
       'generate-simulation',
       { jobId },
-      { jobId: `generate-${jobId}` },
+      { jobId: generationBullJobId(jobId) },
     );
   }
 
@@ -74,7 +87,10 @@ export class GenerationService {
    * Runs the compiled LangGraph pipeline for a job and persists the resulting extraction,
    * simulation tasks, and any admin-review items. Called by GenerationProcessor.
    */
-  async runGeneration(job: Job): Promise<GenerationResult> {
+  async runGeneration(
+    job: Job,
+    onProgress?: (progress: GenerationProgress) => Promise<void>,
+  ): Promise<GenerationResult> {
     this.logger.log(`Starting generation graph for Job ID ${job.id}`);
     const startedAt = Date.now();
 
@@ -104,7 +120,32 @@ export class GenerationService {
       businessProblemRaw: job.businessProblem || undefined,
     };
 
-    const finalState = await graph.invoke(initialState);
+    const tracker = new GenerationProgressTracker(config.selectedTaskCount);
+    await onProgress?.(tracker.start());
+
+    const stream = await graph.stream(initialState, {
+      streamMode: ['updates', 'values'],
+    });
+    let finalState: GenerationState | undefined;
+    for await (const [mode, chunk] of stream) {
+      if (mode === 'values') {
+        finalState = chunk as GenerationState;
+        continue;
+      }
+      for (const [node, update] of Object.entries(
+        chunk as Record<string, Partial<GenerationState>>,
+      )) {
+        const progress = tracker.onNodeCompleted(node, update);
+        if (progress) {
+          await onProgress?.(progress);
+        }
+      }
+    }
+    if (!finalState) {
+      throw new Error(
+        `Generation graph produced no final state for Job ID ${job.id}`,
+      );
+    }
 
     this.logger.log(
       `Graph invoke complete for Job ID ${job.id} in ${((Date.now() - startedAt) / 1000).toFixed(1)}s: ` +

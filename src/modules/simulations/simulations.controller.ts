@@ -11,9 +11,13 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
+import { from, map, Observable, switchMap } from 'rxjs';
 import { SimulationsService } from './simulations.service';
 import { GenerationService } from '../generation/generation.service';
+import {
+  GenerationProgressService,
+  GenerationStreamEvent,
+} from '../generation/generation-progress.service';
 import { JobsService } from '../jobs/jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -37,6 +41,7 @@ export class SimulationsController {
     private readonly generationService: GenerationService,
     private readonly jobsService: JobsService,
     private readonly roleRegistry: RoleRegistry,
+    private readonly generationProgressService: GenerationProgressService,
   ) {}
 
   // Public/candidate-facing — no guard, so this must never return an objectiveComponent's
@@ -189,6 +194,24 @@ export class SimulationsController {
     });
   }
 
+  /**
+   * Streams stage-level progress for a job's queued full generation. Replaces client polling of
+   * the job row: emits the current state on connect, then live progress until done or error.
+   */
+  @Get('job/:jobId/generation-progress')
+  @Sse()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
+  generationProgress(
+    @Param('jobId') jobId: string,
+    @CurrentUser() user: any,
+  ): Observable<{ data: GenerationStreamEvent }> {
+    return from(this.assertCanEditJob(jobId, user)).pipe(
+      switchMap(() => this.generationProgressService.watch(jobId)),
+      map((event) => ({ data: event })),
+    );
+  }
+
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER, UserRole.ADMIN)
@@ -210,7 +233,10 @@ export class SimulationsController {
         'You may only edit simulations for your own jobs',
       );
     }
-    if (Array.isArray(body?.tasks) && body.tasks.length > MAX_SIMULATION_TASKS) {
+    if (
+      Array.isArray(body?.tasks) &&
+      body.tasks.length > MAX_SIMULATION_TASKS
+    ) {
       throw new BadRequestException(
         `A simulation may have at most ${MAX_SIMULATION_TASKS} tasks (got ${body.tasks.length})`,
       );
