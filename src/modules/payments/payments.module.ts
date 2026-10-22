@@ -5,11 +5,10 @@ import { StripeWebhookController } from './stripe-webhook.controller';
 import { StripeService } from './stripe.service';
 import { AuthModule } from '../auth/auth.module';
 import { CreditsModule } from '../credits/credits.module';
-import { EmailModule } from '../email/email.module';
 import { SubmissionsModule } from '../submissions/submissions.module';
 
 @Module({
-  imports: [AuthModule, CreditsModule, EmailModule, SubmissionsModule],
+  imports: [AuthModule, CreditsModule, SubmissionsModule],
   controllers: [PaymentsController, StripeWebhookController],
   providers: [PaymentsService, StripeService],
 })

@@ -9,11 +9,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
-import { employerProfiles } from '../../db/schema';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { CreditPurchasesService } from '../credits/credit-purchases.service';
 import { InsufficientCreditsError } from '../credits/insufficient-credits.error';
@@ -24,14 +22,8 @@ import {
   findPack,
   recommendPack,
 } from '../credits/credit-packs';
-import { EmailQueueService } from '../email/email-queue.service';
 import { SubmissionsService } from '../submissions/submissions.service';
-import { resolveCandidateContact } from '../submissions/candidate-contact';
 import { StripeService } from './stripe.service';
-
-type SubmissionWithContact = Awaited<
-  ReturnType<SubmissionsService['findManyWithContactByIds']>
->[number];
 
 @Injectable()
 export class PaymentsService {
@@ -43,7 +35,6 @@ export class PaymentsService {
     private readonly creditPurchases: CreditPurchasesService,
     private readonly stripeService: StripeService,
     private readonly submissionsService: SubmissionsService,
-    private readonly emailQueue: EmailQueueService,
   ) {}
 
   getPacks() {
@@ -87,13 +78,6 @@ export class PaymentsService {
       }
       throw error;
     }
-
-    await this.requestCvs(
-      employerId,
-      submissions.filter((submission) =>
-        newlyUnlockedIds.includes(submission.id),
-      ),
-    );
 
     return {
       unlockedSubmissionIds: submissionIds,
@@ -227,53 +211,5 @@ export class PaymentsService {
       },
       HttpStatus.PAYMENT_REQUIRED,
     );
-  }
-
-  /**
-   * Emails each newly unlocked candidate asking them to send their CV to the employer. The
-   * unlock is already committed, so a failed email is logged rather than undoing it.
-   */
-  private async requestCvs(
-    employerId: string,
-    unlocked: SubmissionWithContact[],
-  ): Promise<void> {
-    if (unlocked.length === 0) {
-      return;
-    }
-    const employer = await this.db.query.employerProfiles.findFirst({
-      where: eq(employerProfiles.id, employerId),
-      with: { user: true },
-    });
-    if (!employer) {
-      throw new NotFoundException('Employer profile not found');
-    }
-
-    const results = await Promise.allSettled(
-      unlocked.flatMap((submission) => {
-        const contact = resolveCandidateContact(submission);
-        if (!contact) {
-          this.logger.warn(
-            `Submission ${submission.id} has no contact email, skipping CV request`,
-          );
-          return [];
-        }
-        return this.emailQueue.enqueueEmail({
-          to: contact.email,
-          subject: `Send your CV to ${employer.companyName ?? 'the employer'}`,
-          template: 'cv-request',
-          context: {
-            candidateName: contact.fullName,
-            jobTitle: submission.job.title,
-            companyName: employer.companyName,
-            employerEmail: employer.user.email,
-          },
-        });
-      }),
-    );
-    results.forEach((result) => {
-      if (result.status === 'rejected') {
-        this.logger.error(`Failed to queue CV request email: ${result.reason}`);
-      }
-    });
   }
 }
