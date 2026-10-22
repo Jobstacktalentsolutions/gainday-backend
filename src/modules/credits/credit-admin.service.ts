@@ -26,6 +26,11 @@ interface TypeSummary {
   credits: number;
 }
 
+interface PurchaseTotals {
+  pence: number;
+  credits: number;
+}
+
 @Injectable()
 export class CreditAdminService {
   constructor(
@@ -39,7 +44,7 @@ export class CreditAdminService {
    * Every entry type is present in `summary` (zeroed when there are no rows yet).
    */
   async getOverview() {
-    const [signupBonus, rows, allTimeGbpPence] = await Promise.all([
+    const [signupBonus, rows, { pence: allTimeGbpPence }] = await Promise.all([
       this.signupBonusSettings.get(),
       this.db
         .select({
@@ -49,7 +54,7 @@ export class CreditAdminService {
         })
         .from(creditLedgerEntries)
         .groupBy(creditLedgerEntries.type),
-      this.getAllTimeRevenuePence(),
+      this.getPurchaseTotals(),
     ]);
 
     const summary = Object.fromEntries(
@@ -132,7 +137,7 @@ export class CreditAdminService {
       (total, bucket) => total + bucket.purchases,
       0,
     );
-    const allTimePence = await this.getAllTimeRevenuePence();
+    const { pence: allTimePence } = await this.getPurchaseTotals();
 
     return {
       timeframe,
@@ -154,6 +159,11 @@ export class CreditAdminService {
     };
   }
 
+  /**
+   * Ledger rows with their fiat value. A PURCHASE is worth what was paid. Other rows are valued
+   * at the average price per credit across all purchases (`fiatIsEstimate: true`), and have no
+   * value (`fiatPence: null`) until at least one purchase exists.
+   */
   async listLedger({ page, limit, type }: ListCreditLedgerParams) {
     const where = type ? eq(creditLedgerEntries.type, type) : undefined;
 
@@ -162,29 +172,63 @@ export class CreditAdminService {
       .from(creditLedgerEntries)
       .where(where);
 
-    const rows = await this.db
-      .select({
-        id: creditLedgerEntries.id,
-        type: creditLedgerEntries.type,
-        amount: creditLedgerEntries.amount,
-        employerId: creditLedgerEntries.employerId,
-        employerName: employerProfiles.companyName,
-        submissionId: creditLedgerEntries.submissionId,
-        createdAt: creditLedgerEntries.createdAt,
-      })
-      .from(creditLedgerEntries)
-      .innerJoin(
-        employerProfiles,
-        eq(creditLedgerEntries.employerId, employerProfiles.id),
-      )
-      .where(where)
-      .orderBy(desc(creditLedgerEntries.createdAt))
-      .limit(limit)
-      .offset((page - 1) * limit);
+    const [rows, purchaseTotals] = await Promise.all([
+      this.db
+        .select({
+          id: creditLedgerEntries.id,
+          type: creditLedgerEntries.type,
+          amount: creditLedgerEntries.amount,
+          employerId: creditLedgerEntries.employerId,
+          employerName: employerProfiles.companyName,
+          submissionId: creditLedgerEntries.submissionId,
+          createdAt: creditLedgerEntries.createdAt,
+          purchasePricePence: creditPurchases.pricePence,
+        })
+        .from(creditLedgerEntries)
+        .innerJoin(
+          employerProfiles,
+          eq(creditLedgerEntries.employerId, employerProfiles.id),
+        )
+        .leftJoin(
+          creditPurchases,
+          eq(creditLedgerEntries.creditPurchaseId, creditPurchases.id),
+        )
+        .where(where)
+        .orderBy(desc(creditLedgerEntries.createdAt))
+        .limit(limit)
+        .offset((page - 1) * limit),
+      this.getPurchaseTotals(),
+    ]);
+
+    const pricePerCredit =
+      purchaseTotals.credits === 0
+        ? null
+        : purchaseTotals.pence / purchaseTotals.credits;
+
+    const items = rows.map((row) => {
+      const isPurchase = row.type === CreditLedgerEntryType.PURCHASE;
+      const fiatPence = isPurchase
+        ? row.purchasePricePence
+        : pricePerCredit === null
+          ? null
+          : Math.round(row.amount * pricePerCredit);
+      return {
+        id: row.id,
+        type: row.type,
+        amount: row.amount,
+        employerId: row.employerId,
+        employerName: row.employerName,
+        submissionId: row.submissionId,
+        createdAt: row.createdAt,
+        fiatPence,
+        fiatUsd: fiatPence === null ? null : this.toUsd(fiatPence),
+        fiatIsEstimate: !isPurchase,
+      };
+    });
 
     const totalPages = Math.ceil(total / limit);
     return {
-      items: rows,
+      items,
       pagination: {
         page,
         limit,
@@ -196,10 +240,12 @@ export class CreditAdminService {
     };
   }
 
-  private async getAllTimeRevenuePence(): Promise<number> {
+  /** Everything ever paid for credit packs, and the credits those payments bought. */
+  private async getPurchaseTotals(): Promise<PurchaseTotals> {
     const [row] = await this.db
       .select({
         pence: sql<number>`coalesce(sum(${creditPurchases.pricePence}), 0)::int`,
+        credits: sql<number>`coalesce(sum(${creditLedgerEntries.amount}), 0)::int`,
       })
       .from(creditLedgerEntries)
       .innerJoin(
@@ -207,7 +253,7 @@ export class CreditAdminService {
         eq(creditLedgerEntries.creditPurchaseId, creditPurchases.id),
       )
       .where(eq(creditLedgerEntries.type, 'PURCHASE'));
-    return row.pence;
+    return row;
   }
 
   /** USD per 1 GBP, or null when GBP_USD_RATE isn't configured. */

@@ -17,18 +17,12 @@
           &mdash; <%= title %>
         </p>
 
-        <div style="background-color: #ffffff; border: 1px solid #fecdca; border-left: 4px solid #b42318; padding: 16px; border-radius: 6px; font-size: 14px; color: #111019; line-height: 1.6;">
-          <%= message %>
-        </div>
+        <div class="message-box danger"><%= message %></div>
 
         <% if (details) { %>
         <div style="margin: 20px 0;">
-          <div style="font-size: 13px; font-weight: 700; color: #494866; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
-            Reason
-          </div>
-          <div style="background-color: #f8f9fc; border: 1px solid #e2e4ed; padding: 16px; border-radius: 6px; font-size: 13px; color: #111019; white-space: pre-wrap; font-family: monospace; line-height: 1.5;">
-<%= details %>
-          </div>
+          <div class="section-label">Reason</div>
+          <div class="message-box code"><%= details %></div>
         </div>
         <% } %>
 

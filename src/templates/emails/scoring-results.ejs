@@ -9,7 +9,7 @@
 <body>
   <div class="wrapper">
     <div class="container">
-      <%- include('partials/_header') %>
+      <%- include('partials/_header', { bannerTitle: 'Your simulation results' }) %>
 
       <div class="content">
         <p class="intro" style="margin-bottom: 24px; font-size: 15px; color: #3a3a4d; line-height: 1.6;">
@@ -72,9 +72,9 @@
               <table role="presentation" class="skill-table" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td class="skill-track-wrap">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" height="8" style="background-color: #e4e4f0; border-radius: 9999px; overflow: hidden; height: 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" class="skill-track">
                       <tr>
-                        <td width="<%= item.score %>%" style="background-color: #1817fe; height: 8px; border-radius: 9999px;"></td>
+                        <td width="<%= item.score %>%" class="skill-fill"></td>
                         <td width="<%= 100 - item.score %>%" style="height: 8px;"></td>
                       </tr>
                     </table>

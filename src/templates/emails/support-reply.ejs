@@ -21,24 +21,16 @@
         </p>
 
         <!-- Admin Response Block -->
-        <div style="background-color: #f4f6fe; border-left: 4px solid #1817fe; border-radius: 6px; padding: 20px; margin: 20px 0;">
-          <div style="font-size: 11px; font-weight: 700; color: #1817fe; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">
-            RESPONSE FROM GAINDAY SUPPORT
-          </div>
-          <div style="font-size: 14px; color: #111019; white-space: pre-wrap; line-height: 1.6;">
-<%= replyMessage %>
-          </div>
+        <div class="message-box accent" style="margin: 20px 0;">
+          <div class="section-label" style="color: #1817fe;">Response from Gainday Support</div>
+          <div><%= replyMessage %></div>
         </div>
 
         <!-- Quoted Original Message -->
         <% if (typeof originalMessage !== 'undefined' && originalMessage) { %>
         <div style="margin: 24px 0;">
-          <div style="font-size: 12px; font-weight: 600; color: #767592; margin-bottom: 6px;">
-            YOUR ORIGINAL MESSAGE:
-          </div>
-          <div style="background-color: #f8f9fc; border: 1px solid #e2e4ed; border-radius: 6px; padding: 14px; font-size: 13px; color: #494866; white-space: pre-wrap; line-height: 1.5;">
-<%= originalMessage %>
-          </div>
+          <div class="section-label" style="color: #767592;">Your original message</div>
+          <div class="message-box" style="color: #494866; font-size: 13px;"><%= originalMessage %></div>
         </div>
         <% } %>
 

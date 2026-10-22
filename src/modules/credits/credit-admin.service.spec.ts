@@ -14,7 +14,16 @@ const settings = {
 // the chain resolves to `result`.
 const query = (result: unknown) => {
   const chain: Record<string, unknown> = {};
-  for (const method of ['from', 'innerJoin', 'where', 'groupBy']) {
+  for (const method of [
+    'from',
+    'innerJoin',
+    'leftJoin',
+    'where',
+    'groupBy',
+    'orderBy',
+    'limit',
+    'offset',
+  ]) {
     chain[method] = () => chain;
   }
   chain.then = (resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown) =>
@@ -25,20 +34,27 @@ const query = (result: unknown) => {
 interface Fixtures {
   ledgerRows?: unknown[];
   purchases?: unknown[];
-  allTimePence?: number;
+  listRows?: unknown[];
+  listTotal?: number;
+  purchaseTotals?: { pence: number; credits: number };
   usdRate?: number | null;
 }
 
+// The mock routes each query by the fields it selects, mirroring the queries in the service.
 const buildService = ({
   ledgerRows = [],
   purchases = [],
-  allTimePence = 0,
+  listRows = [],
+  listTotal = 0,
+  purchaseTotals = { pence: 0, credits: 0 },
   usdRate = null,
 }: Fixtures = {}) => {
   const select = jest.fn((fields: Record<string, unknown>) => {
+    if ('total' in fields) return query([{ total: listTotal }]);
+    if ('employerName' in fields) return query(listRows);
     if ('type' in fields) return query(ledgerRows);
     if ('paidAt' in fields) return query(purchases);
-    return query([{ pence: allTimePence }]);
+    return query([purchaseTotals]);
   });
   const db = { select } as unknown as DrizzleDb;
   const signupBonusSettings = {
@@ -84,7 +100,7 @@ describe('CreditAdminService.getOverview', () => {
   });
 
   it('converts all-time revenue to USD at the configured rate', async () => {
-    const service = buildService({ allTimePence: 40000, usdRate: 1.25 });
+    const service = buildService({ purchaseTotals: { pence: 40000, credits: 0 }, usdRate: 1.25 });
 
     const { revenue } = await service.getOverview();
 
@@ -96,7 +112,7 @@ describe('CreditAdminService.getRevenue', () => {
   it('places a purchase in the bucket for the time it was paid', async () => {
     const service = buildService({
       purchases: [{ pricePence: 14900, paidAt: new Date() }],
-      allTimePence: 14900,
+      purchaseTotals: { pence: 14900, credits: 5 },
       usdRate: 1.25,
     });
 
@@ -121,5 +137,65 @@ describe('CreditAdminService.getRevenue', () => {
 
     expect(totals.periodUsd).toBeNull();
     expect(series.every((point) => point.usd === null)).toBe(true);
+  });
+});
+
+describe('CreditAdminService.listLedger', () => {
+  it('values purchases at the price paid and other rows at the average price per credit', async () => {
+    const service = buildService({
+      listTotal: 2,
+      listRows: [
+        {
+          id: 'purchase-row',
+          type: 'PURCHASE',
+          amount: 5,
+          employerId: 'e1',
+          employerName: 'Acme',
+          submissionId: null,
+          createdAt: new Date('2026-10-01'),
+          purchasePricePence: 14900,
+        },
+        {
+          id: 'unlock-row',
+          type: 'UNLOCK',
+          amount: -1,
+          employerId: 'e1',
+          employerName: 'Acme',
+          submissionId: 's1',
+          createdAt: new Date('2026-10-02'),
+          purchasePricePence: null,
+        },
+      ],
+      // 14900p for 5 credits = 2980p per credit.
+      purchaseTotals: { pence: 14900, credits: 5 },
+      usdRate: 1.25,
+    });
+
+    const { items } = await service.listLedger({ page: 1, limit: 10 });
+
+    expect(items[0]).toMatchObject({ fiatPence: 14900, fiatUsd: 186.25, fiatIsEstimate: false });
+    expect(items[1]).toMatchObject({ fiatPence: -2980, fiatUsd: -37.25, fiatIsEstimate: true });
+  });
+
+  it('leaves non-purchase rows unvalued when no purchase exists yet', async () => {
+    const service = buildService({
+      listTotal: 1,
+      listRows: [
+        {
+          id: 'bonus-row',
+          type: 'SIGNUP_BONUS',
+          amount: 10,
+          employerId: 'e1',
+          employerName: null,
+          submissionId: null,
+          createdAt: new Date('2026-10-01'),
+          purchasePricePence: null,
+        },
+      ],
+    });
+
+    const { items } = await service.listLedger({ page: 1, limit: 10 });
+
+    expect(items[0]).toMatchObject({ fiatPence: null, fiatUsd: null, fiatIsEstimate: true });
   });
 });
