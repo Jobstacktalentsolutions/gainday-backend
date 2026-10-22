@@ -10,7 +10,7 @@ dotenv.config();
 
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import { aiConfig } from '../../../config/ai.config';
-import { jobRecommendationConfig } from '../job-recommendations.constants';
+import { jobRecommendationConfig } from '../../../config/job-recommendations.config';
 import {
   buildCandidateMatchText,
   buildJobMatchText,

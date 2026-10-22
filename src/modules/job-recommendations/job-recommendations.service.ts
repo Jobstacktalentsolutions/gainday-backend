@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { and, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, lte } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
@@ -22,7 +22,7 @@ import {
 } from '../notifications/notification-preferences.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { JobMatchEmbeddingService } from './job-match-embedding.service';
-import { jobRecommendationConfig } from './job-recommendations.constants';
+import { findCandidateMatches } from './job-match-query';
 import {
   CandidateMatch,
   groupMatchesByCandidate,
@@ -157,45 +157,8 @@ export class JobRecommendationsService {
     );
   }
 
-  /**
-   * Cosine similarity of every eligible candidate against each activated job, keeping the top
-   * `maxPerCandidate` above `minScore` per candidate. Candidates who already applied to a job are
-   * left out of it.
-   */
-  private async findMatches(jobIds: string[]): Promise<CandidateMatch[]> {
-    const { rows } = await this.db.execute<CandidateMatch>(sql`
-      SELECT "candidateId", "jobId", score
-      FROM (
-        SELECT
-          ${candidateMatchEmbeddings.candidateId} AS "candidateId",
-          ${jobMatchEmbeddings.jobId} AS "jobId",
-          1 - (${candidateMatchEmbeddings.embedding} <=> ${jobMatchEmbeddings.embedding}) AS score,
-          ROW_NUMBER() OVER (
-            PARTITION BY ${candidateMatchEmbeddings.candidateId}
-            ORDER BY ${candidateMatchEmbeddings.embedding} <=> ${jobMatchEmbeddings.embedding}
-          ) AS "rank"
-        FROM ${candidateMatchEmbeddings}
-        INNER JOIN ${jobSeekerProfiles}
-          ON ${jobSeekerProfiles.id} = ${candidateMatchEmbeddings.candidateId}
-        CROSS JOIN ${jobMatchEmbeddings}
-        WHERE ${inArray(jobMatchEmbeddings.jobId, jobIds)}
-          AND ${jobSeekerProfiles.isProfileComplete} = true
-          AND NOT EXISTS (
-            SELECT 1 FROM ${submissions}
-            WHERE ${submissions.candidateId} = ${candidateMatchEmbeddings.candidateId}
-              AND ${submissions.jobId} = ${jobMatchEmbeddings.jobId}
-          )
-      ) ranked
-      WHERE score >= ${jobRecommendationConfig.minScore}
-        AND "rank" <= ${jobRecommendationConfig.maxPerCandidate}
-    `);
-
-    return [
-      ...groupMatchesByCandidate(
-        rows,
-        jobRecommendationConfig.minPerCandidate,
-      ).values(),
-    ].flat();
+  private findMatches(jobIds: string[]): Promise<CandidateMatch[]> {
+    return findCandidateMatches(this.db, jobIds);
   }
 
   /**

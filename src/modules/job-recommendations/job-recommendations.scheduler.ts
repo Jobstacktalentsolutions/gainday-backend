@@ -1,10 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { jobRecommendationConfig } from '../../config/job-recommendations.config';
 import {
   JOB_RECOMMENDATIONS_QUEUE,
   RUN_JOB_RECOMMENDATIONS_JOB,
-  jobRecommendationConfig,
 } from './job-recommendations.constants';
 
 /** Registers the recurring pass as a BullMQ job scheduler, so one schedule applies across all app
