@@ -63,6 +63,7 @@ export class GenerationProcessor extends WorkerHost {
         .update(jobs)
         .set({
           status: 'ACTIVE',
+          activatedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(jobs.id, jobId));

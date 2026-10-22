@@ -76,6 +76,9 @@ export const jobSeekerProfiles = pgTable('job_seeker_profiles', {
     .references(() => users.id, { onDelete: 'cascade' }),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   phoneNumber: varchar('phone_number', { length: 50 }),
+  /** The role the candidate is looking for, e.g. "Product Manager". Drives job recommendations —
+   *  see src/modules/job-recommendations/. Null until the candidate sets it. */
+  title: varchar('title', { length: 255 }),
   // All optional at the DB level; the app requires `pronouns` before a candidate can apply, and
   // `isProfileComplete` records that it has been filled (see JobSeekerProfileService.update).
   gender: genderEnum('gender').$type<Gender>(),

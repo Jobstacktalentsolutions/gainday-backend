@@ -23,6 +23,12 @@ export default () => {
       email: process.env.ADMIN_EMAIL || 'admin@gainday.com',
       password: process.env.ADMIN_PASSWORD || 'adminpassword123',
     },
+    credits: {
+      // Optional. Without it, revenue is reported in GBP only.
+      gbpUsdRate: process.env.GBP_USD_RATE
+        ? Number(process.env.GBP_USD_RATE)
+        : null,
+    },
     database: {
       url:
         process.env.DATABASE_URL ||

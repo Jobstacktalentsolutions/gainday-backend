@@ -11,7 +11,12 @@ import {
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { SignupBonusSettingsService } from '../credits/signup-bonus-settings.service';
+import { CreditAdminService } from '../credits/credit-admin.service';
 import { UpdateSignupBonusSettingsDto } from './dto/update-signup-bonus-settings.dto';
+import {
+  CreditRevenueQueryDto,
+  ListCreditLedgerQueryDto,
+} from './dto/credit-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -37,6 +42,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly signupBonusSettingsService: SignupBonusSettingsService,
+    private readonly creditAdminService: CreditAdminService,
   ) {}
 
   @Get('settings/signup-bonus')
@@ -50,6 +56,25 @@ export class AdminController {
     @CurrentUser() admin: any,
   ) {
     return this.signupBonusSettingsService.update(dto, admin.profileId);
+  }
+
+  @Get('credits/overview')
+  async getCreditOverview() {
+    return this.creditAdminService.getOverview();
+  }
+
+  @Get('credits/ledger')
+  async listCreditLedger(@Query() query: ListCreditLedgerQueryDto) {
+    return this.creditAdminService.listLedger({
+      page: query.page ?? 1,
+      limit: query.limit ?? 10,
+      type: query.type,
+    });
+  }
+
+  @Get('credits/revenue')
+  async getCreditRevenue(@Query() query: CreditRevenueQueryDto) {
+    return this.creditAdminService.getRevenue(query.timeframe);
   }
 
   @Get('stats')

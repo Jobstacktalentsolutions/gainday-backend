@@ -12,6 +12,7 @@ import { jobSeekerProfiles } from './job-seeker-profiles.schema';
 
 export const CandidateNotificationType = {
   SELECTED: 'SELECTED',
+  JOB_RECOMMENDATION: 'JOB_RECOMMENDATION',
 } as const;
 export type CandidateNotificationType =
   (typeof CandidateNotificationType)[keyof typeof CandidateNotificationType];

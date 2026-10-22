@@ -97,7 +97,7 @@ export class JobsService {
   async publishJob(jobId: string): Promise<Job> {
     const [job] = await this.db
       .update(jobs)
-      .set({ status: 'ACTIVE', updatedAt: new Date() })
+      .set({ status: 'ACTIVE', activatedAt: new Date(), updatedAt: new Date() })
       .where(eq(jobs.id, jobId))
       .returning();
     if (!job) {

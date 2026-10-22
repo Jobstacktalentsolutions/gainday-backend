@@ -42,15 +42,16 @@ export class UsersController {
       await this.employerProfileService.update(currentUser.profileId, {
         ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
         ...(dto.companyName !== undefined ? { companyName: dto.companyName } : {}),
-        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
+        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber || null } : {}),
       });
     } else if (currentUser.role === UserRole.JOB_SEEKER && currentUser.profileId) {
       await this.jobSeekerProfileService.update(currentUser.profileId, {
         ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
-        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
+        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber || null } : {}),
         ...(dto.gender !== undefined ? { gender: dto.gender } : {}),
         ...(dto.pronouns !== undefined ? { pronouns: dto.pronouns } : {}),
         ...(dto.brief !== undefined ? { brief: dto.brief.trim() || null } : {}),
+        ...(dto.title !== undefined ? { title: dto.title.trim() || null } : {}),
       });
     }
 

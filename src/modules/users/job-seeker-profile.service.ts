@@ -78,7 +78,7 @@ export class JobSeekerProfileService {
     data: Partial<
       Pick<
         JobSeekerProfile,
-        'fullName' | 'phoneNumber' | 'gender' | 'pronouns' | 'brief'
+        'fullName' | 'phoneNumber' | 'gender' | 'pronouns' | 'brief' | 'title'
       >
     >,
   ): Promise<JobSeekerProfile> {

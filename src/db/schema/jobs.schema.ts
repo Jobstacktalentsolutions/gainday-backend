@@ -61,6 +61,10 @@ export const jobs = pgTable('jobs', {
   }),
   businessProblem: text('business_problem'),
   status: jobStatusEnum('status').notNull().default('DRAFT').$type<JobStatus>(),
+  /** When the job first went ACTIVE. Job recommendations pick up jobs by this, not createdAt,
+   *  since a job can sit in DRAFT or GENERATING for a long time before it goes live. Null for
+   *  jobs that went live before this column existed. */
+  activatedAt: timestamp('activated_at', { withTimezone: true }),
   employerId: uuid('employer_id')
     .notNull()
     .references(() => employerProfiles.id, { onDelete: 'cascade' }),

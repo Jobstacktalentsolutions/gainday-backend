@@ -18,6 +18,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { EmailModule } from './modules/email/email.module';
 import { SupportModule } from './modules/support/support.module';
 import { CapabilityPassportModule } from './modules/capability-passport/capability-passport.module';
+import { JobRecommendationsModule } from './modules/job-recommendations/job-recommendations.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -66,6 +67,7 @@ import { AppService } from './app.service';
     NotificationsModule,
     EmailModule,
     SupportModule,
+    JobRecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -14,3 +14,5 @@ export * from './credit-purchases.schema';
 export * from './credit-ledger-entries.schema';
 export * from './signup-bonus-settings.schema';
 export * from './candidate-notifications.schema';
+export * from './job-recommendations.schema';
+export * from './notification-preferences.schema';

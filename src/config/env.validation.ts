@@ -80,6 +80,8 @@ export const envValidationSchema = Joi.object({
   PASSWORD_RESET_RESEND_COOLDOWN_SECONDS: Joi.number(),
   PASSWORD_RESET_MAX_REQUESTS: Joi.number(),
   PASSWORD_RESET_TTL_MINUTES: Joi.number(),
+  // USD per 1 GBP, used to show credit revenue in dollars. Optional.
+  GBP_USD_RATE: Joi.number().positive(),
 
   SEED_EMPLOYER_EMAIL: Joi.string(),
 })

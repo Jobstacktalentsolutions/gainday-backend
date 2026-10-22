@@ -9,6 +9,7 @@ import { and, count, desc, eq, or, ilike, inArray } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { DRIZZLE } from '../../db/db.constants';
+import { buildTimeBuckets } from './analytics-buckets';
 import type { DrizzleDb } from '../../db/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
@@ -188,133 +189,11 @@ export class AdminService {
     appDates: (Date | string | null)[],
     subDates: (Date | string | null)[],
   ) {
-    const now = new Date();
-    const buckets: {
-      key: string;
-      label: string;
-      startTime: number;
-      endTime: number;
-      applications: number;
-      submissions: number;
-    }[] = [];
-
-    if (timeframe === 'day') {
-      // 24 hourly buckets
-      for (let i = 23; i >= 0; i--) {
-        const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-        const start = new Date(
-          d.getFullYear(),
-          d.getMonth(),
-          d.getDate(),
-          d.getHours(),
-          0,
-          0,
-        ).getTime();
-        const end = start + 60 * 60 * 1000;
-        const hourStr = `${d.getHours().toString().padStart(2, '0')}:00`;
-        buckets.push({
-          key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`,
-          label: hourStr,
-          startTime: start,
-          endTime: end,
-          applications: 0,
-          submissions: 0,
-        });
-      }
-    } else if (timeframe === 'week') {
-      // 7 daily buckets
-      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const start = new Date(
-          d.getFullYear(),
-          d.getMonth(),
-          d.getDate(),
-          0,
-          0,
-          0,
-        ).getTime();
-        const end = start + 24 * 60 * 60 * 1000;
-        const label = `${dayNames[d.getDay()]} ${d.getDate()}`;
-        buckets.push({
-          key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
-          label,
-          startTime: start,
-          endTime: end,
-          applications: 0,
-          submissions: 0,
-        });
-      }
-    } else if (timeframe === 'month') {
-      // 30 daily buckets (or 15 two-day steps)
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const start = new Date(
-          d.getFullYear(),
-          d.getMonth(),
-          d.getDate(),
-          0,
-          0,
-          0,
-        ).getTime();
-        const end = start + 24 * 60 * 60 * 1000;
-        const label = `${monthNames[d.getMonth()]} ${d.getDate()}`;
-        buckets.push({
-          key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
-          label,
-          startTime: start,
-          endTime: end,
-          applications: 0,
-          submissions: 0,
-        });
-      }
-    } else if (timeframe === 'year' || timeframe === 'all') {
-      // 12 monthly buckets
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      const monthsCount = timeframe === 'all' ? 12 : 12;
-      for (let i = monthsCount - 1; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const start = d.getTime();
-        const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-        const end = nextMonth.getTime();
-        const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(-2)}`;
-        buckets.push({
-          key: `${d.getFullYear()}-${d.getMonth()}`,
-          label,
-          startTime: start,
-          endTime: end,
-          applications: 0,
-          submissions: 0,
-        });
-      }
-    }
+    const buckets = buildTimeBuckets(timeframe).map((b) => ({
+      ...b,
+      applications: 0,
+      submissions: 0,
+    }));
 
     // Populate applications
     for (const rawDate of appDates) {

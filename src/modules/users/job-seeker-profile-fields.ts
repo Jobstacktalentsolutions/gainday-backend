@@ -16,6 +16,7 @@ export function jobSeekerProfileFields(profile: AnyProfile | null | undefined) {
     gender: profile.gender,
     pronouns: profile.pronouns,
     brief: profile.brief,
+    title: profile.title,
     isProfileComplete: profile.isProfileComplete,
   };
 }

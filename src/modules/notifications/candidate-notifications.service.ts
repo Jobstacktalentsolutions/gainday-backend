@@ -61,6 +61,25 @@ export class CandidateNotificationsService {
     }
   }
 
+  /** One in-app notification per recommended job. Pass `tx` to write them in the caller's
+   *  transaction, so a recommendation is never saved without its notification. */
+  async notifyJobRecommended(
+    recommendations: { candidateId: string; jobId: string; jobTitle: string }[],
+    tx?: DrizzleDb,
+  ): Promise<void> {
+    if (recommendations.length === 0) return;
+    const db = tx ?? this.db;
+    await db.insert(candidateNotifications).values(
+      recommendations.map((recommendation) => ({
+        candidateId: recommendation.candidateId,
+        type: CandidateNotificationType.JOB_RECOMMENDATION,
+        title: `New job match: ${recommendation.jobTitle}`,
+        message: `${recommendation.jobTitle} matches the job title on your profile.`,
+        metadata: { jobId: recommendation.jobId },
+      })),
+    );
+  }
+
   list(candidateId: string): Promise<CandidateNotification[]> {
     return this.db
       .select()
