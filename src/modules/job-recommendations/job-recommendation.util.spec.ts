@@ -1,7 +1,6 @@
 import {
   buildCandidateMatchText,
   buildJobMatchText,
-  chunk,
   groupMatchesByCandidate,
   hashText,
 } from './job-recommendation.util';
