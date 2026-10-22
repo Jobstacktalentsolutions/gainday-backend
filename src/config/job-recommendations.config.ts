@@ -19,4 +19,4 @@ export const jobRecommendationConfig = {
   minScore: 0.6,
   maxPerCandidate: 4,
   minPerCandidate: 2,
-} satisfies SelectionRules;
+};
