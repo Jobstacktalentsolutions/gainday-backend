@@ -12,13 +12,19 @@ import {
   jobs,
   jobSeekerProfiles,
   submissions,
+  users,
 } from '../../db/schema';
+import { chunk } from '../../common/chunk.util';
 import { CandidateNotificationsService } from '../notifications/candidate-notifications.service';
+import {
+  NotificationCategory,
+  NotificationPreferencesService,
+} from '../notifications/notification-preferences.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { JobMatchEmbeddingService } from './job-match-embedding.service';
 import { jobRecommendationConfig } from './job-recommendations.constants';
 import {
   CandidateMatch,
-  chunk,
   groupMatchesByCandidate,
 } from './job-recommendation.util';
 
@@ -27,6 +33,23 @@ const WRITE_BATCH_SIZE = 500;
 interface ActivatedJob {
   id: string;
   title: string;
+}
+
+interface SavedRecommendation {
+  candidateId: string;
+  jobId: string;
+}
+
+interface Recipient {
+  candidateId: string;
+  userId: string;
+  email: string;
+  fullName: string;
+}
+
+interface Delivery extends SavedRecommendation {
+  recipient: Recipient;
+  jobTitle: string;
 }
 
 /**
@@ -41,6 +64,8 @@ export class JobRecommendationsService {
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly embeddings: JobMatchEmbeddingService,
     private readonly candidateNotifications: CandidateNotificationsService,
+    private readonly preferences: NotificationPreferencesService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async runPass(): Promise<void> {
@@ -174,8 +199,10 @@ export class JobRecommendationsService {
   }
 
   /**
-   * Saves the recommendations and their notifications in one transaction. Re-running a pass
-   * skips recommendations already saved, so a candidate is never notified about a job twice.
+   * Saves every recommendation, and notifies only candidates who have not opted out. Opt-outs are
+   * checked before anything is written. Emails go out after the commit, so an email is never sent
+   * for a recommendation that failed to save. Re-running a pass skips recommendations already
+   * saved, so nobody is told about the same job twice.
    */
   private async saveAndNotify(
     runId: string,
@@ -185,32 +212,107 @@ export class JobRecommendationsService {
     const titleByJobId = new Map(
       activatedJobs.map((job) => [job.id, job.title]),
     );
+    const recipients = await this.findRecipients([
+      ...new Set(matches.map((match) => match.candidateId)),
+    ]);
+    const optedOut = await this.preferences.optedOutUserIds(
+      NotificationCategory.JOB_RECOMMENDATIONS,
+      [...recipients.values()].map((recipient) => recipient.userId),
+    );
     const rows = matches.map((match) => ({ ...match, runId }));
 
-    return this.db.transaction(async (tx) => {
-      let created = 0;
+    const deliveries = await this.db.transaction(async (tx) => {
+      const inserted: SavedRecommendation[] = [];
       for (const batch of chunk(rows, WRITE_BATCH_SIZE)) {
-        const inserted = await tx
-          .insert(jobRecommendations)
-          .values(batch)
-          .onConflictDoNothing()
-          .returning({
-            candidateId: jobRecommendations.candidateId,
-            jobId: jobRecommendations.jobId,
-          });
-
-        await this.candidateNotifications.notifyJobRecommended(
-          inserted.flatMap((row) => {
-            const jobTitle = titleByJobId.get(row.jobId);
-            return jobTitle
-              ? [{ candidateId: row.candidateId, jobId: row.jobId, jobTitle }]
-              : [];
-          }),
-          tx,
+        inserted.push(
+          ...(await tx
+            .insert(jobRecommendations)
+            .values(batch)
+            .onConflictDoNothing()
+            .returning({
+              candidateId: jobRecommendations.candidateId,
+              jobId: jobRecommendations.jobId,
+            })),
         );
-        created += inserted.length;
       }
-      return created;
+
+      const notifiable = inserted.flatMap((row) => {
+        const recipient = recipients.get(row.candidateId);
+        const jobTitle = titleByJobId.get(row.jobId);
+        return recipient && jobTitle && !optedOut.has(recipient.userId)
+          ? [{ ...row, recipient, jobTitle }]
+          : [];
+      });
+      await this.candidateNotifications.notifyJobRecommended(
+        notifiable.map((delivery) => ({
+          candidateId: delivery.candidateId,
+          jobId: delivery.jobId,
+          jobTitle: delivery.jobTitle,
+        })),
+        tx,
+      );
+      return notifiable;
     });
+
+    await this.sendEmails(deliveries);
+    return rows.length;
+  }
+
+  /** One email per candidate listing that candidate's new matches. A failed enqueue is logged, not
+   *  rethrown: the recommendations are already saved, so a retry would never send the email. */
+  private async sendEmails(deliveries: Delivery[]): Promise<void> {
+    const byCandidate = new Map<string, Delivery[]>();
+    for (const delivery of deliveries) {
+      const existing = byCandidate.get(delivery.candidateId);
+      if (existing) {
+        existing.push(delivery);
+      } else {
+        byCandidate.set(delivery.candidateId, [delivery]);
+      }
+    }
+
+    for (const [candidateId, candidateDeliveries] of byCandidate) {
+      const { recipient } = candidateDeliveries[0];
+      try {
+        const unsubscribeUrl = await this.preferences.getUnsubscribeUrl(
+          recipient.userId,
+        );
+        await this.notifications.sendJobRecommendationsEmail(recipient.email, {
+          candidateName: recipient.fullName,
+          jobs: candidateDeliveries.map((delivery) => ({
+            id: delivery.jobId,
+            title: delivery.jobTitle,
+          })),
+          unsubscribeUrl,
+        });
+      } catch (err) {
+        this.logger.error(
+          `Failed to email job recommendations to candidate ${candidateId}`,
+          err,
+        );
+      }
+    }
+  }
+
+  private async findRecipients(
+    candidateIds: string[],
+  ): Promise<Map<string, Recipient>> {
+    const recipients = new Map<string, Recipient>();
+    for (const batch of chunk(candidateIds, WRITE_BATCH_SIZE)) {
+      const rows = await this.db
+        .select({
+          candidateId: jobSeekerProfiles.id,
+          userId: users.id,
+          email: users.email,
+          fullName: jobSeekerProfiles.fullName,
+        })
+        .from(jobSeekerProfiles)
+        .innerJoin(users, eq(users.id, jobSeekerProfiles.userId))
+        .where(inArray(jobSeekerProfiles.id, batch));
+      for (const row of rows) {
+        recipients.set(row.candidateId, row);
+      }
+    }
+    return recipients;
   }
 }

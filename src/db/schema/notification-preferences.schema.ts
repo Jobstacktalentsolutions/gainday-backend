@@ -24,4 +24,5 @@ export const notificationPreferences = pgTable('notification_preferences', {
     .unique(),
 });
 
-export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type NotificationPreferences =
+  typeof notificationPreferences.$inferSelect;

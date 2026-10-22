@@ -182,6 +182,38 @@ export class NotificationsService {
     this.logger.log(`Scoring results email enqueued for ${candidateEmail}`);
   }
 
+  /** Marketing-style email, so it carries the unsubscribe link (see the footer partial). */
+  async sendJobRecommendationsEmail(
+    to: string,
+    recommendation: {
+      candidateName: string;
+      jobs: { id: string; title: string }[];
+      unsubscribeUrl: string;
+    },
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>('email.appUrl');
+    const year = new Date().getFullYear();
+    const count = recommendation.jobs.length;
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: `${count} new ${count === 1 ? 'job matches' : 'jobs match'} your job title`,
+      template: 'job-recommendations',
+      context: {
+        candidateName: recommendation.candidateName,
+        jobs: recommendation.jobs.map((job) => ({
+          title: job.title,
+          url: `${appUrl}/job-board/${job.id}`,
+        })),
+        jobBoardUrl: `${appUrl}/job-board`,
+        unsubscribeUrl: recommendation.unsubscribeUrl,
+        year,
+      },
+    });
+
+    this.logger.log(`Job recommendations email enqueued for ${to}`);
+  }
+
   async sendCandidateSelectedEmail(
     to: string,
     selection: {

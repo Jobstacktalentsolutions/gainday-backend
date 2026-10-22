@@ -117,10 +117,14 @@ copy and new variables slotted into existing components.
    `gainday-frontend/src` for it, the same way you'd check a backend schema
    before wiring a frontend field.
 
-## Known gap
+## Unsubscribe
 
-None of these templates currently have a working unsubscribe link — there's no
-unsubscribe endpoint or preference mechanism in the codebase yet. Don't add a
-decorative "Unsubscribe" link that points nowhere; add the real link once that
-mechanism exists (and revisit whether transactional emails like these need one
-at all versus only marketing sends).
+The footer's "Unsubscribe" link is real, but only for marketing-style emails,
+the ones a user can opt out of (job recommendations, newsletter). Those pass
+`unsubscribeUrl` into the footer, which links to `/email-preferences?token=…`.
+Get the URL from `NotificationPreferencesService.getUnsubscribeUrl(userId)`,
+and check `optedOutUserIds(category, …)` before sending.
+
+Transactional emails (verification, password reset, selection, scoring) don't
+pass `unsubscribeUrl`, so the footer shows a plain "Privacy" link. Don't add an
+unsubscribe link to them: users can't opt out of account emails.

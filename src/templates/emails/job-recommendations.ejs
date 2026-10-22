@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New jobs matching your job title</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'New jobs for you' }) %>
+
+      <div class="content">
+        <p class="intro">
+          Hi <%= candidateName %>,<br><br>
+          New jobs were posted that match the job title on your profile.
+        </p>
+
+        <div class="standout-box">
+          <div class="standout-title">Your matches</div>
+          <% jobs.forEach(function (job) { %>
+            <p style="margin: 0 0 12px 0;">
+              <span class="badge"><%= job.title %></span><br>
+              <a href="<%= job.url %>" style="color:#1817fe; text-decoration:none; font-size:13px; font-weight:600;">View job</a>
+            </p>
+          <% }) %>
+        </div>
+
+        <div class="cta-wrap">
+          <a href="<%= jobBoardUrl %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            Browse the job board
+          </a>
+        </div>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl, unsubscribeUrl: unsubscribeUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

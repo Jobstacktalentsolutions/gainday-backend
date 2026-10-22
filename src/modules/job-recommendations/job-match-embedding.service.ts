@@ -10,10 +10,10 @@ import {
   jobs,
 } from '../../db/schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
+import { chunk } from '../../common/chunk.util';
 import {
   buildCandidateMatchText,
   buildJobMatchText,
-  chunk,
   hashText,
 } from './job-recommendation.util';
 
