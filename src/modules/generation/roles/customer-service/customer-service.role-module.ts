@@ -89,7 +89,7 @@ export const CustomerServiceRoleModule: RoleModule = {
   extraction: {
     categorySubDomainGuidance:
       'Customer service sub-domains include Tier 1 support, Complaints and Escalations, Technical Support, ' +
-      'Contact Centre, and Support Lead. Extract the specific sub-domain the job describes (e.g. ' +
+      'Contact Centre, and Support Lead. Retention and renewal work is "Sales > CSM", not customer service. Extract the specific sub-domain the job describes (e.g. ' +
       '"Customer Service > Complaints"), not just "Customer Service", when the description supports it.',
     intentFramingGuidance:
       'Customer service intent centers on applying policy correctly, de-escalating, communicating clearly ' +

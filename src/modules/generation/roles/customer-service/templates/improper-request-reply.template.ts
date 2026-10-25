@@ -52,5 +52,6 @@ export const improperRequestReplySpec = defineTaskSpec(dataSchema, (data) => ({
       'Stays courteous and does not accuse the customer',
     ],
     gate: `Carries out or confirms the requested action: ${data.requestedAction}`,
+    authorisedCommitments: [{ kind: 'ESCALATION', amount: null }],
   },
 }));

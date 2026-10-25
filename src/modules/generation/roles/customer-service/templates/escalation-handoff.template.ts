@@ -63,6 +63,7 @@ export const escalationHandoffSpec = defineTaskSpec(dataSchema, (data) => {
         'Does not blame the customer',
       ],
       gate: null,
+      authorisedCommitments: [{ kind: 'ESCALATION', amount: null }],
     },
   };
 });

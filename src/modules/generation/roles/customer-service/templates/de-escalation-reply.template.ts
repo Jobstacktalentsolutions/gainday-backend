@@ -64,6 +64,13 @@ export const deEscalationReplySpec = defineTaskSpec(dataSchema, (data) => {
     rubric: {
       checklist,
       gate: `Mirrors abusive language, or promises compensation above ${money(data.compensationLimit)}`,
+      authorisedCommitments:
+        data.threat === 'NONE'
+          ? [{ kind: 'COMPENSATION', amount: data.compensationLimit }]
+          : [
+              { kind: 'COMPENSATION', amount: data.compensationLimit },
+              { kind: 'ESCALATION', amount: null },
+            ],
     },
   };
 });

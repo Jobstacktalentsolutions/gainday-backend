@@ -157,7 +157,7 @@ These findings come from AI support assistants, not hiring simulations; applying
 
 ### 5.3 Customer-service-specific critic checks
 Added to the shared checks (novelty, duplicate, relevance, anchor correctness). Under current product decisions simulations publish without employer review, so the critic plus admin oversight are the only gates.
-- **Commitment check:** every refund, credit, timeline or escalation promised in an anchor scoring 7 or above must be authorised by the spec. An unauthorised commitment appears only in low-scoring anchors, and is labelled as the defect it is. Built as an instruction in the anchor correctness prompt (an LLM check against the Policy tab and the gate), not as a deterministic check.
+- **Commitment check:** every refund, credit, timeline or escalation promised in an anchor scoring 7 or above must be authorised by the spec. An unauthorised commitment appears only in low-scoring anchors, and is labelled as the defect it is. Built as a deterministic check (`grading/anchors/commitment-check.ts`). Each anchor lists its commitments (kind and amount), and each task lists the commitments its policy authorises (`rubric.authorisedCommitments`). An anchor scoring 70 or more that promises anything else fails, and the set is regenerated. Anchors below 70 may show the defect. Anchors generated before commitment tags existed are not checked.
 - **Deterministic facts:** eligibility, dates and amounts in the Case File are computed by code and consistent across ticket, record and policy.
 - **Single defensible outcome:** either the spec yields one correct outcome, or it is explicitly marked discretionary and graded on reasoning against a defined set of acceptable options. Never a firm key on an ambiguous policy.
 - **Completeness:** the Case File contains what the candidate needs, or the missing information is deliberate and listed in the spec as the information-gathering target.
@@ -210,7 +210,7 @@ As with sales and finance, "customer service" is not one bucket; Category needs 
 - **Technical support:** 2.4, 2.1, 2.5, 2.7. Highest risk of invented product behaviour.
 - **Complaints and escalations:** 2.2, 2.3, 2.5. Kaizo's complaints template emphasises de-escalation, remedy, root cause, ownership without bouncing, regulatory handling and handover documentation, with the highest pass mark of its templates (90%).
 - **Support lead / QA:** 2.6, 2.7, and the deferred QA-review task.
-- **Customer success / retention:** overlaps with the sales document's CSM sub-role. Routing needs a decision (Section 8) so a retention role does not generate from the wrong module.
+- **Customer success / retention:** owned by the sales module as "Sales > CSM" (Section 8). The customer service module does not generate retention tasks.
 
 ---
 
@@ -240,7 +240,7 @@ As with sales and finance, "customer service" is not one bucket; Category needs 
 - **Case File Panel spec:** tabs, supported content (text, small tables), maximum length, always-visible behaviour.
 - **Gate handling:** decided as cap and flag (Section 5.5). Built: cap at 20 on judgment, `gateTriggered` per task. Not yet shown on the employer review page.
 - **Commercial/domain awareness for customer service:** the definition in Section 5.4 is used. Its weight is 0.15 (`customer-service.anchor-config.ts`), and the one-item-per-task rule is not yet enforced.
-- **Routing for customer success and retention roles:** still open. Retention tasks currently route to the customer service module only if the category says "Customer Service".
+- **Routing for customer success and retention roles:** decided. Retention, renewal, customer success and account-management roles are owned by the sales module as "Sales > CSM" (`canonicalCategory`, applied right after category extraction). The customer service module covers service issues only. Sales CSM task types are not built yet: CSM postings currently get the general sales tasks.
 - **Channel defaults and employer disclosure:** default when the posting is silent, and what the employer is told for phone-heavy roles.
 - **Calibration set:** who scores the human reference replies, and how tone is calibrated across locales.
 - **SJT keying method,** if forced-choice items are added: policy-determined keys only, or expert-reviewed keys.

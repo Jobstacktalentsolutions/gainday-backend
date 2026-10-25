@@ -92,6 +92,7 @@ export const ticketTriageSpec = defineTaskSpec(dataSchema, (data) => {
         'Sets expectations for the tickets not worked first',
       ],
       gate: null,
+      authorisedCommitments: [{ kind: 'ESCALATION', amount: null }],
     },
   };
 });

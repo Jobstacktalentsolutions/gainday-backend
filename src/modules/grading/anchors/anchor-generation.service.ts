@@ -21,6 +21,7 @@ import { anchorCritiqueSchema } from '../schemas/anchor-critique.schema';
 import { buildAnchorGenerationPrompt } from '../prompts/anchor-generation.prompt';
 import { AnchorRoleRegistry } from '../roles/anchor-role-registry';
 import { AnchorCriteriaFraming } from '../roles/anchor-role-config.interface';
+import { unauthorisedCommitmentReasons } from './commitment-check';
 import { GradingConfig } from '../grading.config.interface';
 
 const logger = new Logger('Grading:anchorGeneration');
@@ -104,6 +105,15 @@ export class AnchorGenerationService {
         );
         continue;
       }
+      // Code checks promises the policy does not authorise before the LLM critic runs. A set that
+      // fails is discarded, like a malformed one, and never kept as the fallback.
+      const commitmentProblems = unauthorisedCommitmentReasons(anchors, row.taskContent.rubric);
+      if (commitmentProblems.length > 0) {
+        logger.warn(
+          `question_bank ${row.id}: anchor attempt ${attempt + 1} of ${grading.maxAnchorAttempts} discarded — ${commitmentProblems.join(' ')}`,
+        );
+        continue;
+      }
       lastAnchors = anchors;
 
       const critique = await this.critiqueAnchors(
@@ -126,7 +136,7 @@ export class AnchorGenerationService {
     // it is retried (and reported if it keeps happening) rather than saving a bad anchor set.
     if (lastAnchors === null) {
       throw new Error(
-        `question_bank ${row.id}: no well-formed anchor set after ${grading.maxAnchorAttempts} attempts`,
+        `question_bank ${row.id}: no anchor set passed the shape and commitment checks after ${grading.maxAnchorAttempts} attempts`,
       );
     }
 

@@ -93,6 +93,7 @@ export const diagnosticQuestionsSpec = defineTaskSpec(dataSchema, (data) => {
         'Uses plain language a non-technical customer can follow',
       ],
       gate: null,
+      authorisedCommitments: [],
     },
   };
 });

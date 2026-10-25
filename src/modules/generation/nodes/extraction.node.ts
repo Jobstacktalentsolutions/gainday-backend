@@ -10,6 +10,7 @@ import {
   intentProblemExtractionSchema,
 } from '../schemas/extraction.schema';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
+import { canonicalCategory } from '../roles/category-routing';
 
 const logger = new Logger('GenerationPipeline:extraction');
 
@@ -17,7 +18,7 @@ const CATEGORY_EXTRACTION_PROMPT = `You are extracting the job Category from a r
 posting input. Category is the true domain and sub-domain of the role (e.g. "Finance >
 Reconciliation", "Sales", "Customer Support > Technical Troubleshooting", "Logistics > Fleet
 Operations"). Extract the domain the role actually belongs to — do not force-fit it into Finance
-or Sales if it clearly belongs elsewhere; we support any domain. If a sub-domain is evident from
+or Sales if it clearly belongs elsewhere; we support any domain. Customer retention, renewal and account-management roles are "Sales > CSM", never Customer Service. If a sub-domain is evident from
 the description, include it after " > ".`;
 
 export function extractionNode(ctx: GenerationContext) {
@@ -37,15 +38,16 @@ export function extractionNode(ctx: GenerationContext) {
         }),
       ),
     ]);
-    logger.log(`Category extracted: "${categoryResult.category}"`);
+    const category = canonicalCategory(categoryResult.category);
+    logger.log(`Category extracted: "${category}"`);
 
-    const roleModule = ctx.roleRegistry.resolve(categoryResult.category);
+    const roleModule = ctx.roleRegistry.resolve(category);
     logger.log(
-      `Resolved role module for "${categoryResult.category}" (${roleModule.allowedTaskPatternTypes.length} allowed task pattern types)`,
+      `Resolved role module for "${category}" (${roleModule.allowedTaskPatternTypes.length} allowed task pattern types)`,
     );
 
     const intentProblemPrompt = `You are extracting Intent and Problem from a recruiter's job
-posting input, for a role in the category "${categoryResult.category}".
+posting input, for a role in the category "${category}".
 
 ${roleModule.extraction.intentFramingGuidance}
 ${roleModule.extraction.expectedTaskGuidance}
@@ -74,7 +76,7 @@ stated, return null for problem. Never invent or infer a problem that is not pre
     );
 
     return {
-      category: categoryResult.category,
+      category: category,
       roleModule,
       intent: intentProblemResult.intent,
       problem: intentProblemResult.problem,
