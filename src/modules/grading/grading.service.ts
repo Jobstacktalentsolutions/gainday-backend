@@ -31,6 +31,7 @@ import {
 import { checklistResults, gateOutcome } from './rubric-results';
 import { RoleRegistry } from '../generation/roles/role-registry';
 import { SimulationTask } from '../../db/schema/simulations.schema';
+import { isGradedByAnswer } from './task-eligibility';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AdminNotificationsService } from '../notifications/admin-notifications.service';
 import { toDisplayId } from '../submissions/employer-submission.view';
@@ -225,6 +226,11 @@ export class GradingService {
         this.logger.warn(
           `Submission ${submissionId}: answer for unknown task ${answer.taskId} — skipping`,
         );
+        continue;
+      }
+      if (!isGradedByAnswer(task)) {
+        // Staged chats are graded from their transcript, not from this answer (see task-eligibility.ts).
+        this.logger.log(`Submission ${submissionId}: task ${task.id} is a staged chat — not graded from its answer`);
         continue;
       }
       if (!task.questionBankId) {

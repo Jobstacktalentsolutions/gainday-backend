@@ -46,6 +46,16 @@ function selectCandidateForSlot(state: GenerationState): TaskCandidateRecord {
   return next;
 }
 
+/**
+ * On a retry, the critic's reasons for the rejected attempt, so the next attempt corrects them. A fresh
+ * slot (attempt 0) has no earlier rejection of its own, so it gets none.
+ */
+function revisionNotesFor(state: GenerationState): string[] | undefined {
+  const previous = state.currentCriticResult;
+  if (state.currentAttempt === 0 || !previous || previous.passed) return undefined;
+  return previous.failureReasons;
+}
+
 export function taskGenerationNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
     const candidate = selectCandidateForSlot(state);
@@ -63,6 +73,7 @@ export function taskGenerationNode(ctx: GenerationContext) {
         problem: state.problem,
         taskType: candidate.taskType,
         briefDescription: candidate.briefDescription,
+        revisionNotes: revisionNotesFor(state),
       });
     } catch (err) {
       if (!(err instanceof TaskSpecError)) throw err;

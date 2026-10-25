@@ -72,6 +72,16 @@ export class AuthService {
     };
   }
 
+  /** Throws for a suspended account. Shared by password and Google login, so both say the same. */
+  assertAccountActive(user: { isActive: boolean; suspensionReason: string | null }): void {
+    if (user.isActive === false) {
+      const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
+      throw new ForbiddenException(
+        `Your account has been suspended${reason}. Please contact support.`,
+      );
+    }
+  }
+
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmailWithPassword(email);
 
@@ -86,12 +96,7 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (isPasswordValid) {
-      if (user.isActive === false) {
-        const reason = user.suspensionReason ? `: ${user.suspensionReason}` : '';
-        throw new ForbiddenException(
-          `Your account has been suspended${reason}. Please contact support.`,
-        );
-      }
+      this.assertAccountActive(user);
       const { password, ...result } = user;
       return result;
     }
@@ -561,82 +566,6 @@ export class AuthService {
       token,
       user.role,
     );
-  }
-
-  async validateGoogleUser(
-    googleUserData: any,
-    role: UserRole = UserRole.EMPLOYER,
-  ) {
-    // NOTE (pre-existing, unrelated to this refactor): the "attach googleId to
-    // an existing user found by email" branch below calls createUser with the
-    // existing user's fields, which inserts a *new* row rather than updating
-    // the found one. Left as-is per plan — flagged, not fixed here.
-    const { email, googleId, fullName } = googleUserData;
-
-    let user = await this.usersService.findByGoogleId(googleId);
-
-    if (!user) {
-      user = await this.usersService.findByEmail(email);
-
-      if (user) {
-        await this.usersService.createUser({
-          ...user,
-          googleId,
-        });
-      } else if (role === UserRole.JOB_SEEKER) {
-        user = await this.db.transaction(async (tx) => {
-          const [newUser] = await tx
-            .insert(users)
-            .values({
-              email,
-              googleId,
-              role: UserRole.JOB_SEEKER,
-              authProvider: AuthProvider.GOOGLE,
-              isEmailVerified: true,
-            })
-            .returning();
-
-          await this.jobSeekerProfileService.create(
-            {
-              userId: newUser.id,
-              fullName,
-            },
-            tx,
-          );
-
-          return newUser;
-        });
-      } else {
-        let employerProfileId!: string;
-        user = await this.db.transaction(async (tx) => {
-          const [newUser] = await tx
-            .insert(users)
-            .values({
-              email,
-              googleId,
-              role: UserRole.EMPLOYER,
-              authProvider: AuthProvider.GOOGLE,
-              isEmailVerified: true,
-            })
-            .returning();
-
-          const employerProfile = await this.employerProfileService.create(
-            {
-              userId: newUser.id,
-              fullName,
-            },
-            tx,
-          );
-          employerProfileId = employerProfile.id;
-
-          return newUser;
-        });
-
-        await this.grantSignupBonusSafely(employerProfileId);
-      }
-    }
-
-    return this.login(user);
   }
 
   /**

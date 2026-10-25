@@ -97,10 +97,46 @@ Interface names refer to the pipeline document's taxonomy (Section 2.5) and the 
 
 ---
 
+### 2.8 Staged Chat (scripted multi-turn conversation)
+**Real-world form:** a multi-turn exchange with a customer who escalates, asks follow-ups, and expects a resolution. The live version (Section 3) needs an adaptive customer; the staged version does not.
+**What it is:** a fixed script. The customer's messages are pre-written and identical for every candidate. The candidate writes one reply per turn, and the next customer message is released only after that reply is stored. The conversation never adapts to what the candidate wrote, except through an optional branch.
+**Turns:** 3 or 4, chosen per task by the generator. Use 4 only when the case has a distinct final step, such as setting expectations after an escalation. The extra turn must test a different skill, not repeat the same pressure. (This guidance lives in the generation prompt, because the validator cannot check it.)
+**Component type:** none at task level. The transcript is graded later, in batch, by the existing grading pipeline. This task defines only the data contract that grading consumes: per turn, the customer message, the candidate reply, the branch id if any, and the server-only checkpoints and critical errors.
+**Interface:** `STAGED_CHAT`: a Case File Panel (desktop, left) and a chat (right). Mobile shows the chat full width, with the Case File in a bottom sheet.
+
+**Data split (strict).** Each task keeps two kinds of content apart:
+- *Visible to the candidate:* the customer's display name, the Case File (three tabs: Customer record, Ticket history, Policy), the reply word limit, and the turn count.
+- *Server only, never sent to the client:* the full scripted messages, the typing delay for each, the grading checkpoints and critical errors for each turn, the branches, and a reference to the question-bank row, which holds the anchor set.
+The server-only part is stored on the question-bank row and never copied into the simulation task, so the candidate's task data cannot contain it. The visible payload is validated strictly, so an extra server-only key is rejected.
+
+**Validator rules** (enforced at generation and on any save):
+1. Turn count is 3 or 4. The message count matches the turn count.
+2. Customer messages must not refer to what the candidate said ("as you said", "you mentioned", "your last reply"). Each message must make sense after any reasonable reply.
+3. Typing delays are between 800 and 4000 ms.
+4. Figures in customer messages must come from the Case File, as in the other roles.
+5. Branch ids are unique, and a branch applies to a turn from 2 to the turn count. Branch replacement messages follow rule 2.
+6. The Case File has exactly the three tabs above, in that order.
+
+**Branch hook.** A `BranchEvaluator` takes the turn and the reply and returns a branch id or null. This version ships only the default, which always returns null. There are no LLM calls and no keyword matching. A branch is a named condition plus a replacement customer message for the next turn.
+
+**Runtime flow and API:**
+- `GET` staged-chat state: returns the visible task data, the transcript so far, and the current turn index. It never includes a future message.
+- `POST` a reply for turn N with `{ text, clientSentAt, idempotencyKey }`. The server checks that N is the current turn, that the text is non-empty and within the word limit, stores the reply, and returns the next customer message with its `typing_delay_ms`, or a completion marker after the last turn.
+- One reply per (submission, task, turn). A retry with the same idempotency key returns the original response. A stale turn index returns a clear error.
+- Stored per reply: the candidate text, the server receive time, the client send time, the customer message and branch that were released for that turn, and the branch chosen for the next turn.
+- Storage: replies are JSON, one record per staged task, in `submissions.staged_chats`, the same way other submission data is stored. Each write locks the submission row, checks the turn and idempotency key inside that lock, and writes the array back. Turn uniqueness and idempotency are enforced in code under the lock, not by database indexes.
+- **Deadline:** if the submission closes mid-conversation, the replies already stored are kept and the transcript is marked incomplete. Batch grading is not blocked.
+- **Grader contract:** a function returns, for a submission and task, `[{ turn, customer_message, candidate_reply, branch_id }]` plus the server-only checkpoints and critical errors for each turn. It does not call a grader.
+
+**Frontend layout:** on desktop, the Case File Panel is on the left, read-only, with its three tabs always visible while the candidate types. Switching tabs inside the page does not trigger tab-switch detection. On mobile, the chat takes the full width, and the Case File opens from a pinned button as a bottom sheet. The reply box stays usable with the keyboard open.
+- Customer bubbles sit on the left with an initials avatar. Candidate bubbles sit on the right. Timestamps are small and muted. Sent messages cannot be edited or deleted.
+- A progress label above the reply box reads "Reply N of M", where M comes from the task's turn count. The UI never hard-codes the turn count.
+- The reply box is multi-line. Enter inserts a newline, Ctrl/Cmd+Enter sends, and a Send button is always visible. A live word counter shows the count. At 90% of the limit a soft warning appears. Over the limit, Send is disabled and the count turns the error colour.
+
 ## 3. Categories — Not Buildable in the Current Scope
 
 - **Live phone and voice roleplay.** Vervoe uses recorded audio and video answers; much real customer service hiring is phone-based. The text-first platform cannot test voice, pace, or active listening in real time. For phone-heavy postings the simulation measures written judgment only, and the employer should be told so.
-- **Live chat simulation** (eSkill's chat simulation, interactive customer personas). Needs the multi-turn chat thread interface that is deliberately out of scope, plus transcript-level grading.
+- **Live chat simulation** (eSkill's chat simulation, interactive customer personas). Needs an adaptive customer and live grading. The scripted version is built as staged chat (Section 2.8).
 - **Animated work simulation** (HR Avatar). A vendor product; not a realistic build.
 - **Product session.** PitchNHire's best predictor of ramp speed, but it needs a sandbox product to work in.
 - **Incident interview.** A structured behavioural interview, not a simulation.

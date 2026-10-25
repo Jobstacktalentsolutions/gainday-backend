@@ -22,6 +22,7 @@ function failedWithoutContent(state: GenerationState): CriticResult {
     noveltyDistance: null,
     isDuplicate: false,
     relevant: false,
+    repairable: false,
     embedding: null,
   };
 }
@@ -108,14 +109,9 @@ export function criticNode(ctx: GenerationContext) {
       }
     }
 
-    // Role-specific deterministic checks, e.g. finance: no figure in the text that the table lacks.
-    const roleReasons = state.roleModule.criticChecks.validateTask?.(candidate) ?? [];
-    failureReasons.push(...roleReasons);
-
     const criticResult: CriticResult = {
       passed:
         payloadValid &&
-        roleReasons.length === 0 &&
         !duplicateResult.isDuplicate &&
         relevanceResult.relevant &&
         additionalRelevanceOk,
@@ -123,6 +119,7 @@ export function criticNode(ctx: GenerationContext) {
       noveltyDistance: duplicateResult.closestMatch?.distance ?? null,
       isDuplicate: duplicateResult.isDuplicate,
       relevant: relevanceResult.relevant && additionalRelevanceOk,
+      repairable: !duplicateResult.isDuplicate && relevanceResult.relevant && additionalRelevanceOk,
       embedding,
     };
 

@@ -27,6 +27,11 @@ export interface CriticResult {
   noveltyDistance: number | null;
   isDuplicate: boolean;
   relevant: boolean;
+  /**
+   * True when the draft can be fixed in place: its content exists and the failures are about wording,
+   * figures or payload, not about the idea. A duplicate or an irrelevant task needs a new candidate.
+   */
+  repairable: boolean;
   /** Embedding computed for the novelty/duplicate check — carried forward so persist.node.ts
    *  doesn't recompute it for the same unchanged taskContent. Null when the draft had no content. */
   embedding: number[] | null;

@@ -54,9 +54,31 @@ describe('envValidationSchema — Stripe webhook secret', () => {
       DATABASE_URL: 'postgres://localhost:5432/db',
       BREVO_API_KEY: 'brevo-key',
       GEMINI_API_KEY: 'gemini-key',
+      GOOGLE_CLIENT_ID: 'client-id.apps.googleusercontent.com',
     });
     expect(error?.message).toMatch(
       /STRIPE_PROD_WEBHOOK_SECRET.*doesn't look like a real Stripe webhook secret/,
     );
+  });
+});
+
+describe('envValidationSchema — Google sign-in client ID', () => {
+  it('requires GOOGLE_CLIENT_ID in production', () => {
+    const { error } = validate({
+      ...baseEnv,
+      NODE_ENV: 'production',
+      STRIPE_LIVE_SECRET_KEY: 'sk_live_abc123',
+      BREVO_API_KEY: 'brevo-key',
+      STRIPE_PROD_WEBHOOK_SECRET: 'whsec_live_abc123',
+    });
+    expect(error?.message).toMatch(/GOOGLE_CLIENT_ID/);
+  });
+
+  it('does not require it in development', () => {
+    const { error } = validate({
+      ...baseEnv,
+      STRIPE_TEST_WEBHOOK_SECRET: 'whsec_test_abc123',
+    });
+    expect(error?.message ?? '').not.toMatch(/GOOGLE_CLIENT_ID/);
   });
 });

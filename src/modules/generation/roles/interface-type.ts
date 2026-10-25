@@ -22,6 +22,7 @@ export enum InterfaceType {
   CSV_DATA_PANEL = 'CSV_DATA_PANEL',
   TABLE_VIEW_WITH_CHART = 'TABLE_VIEW_WITH_CHART',
   CASE_FILE_TEXT_AREA = 'CASE_FILE_TEXT_AREA',
+  STAGED_CHAT = 'STAGED_CHAT',
 }
 
 // z.literal() compiles to JSON-Schema `const`, which Gemini's schema parser rejects
@@ -119,6 +120,32 @@ const caseFileTextAreaSchema = z.object({
   placeholder: z.string().nullable(),
 });
 
+// Staged chat (customer service doc Section 2.8): the candidate-visible part only. The scripted
+// customer messages, delays, checkpoints and branches are server-only and live on the question-bank
+// row, so this schema is strict: an extra key, such as a message, is rejected rather than stripped.
+export const STAGED_CHAT_TURN_COUNTS = [3, 4] as const;
+export const STAGED_CHAT_TAB_LABELS = ['Customer record', 'Ticket history', 'Policy'] as const;
+
+const stagedChatSchema = z
+  .object({
+    interfaceType: z.enum([InterfaceType.STAGED_CHAT]),
+    displayName: z.string().min(1),
+    caseFile: z.object({
+      tabs: z
+        .array(z.object({ label: z.string(), content: z.string() }))
+        .length(STAGED_CHAT_TAB_LABELS.length),
+    }),
+    wordLimit: z.object({
+      min: z.number().int().nonnegative(),
+      max: z.number().int().positive(),
+    }),
+    turnCount: z.union([z.literal(3), z.literal(4)]),
+    placeholder: z.string().nullable(),
+  })
+  .strict();
+
+export type StagedChatPayload = z.infer<typeof stagedChatSchema>;
+
 /**
  * Per-type Zod schemas describing exactly what the frontend needs to render that interface —
  * the contract for `SimulationTask.interfacePayload`. This is a Record keyed by every
@@ -132,6 +159,7 @@ export const INTERFACE_SCHEMAS: Record<InterfaceType, z.ZodTypeAny> = {
   [InterfaceType.CSV_DATA_PANEL]: csvDataPanelSchema,
   [InterfaceType.TABLE_VIEW_WITH_CHART]: tableViewWithChartSchema,
   [InterfaceType.CASE_FILE_TEXT_AREA]: caseFileTextAreaSchema,
+  [InterfaceType.STAGED_CHAT]: stagedChatSchema,
 };
 
 export type RichTextComposerPayload = z.infer<typeof richTextComposerSchema>;

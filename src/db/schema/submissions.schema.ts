@@ -109,6 +109,26 @@ export interface AntiCheatEvent {
   durationMs?: number;
 }
 
+/** One candidate reply in a staged chat (customer service doc Section 2.8). */
+export interface StagedChatReplyRecord {
+  turnIndex: number;
+  customerMessage: string;
+  branchId: string | null;
+  nextBranchId: string | null;
+  candidateText: string;
+  idempotencyKey: string;
+  clientSentAt: string | null;
+  serverReceivedAt: string;
+}
+
+/** The state of one staged chat within a submission. */
+export interface StagedChatRecord {
+  /** The simulation task id, e.g. "<jobId>-task-2". */
+  taskId: string;
+  status: 'IN_PROGRESS' | 'COMPLETE' | 'INCOMPLETE';
+  replies: StagedChatReplyRecord[];
+}
+
 export const submissions = pgTable(
   'submissions',
   {
@@ -142,6 +162,11 @@ export const submissions = pgTable(
     // A per-event log (see AntiCheatEvent), not a flat summary-string array — was
     // text('anti_cheat_flags').array() before, which could only hold "type ×count" totals for the
     // whole run with no per-event timing or task association.
+    // One entry per staged chat task (see StagedChatRecord). Written only under a row lock.
+    stagedChats: jsonb('staged_chats')
+      .$type<StagedChatRecord[]>()
+      .notNull()
+      .default([]),
     antiCheatFlags: jsonb('anti_cheat_flags')
       .$type<AntiCheatEvent[]>()
       .notNull()

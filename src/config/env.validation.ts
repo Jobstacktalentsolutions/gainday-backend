@@ -51,9 +51,11 @@ export const envValidationSchema = Joi.object({
 
   REDIS_URL: Joi.string().uri({ scheme: ['redis', 'rediss'] }),
 
-  GOOGLE_CLIENT_ID: Joi.string(),
-  GOOGLE_CLIENT_SECRET: Joi.string(),
-  GOOGLE_CALLBACK_URL: Joi.string().uri(),
+  // Public identifier for Google sign-in (ID token verification). Not a secret.
+  GOOGLE_CLIENT_ID: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.required(),
+  }),
 
   AI_PROVIDER: Joi.string().valid('gemini', 'groq', 'fireworks'),
   // EMBEDDINGS always calls Gemini regardless of AI_PROVIDER (see ai.module.ts), so one of

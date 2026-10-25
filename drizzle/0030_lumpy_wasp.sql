@@ -1,0 +1,1 @@
+ALTER TABLE "submissions" ADD COLUMN "staged_chats" jsonb DEFAULT '[]'::jsonb NOT NULL;

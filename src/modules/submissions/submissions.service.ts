@@ -26,6 +26,7 @@ import { CandidateNotificationsService } from '../notifications/candidate-notifi
 import { RoleRegistry } from '../generation/roles/role-registry';
 import { sanitizeTaskForCandidate } from '../simulations/candidate-task.util';
 import { parseAnswers } from './answer-validation';
+import { StagedChatService } from './staged-chat/staged-chat.service';
 import { resolveCandidateContact } from './candidate-contact';
 import {
   buildEmployerTaskResults,
@@ -70,6 +71,7 @@ export class SubmissionsService {
     private readonly creditLedger: CreditLedgerService,
     private readonly roleRegistry: RoleRegistry,
     private readonly candidateNotifications: CandidateNotificationsService,
+    private readonly stagedChatService: StagedChatService,
   ) {}
 
   async createSubmission(
@@ -214,6 +216,9 @@ export class SubmissionsService {
       })
       .where(eq(submissions.id, submissionId))
       .returning();
+
+    // Open staged chats keep their replies and are marked incomplete; grading is not blocked.
+    await this.stagedChatService.markOpenSessionsIncomplete(submissionId);
 
     // Async, off the request path — grading (and, if this is the first submission to reach a
     // given task, anchor generation for it) happens in the background. See GradingService.

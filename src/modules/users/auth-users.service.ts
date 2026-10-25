@@ -162,6 +162,14 @@ export class AuthUsersService {
     return user;
   }
 
+  /** Google has verified the email, so the account is marked verified as well. */
+  async linkGoogleAccount(userId: string, googleId: string): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ googleId, isEmailVerified: true, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     await this.db
       .update(users)

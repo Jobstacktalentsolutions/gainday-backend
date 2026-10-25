@@ -115,7 +115,7 @@ The model supplies raw inputs only: balances, transaction amounts, budgets and a
 | 2.5 | Base assumptions and the change | Revised operating result |
 | 2.6 | Revenue, cost of sales and operating expenses per period | Gross and operating margin; chart series |
 
-**Figure check (narrative–data consistency):** every number in the candidate-facing text must appear in the data table. The critic fails any task whose text states a figure the table does not show. Tasks with no table, such as pushback, may contain no numbers at all.
+**Figure check (narrative–data consistency):** every number in the candidate-facing text must appear in the data table. The title is a label and is not checked, so a title such as "13-Week Forecast" is allowed. The critic fails any task whose text states a figure the table does not show. Tasks with no table, such as pushback, may contain no numbers at all.
 
 **Regeneration:** when the model's inputs cannot form a valid task (for example, a balance would be negative), the slot regenerates like any other critic failure.
 

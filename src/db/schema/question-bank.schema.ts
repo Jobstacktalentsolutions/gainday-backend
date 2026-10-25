@@ -56,6 +56,8 @@ export interface QuestionBankTaskContent {
   taskType: string;
   title: string;
   rubric?: TaskRubric;
+  /** Never sent to candidates and never copied into the simulation task (e.g. a staged chat script). */
+  serverOnly?: Record<string, unknown>;
   /** Markdown — see {@link MarkdownString}. */
   scenarioDescription: MarkdownString;
   /** Markdown — see {@link MarkdownString}. */

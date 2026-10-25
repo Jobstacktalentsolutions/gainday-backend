@@ -11,8 +11,9 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { CreditsModule } from '../credits/credits.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { GoogleAuthService } from './google-auth.service';
+import { GoogleTokenVerifier } from './google-token-verifier.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { GoogleStrategy } from './strategies/google.strategy';
 import { RolesGuard } from './guards/roles.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
@@ -41,7 +42,8 @@ const jwtModuleOptions: JwtModuleAsyncOptions = {
   providers: [
     AuthService,
     JwtStrategy,
-    GoogleStrategy,
+    GoogleTokenVerifier,
+    GoogleAuthService,
     RolesGuard,
     JwtAuthGuard,
   ],

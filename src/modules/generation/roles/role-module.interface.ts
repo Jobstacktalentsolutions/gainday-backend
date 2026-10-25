@@ -27,6 +27,8 @@ export interface MaterializedTaskData {
   interfacePayload: Record<string, unknown>;
   objectiveComponent?: Record<string, unknown>;
   rubric?: TaskRubric;
+  /** Server-only data, kept on the question-bank row (see QuestionBankTaskContent.serverOnly). */
+  serverOnly?: Record<string, unknown>;
 }
 
 /** Thrown when the model's raw inputs cannot form a valid task (e.g. a balance comes out
@@ -100,9 +102,6 @@ export interface RoleModule {
       extraction: ExtractionResult,
       criticModel: BaseChatModel,
     ): Promise<RelevanceCheckResult | null>;
-    /** Deterministic role-specific checks on a generated task. Returns failure reasons; an empty
-     *  array passes. */
-    validateTask?(task: GeneratedTaskCandidate): string[];
   };
 }
 

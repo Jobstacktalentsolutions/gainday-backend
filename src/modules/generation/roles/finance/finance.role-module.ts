@@ -1,11 +1,9 @@
 import {
-  GeneratedTaskCandidate,
   RoleModule,
   TaskPatternTypeDefinition,
 } from '../role-module.interface';
 import { InterfaceType } from '../interface-type';
 import { RoleCategory } from '../role-category.enum';
-import { unsourcedFigures } from '../narrative-figures';
 import { reconciliationSpec } from './templates/reconciliation.template';
 import { journalEntrySpec } from './templates/journal-entry.template';
 import { varianceSpec } from './templates/variance.template';
@@ -105,14 +103,5 @@ export const FinanceRoleModule: RoleModule = {
 
   allowedTaskPatternTypes: financeTaskPatternTypes,
 
-  criticChecks: {
-    validateTask: (task: GeneratedTaskCandidate) => {
-      const figures = unsourcedFigures(task);
-      return figures.length === 0
-        ? []
-        : [
-            `The text states figures the table does not show (${figures.join(', ')}). Remove them, or put them in the data.`,
-          ];
-    },
-  },
+  criticChecks: {},
 };

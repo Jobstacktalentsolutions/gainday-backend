@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { SubmissionsService } from './submissions.service';
+import { StagedChatController } from './staged-chat/staged-chat.controller';
+import { StagedChatService } from './staged-chat/staged-chat.service';
+import { BRANCH_EVALUATOR, NoBranchEvaluator } from './staged-chat/branch-evaluator';
 import { SubmissionsController } from './submissions.controller';
 import { AuthModule } from '../auth/auth.module';
 import { JobsModule } from '../jobs/jobs.module';
@@ -19,8 +22,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
     GenerationModule,
     NotificationsModule,
   ],
-  controllers: [SubmissionsController],
-  providers: [SubmissionsService],
+  controllers: [SubmissionsController, StagedChatController],
+  providers: [
+    SubmissionsService,
+    StagedChatService,
+    { provide: BRANCH_EVALUATOR, useClass: NoBranchEvaluator },
+  ],
   exports: [SubmissionsService],
 })
 export class SubmissionsModule {}

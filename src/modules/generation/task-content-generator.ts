@@ -51,6 +51,16 @@ export interface GenerateTaskContentParams {
   /** Employer-supplied direction for a single-task regeneration — takes priority over default
    *  variety when present. Not used by the main graph's per-slot generation. */
   guidance?: string;
+  /** Why the previous attempt at this slot was rejected. The next attempt must correct them. */
+  revisionNotes?: string[];
+}
+
+/** Feedback from a rejected attempt, in the words the critic used. Empty when there is none. */
+export function revisionClause(notes: string[] | undefined): string {
+  if (!notes || notes.length === 0) return '';
+  return `
+
+The previous attempt was rejected. Fix every one of these problems in this attempt: ${notes.join(' ')}`;
 }
 
 /**
@@ -70,6 +80,7 @@ export async function generateTaskContent(
     taskType,
     briefDescription,
     guidance,
+    revisionNotes,
   } = params;
 
   const allowedTypeKeys = roleModule.allowedTaskPatternTypes.map(
@@ -94,6 +105,7 @@ export async function generateTaskContent(
       problem,
       briefDescription,
       guidance,
+      revisionNotes,
     });
   }
   const interfaceType = patternTypeDef.interfaceType;
@@ -121,7 +133,7 @@ export async function generateTaskContent(
   const result = await structuredModel.invoke([
     new SystemMessage(
       `${TASK_GENERATION_PROMPT_BASE}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
-        `interfacePayload you generate must match that render mode.${guidanceClause}`,
+        `interfacePayload you generate must match that render mode.${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -184,6 +196,7 @@ interface GenerateSpecTaskContentParams {
   guidance?: string;
   /** Set when editing an existing task: the model returns that task with the guidance applied. */
   existingTask?: QuestionBankTaskContent;
+  revisionNotes?: string[];
 }
 
 /**
@@ -204,6 +217,7 @@ async function generateSpecTaskContent(
     briefDescription,
     guidance,
     existingTask,
+    revisionNotes,
   } = params;
 
   const openEndedComponentSchema = patternTypeDef.openEndedComponentType
@@ -221,7 +235,7 @@ async function generateSpecTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${basePrompt}\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}`,
+      `${basePrompt}\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -251,6 +265,7 @@ async function generateSpecTaskContent(
     interfaceType: patternTypeDef.interfaceType,
     interfacePayload: { interfaceType: patternTypeDef.interfaceType, ...derived.interfacePayload },
     rubric: derived.rubric,
+    serverOnly: derived.serverOnly,
   };
 }
 
@@ -266,6 +281,56 @@ ${CANDIDATE_FACING_TEXT_RULES}
 If the existing text already breaks these rules, fix that as part of the edit.
 
 ${MARKDOWN_RULES} Preserve existing markdown structure unless the change calls for different structure.`;
+
+export interface ReviseTaskContentParams {
+  model: BaseChatModel;
+  roleModule: RoleModule;
+  category: string;
+  intent: string;
+  problem: string | null;
+  /** The rejected draft. The revision starts from it, so the rest of the task is kept. */
+  existingTask: QuestionBankTaskContent;
+  /** The critic's reasons for rejecting it, in its own words. */
+  revisionNotes: string[];
+}
+
+/**
+ * Repairs a rejected draft in place. The model sees the draft and the critic's reasons, and changes
+ * only what those reasons name. Its output is then checked by code again, so the model never judges its
+ * own repair: figure and spec checks are deterministic, and the critic reruns on the result.
+ */
+export async function reviseTaskContent(params: ReviseTaskContentParams): Promise<QuestionBankTaskContent> {
+  const { model, roleModule, category, intent, problem, existingTask, revisionNotes } = params;
+
+  const patternTypeDef = roleModule.allowedTaskPatternTypes.find((t) => t.key === existingTask.taskType);
+  if (!patternTypeDef) {
+    throw new Error(
+      `No task-pattern-type definition found for taskType "${existingTask.taskType}" in role module for category "${category}"`,
+    );
+  }
+  if (patternTypeDef.spec) {
+    return generateSpecTaskContent({
+      model,
+      patternTypeDef,
+      spec: patternTypeDef.spec,
+      category,
+      intent,
+      problem,
+      briefDescription: existingTask.title,
+      existingTask,
+      revisionNotes,
+    });
+  }
+  return modifyTaskContent({
+    model,
+    roleModule,
+    category,
+    intent,
+    problem,
+    existingTask,
+    guidance: `Fix these problems and change nothing else: ${revisionNotes.join(' ')}`,
+  });
+}
 
 export interface ModifyTaskContentParams {
   model: BaseChatModel;

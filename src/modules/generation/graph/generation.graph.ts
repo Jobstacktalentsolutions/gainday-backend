@@ -12,6 +12,7 @@ import { taskGenerationNode } from '../nodes/task-generation.node';
 import { criticNode } from '../nodes/critic.node';
 import { persistNode } from '../nodes/persist.node';
 import { adminReviewFlagNode } from '../nodes/admin-review-flag.node';
+import { repairTaskNode } from '../nodes/repair-task.node';
 import {
   regenerationRouter,
   retryStateUpdate,
@@ -59,6 +60,7 @@ export function buildGenerationGraph(ctx: GenerationContext) {
     .addNode('persist', persistNode(ctx))
     .addNode('adminReviewFlag', adminReviewFlagNode(ctx))
     .addNode('prepareRetry', prepareRetryNode())
+    .addNode('repairTask', repairTaskNode(ctx))
     .addNode('prepareNextSlot', prepareNextSlotNode())
     .addEdge(START, 'extraction')
     .addEdge('extraction', 'overgenerate')
@@ -66,11 +68,13 @@ export function buildGenerationGraph(ctx: GenerationContext) {
     .addEdge('rankSelect', 'taskGeneration')
     .addEdge('taskGeneration', 'critic')
     .addConditionalEdges('critic', regenerationRouter(ctx), {
+      [REGEN_ROUTE.REPAIR]: 'repairTask',
       [REGEN_ROUTE.RETRY]: 'prepareRetry',
       [REGEN_ROUTE.PERSIST]: 'persist',
       [REGEN_ROUTE.ADMIN_REVIEW]: 'adminReviewFlag',
     })
     .addEdge('prepareRetry', 'taskGeneration')
+    .addEdge('repairTask', 'critic')
     .addConditionalEdges('persist', slotAdvanceRouter(ctx), {
       [SLOT_ADVANCE_ROUTE.NEXT_SLOT]: 'prepareNextSlot',
       [SLOT_ADVANCE_ROUTE.DONE]: END,

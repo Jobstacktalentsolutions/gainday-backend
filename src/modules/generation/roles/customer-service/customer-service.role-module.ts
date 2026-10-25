@@ -5,13 +5,13 @@ import {
 } from '../role-module.interface';
 import { InterfaceType } from '../interface-type';
 import { RoleCategory } from '../role-category.enum';
-import { unsourcedFigures } from '../narrative-figures';
 import { refundPolicyReplySpec } from './templates/refund-policy-reply.template';
 import { deEscalationReplySpec } from './templates/de-escalation-reply.template';
 import { improperRequestReplySpec } from './templates/improper-request-reply.template';
 import { diagnosticQuestionsSpec } from './templates/diagnostic-questions.template';
 import { escalationHandoffSpec } from './templates/escalation-handoff.template';
 import { ticketTriageSpec } from './templates/ticket-triage.template';
+import { stagedChatSpec } from './templates/staged-chat.template';
 
 /** Customer service task-pattern keys (customer service doc Section 2). Every task is spec-backed: the
  *  model supplies the scenario inputs, and code derives the case file, the rubric and any answer key. */
@@ -22,6 +22,7 @@ export enum CustomerServiceTaskType {
   DIAGNOSTIC_QUESTIONS = 'DIAGNOSTIC_QUESTIONS',
   ESCALATION_HANDOFF = 'ESCALATION_HANDOFF',
   TICKET_TRIAGE = 'TICKET_TRIAGE',
+  STAGED_CHAT_SUPPORT = 'STAGED_CHAT_SUPPORT',
 }
 
 const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
@@ -81,6 +82,14 @@ const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
     interfaceType: InterfaceType.CASE_FILE_TEXT_AREA,
     spec: ticketTriageSpec,
   },
+  {
+    key: CustomerServiceTaskType.STAGED_CHAT_SUPPORT,
+    label: 'Staged chat',
+    description:
+      'A scripted multi-turn conversation with a fixed customer: the candidate replies turn by turn, and the whole transcript is graded afterwards.',
+    interfaceType: InterfaceType.STAGED_CHAT,
+    spec: stagedChatSpec,
+  },
 ];
 
 export const CustomerServiceRoleModule: RoleModule = {
@@ -101,14 +110,5 @@ export const CustomerServiceRoleModule: RoleModule = {
 
   allowedTaskPatternTypes: customerServiceTaskPatternTypes,
 
-  criticChecks: {
-    validateTask: (task: GeneratedTaskCandidate) => {
-      const figures = unsourcedFigures(task);
-      return figures.length === 0
-        ? []
-        : [
-            `The text states figures the case file does not show (${figures.join(', ')}). Remove them, or put them in the case file.`,
-          ];
-    },
-  },
+  criticChecks: {},
 };

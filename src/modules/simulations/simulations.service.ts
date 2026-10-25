@@ -73,24 +73,6 @@ export class SimulationsService {
       );
     }
 
-    const roleModule = this.roleRegistry.resolve(task.category);
-    const reasons =
-      roleModule.criticChecks.validateTask?.({
-        taskType: task.taskType,
-        taskContent: {
-          taskType: task.taskType,
-          title: task.title,
-          scenarioDescription: task.scenarioDescription,
-          questionPrompt: task.questionPrompt,
-          openEndedComponent: task.openEndedComponent,
-          businessProblemDerived: task.businessProblemDerived,
-          interfaceType: task.interfaceType,
-          interfacePayload: task.interfacePayload,
-        },
-      }) ?? [];
-    if (reasons.length > 0) {
-      throw new BadRequestException(`"${task.title}": ${reasons.join(' ')}`);
-    }
     return task;
   }
 

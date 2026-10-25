@@ -14,6 +14,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
+import { GoogleAuthService } from './google-auth.service';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { LoginDto } from './dto/login.dto';
 import { AdminVerify2faDto } from './dto/admin-verify-2fa.dto';
 import { AdminResend2faDto } from './dto/admin-resend-2fa.dto';
@@ -27,7 +29,6 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 
 @Controller('auth')
@@ -35,6 +36,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly googleAuthService: GoogleAuthService,
   ) {}
 
   @Post('admin/login')
@@ -72,6 +74,17 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.setAdminInitialPassword(user.id, dto);
+    this.setAuthCookie(res, result.access_token);
+    return result;
+  }
+
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  async googleLogin(
+    @Body() dto: GoogleLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.googleAuthService.signIn(dto.credential);
     this.setAuthCookie(res, result.access_token);
     return result;
   }
@@ -206,29 +219,6 @@ export class AuthController {
     } else {
       return res.redirect(`${frontendUrl}/${rolePath}/verify-email?error=true`);
     }
-  }
-
-  @Get('google')
-  @UseGuards(GoogleAuthGuard)
-  googleAuth() {}
-
-  @Get('google/callback')
-  @UseGuards(GoogleAuthGuard)
-  async googleCallback(
-    @CurrentUser() user: any,
-    @Query('state') state: string,
-    @Res() res: Response,
-  ) {
-    const role = state === 'JOB_SEEKER' ? UserRole.JOB_SEEKER : UserRole.EMPLOYER;
-    const result = await this.authService.validateGoogleUser(user, role);
-    const frontendUrl = this.configService.get('frontendUrl');
-    const rolePath = result.user.role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
-
-    this.setAuthCookie(res, result.access_token);
-
-    return res.redirect(
-      `${frontendUrl}/${rolePath}/oauth/callback?token=${result.access_token}`,
-    );
   }
 
   @Get('me')
