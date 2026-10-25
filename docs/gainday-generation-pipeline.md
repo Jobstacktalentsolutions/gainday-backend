@@ -65,6 +65,8 @@ Different task categories need to be presented differently — this was underspe
 
 ## 3. Extraction Stage
 
+**Chosen role.** The role the employer picks on the job form is the top-level category and is never overridden. A sub-role the employer names (e.g. "Finance > Private Equity") is used as is. Otherwise the extraction step infers the sub-role under the chosen top level. With no chosen role, the extraction step infers the whole category. The form suggests a role from the posting, and the employer can keep it or pick another.
+
 Four fields are extracted from the recruiter input. The specifics of each field (what counts as a valid Category, how Intent is framed, what an Expected Task looks like) are defined per role module per Section 2.2 — the table below describes the field's purpose, using finance as the illustrative example.
 
 | Field | Description | Required? |
@@ -157,7 +159,6 @@ The critic agent is a separate step from generation. It validates each generated
 - **Novelty check:** the generated question is compared against the existing question bank using pgvector similarity search (Postgres vector extension) to retrieve semantically similar stored questions.
 - **Duplicate check:** flags near-identical matches from the novelty search above a similarity threshold.
 - **Relevance check:** confirms the generated task genuinely aligns with the extracted Category and Intent (not just novel, but actually on-target).
-- **Figure check (finance):** every number in candidate-facing text must appear in the task's data table. Role-specific, deterministic (`roles/finance/narrative-figures.ts`).
 - **Anchor correctness check (moved to grading as of 2026-08-30; not run by the generation critic — the rationale below still applies there):** because there is no external grounding source, the good/bad/mid-range anchor responses (Section 6.2) are themselves LLM-generated and could be subtly wrong. The critic verifies they are sound — an incorrect "100/100" anchor would silently corrupt every future grading decision made against it. What "sound" means is role-specific: factual/numeric correctness for finance, sound sales practice for sales (Section 2.2) — the role module defines the correctness check, not one generic definition.
 
 ### 7.2 Regeneration loop

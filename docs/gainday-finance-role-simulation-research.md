@@ -52,7 +52,7 @@ Each category names its real-world form, the Gainday task shape, the components 
 
 ### 2.4 Stakeholder Communication & Pushback (built)
 - **Real-world form:** reply to a frustrated department head or answer a CFO question, in writing.
-- **Gainday task shape:** a stakeholder message as read-only context, then a written response. The task contains no figures, so the figure check forbids numbers in the text.
+- **Gainday task shape:** a stakeholder message as read-only context, then a written response. The task contains no figures, so the text states none.
 - **Components:** pure open-ended `STAKEHOLDER_PUSHBACK_RESPONSE`.
 - **Graded:** all four criteria by the LLM grader against anchors.
 - **Interface:** Text Area.
@@ -115,11 +115,19 @@ The model supplies raw inputs only: balances, transaction amounts, budgets and a
 | 2.5 | Base assumptions and the change | Revised operating result |
 | 2.6 | Revenue, cost of sales and operating expenses per period | Gross and operating margin; chart series |
 
-**Figure check (narrative–data consistency):** every number in the candidate-facing text must appear in the data table. The title is a label and is not checked, so a title such as "13-Week Forecast" is allowed. The critic fails any task whose text states a figure the table does not show. Tasks with no table, such as pushback, may contain no numbers at all.
+**Figures:** the generator states figures from the data table and the LLM critic reviews them. There is no deterministic figure check. Tasks with no table, such as pushback, state no numbers.
 
 **Regeneration:** when the model's inputs cannot form a valid task (for example, a balance would be negative), the slot regenerates like any other critic failure.
 
 ---
+
+**Chart types built.** Four chart types are supported, each with a finance task that uses it:
+- **Bar** (Statement analysis, 2.6): period amounts side by side.
+- **Line** (Trend over periods): revenue across periods. The candidate computes the change across the whole period, which the line does not state.
+- **Combo** (Revenue and units): revenue as bars, units sold as a line on a second axis. The candidate computes revenue per unit.
+- **Waterfall** (Variance bridge): budget, then named drivers, then actual. The candidate computes the variance the drivers do not explain, which the chart leaves out.
+
+No chart shows the value the candidate is asked to compute. Pie, area and stacked charts are not built, since no task yet needs a share of the whole.
 
 ## 6. Grading
 
@@ -196,7 +204,6 @@ Sub-role extraction is not yet specialised: the finance module registers the top
 
 - **Templates:** `src/modules/generation/roles/finance/templates/` (one per category), each built on `defineTaskSpec` in `roles/task-spec.ts`.
 - **Formatting and tolerances:** `roles/finance/finance-format.ts`.
-- **Figure check:** `roles/finance/narrative-figures.ts`, run by the critic and by employer edits.
 - **Objective grading:** `src/modules/grading/objective/objective-grader.ts`.
 - **Score merge:** `src/modules/grading/task-category-scores.ts`.
 - **Answer validation on submit:** `src/modules/submissions/answer-validation.ts`.

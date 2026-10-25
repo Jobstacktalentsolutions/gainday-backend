@@ -12,7 +12,7 @@ const EMPLOYER_EMAIL =
 const DRAFT_JOBS = [
   {
     title: 'Senior Financial Analyst',
-    role: 'FINANCE' as const,
+    role: 'Finance' as const,
     skillLevel: 'Senior',
     skillCategory: 'Financial Modeling',
     location: 'London, UK',
@@ -28,7 +28,7 @@ const DRAFT_JOBS = [
   },
   {
     title: 'Enterprise Sales Executive',
-    role: 'SALES' as const,
+    role: 'Sales' as const,
     skillLevel: 'Mid-level',
     skillCategory: 'B2B Sales',
     location: 'Remote',
@@ -44,7 +44,7 @@ const DRAFT_JOBS = [
   },
   {
     title: 'Junior Accountant',
-    role: 'FINANCE' as const,
+    role: 'Finance' as const,
     skillLevel: 'Entry-level',
     skillCategory: 'Bookkeeping',
     location: 'Manchester, UK',
@@ -60,7 +60,7 @@ const DRAFT_JOBS = [
   },
   {
     title: 'Sales Development Representative',
-    role: 'SALES' as const,
+    role: 'Sales' as const,
     skillLevel: 'Entry-level',
     skillCategory: 'Outbound Prospecting',
     location: 'Remote',
@@ -76,7 +76,7 @@ const DRAFT_JOBS = [
   },
   {
     title: 'FP&A Manager',
-    role: 'FINANCE' as const,
+    role: 'Finance' as const,
     skillLevel: 'Senior',
     skillCategory: 'Financial Planning & Analysis',
     location: 'Leeds, UK',

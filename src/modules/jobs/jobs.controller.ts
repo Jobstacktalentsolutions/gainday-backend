@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Put,
+  Query,
   UseGuards,
   ForbiddenException,
   NotFoundException,
@@ -15,7 +16,10 @@ import {
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { JobDescriptionParserService } from './job-description-parser.service';
+import { JobBoardService } from './job-board/job-board.service';
+import { ListJobBoardDto } from './job-board/dto/list-job-board.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -29,11 +33,33 @@ export class JobsController {
   constructor(
     private readonly jobsService: JobsService,
     private readonly jobDescriptionParserService: JobDescriptionParserService,
+    private readonly jobBoardService: JobBoardService,
   ) {}
 
   @Get()
   async getActiveJobs() {
     return this.jobsService.findAllActive();
+  }
+
+  // Declared before ':id' so 'board' is not read as a job id.
+  @Get('board')
+  @UseGuards(OptionalJwtAuthGuard)
+  async getJobBoard(@CurrentUser() user: any, @Query() query: ListJobBoardDto) {
+    return this.jobBoardService.listPage(
+      user?.role === UserRole.JOB_SEEKER
+        ? {
+            profileId: user.profileId,
+            title: user.title ?? null,
+            brief: user.brief ?? null,
+          }
+        : null,
+      query,
+    );
+  }
+
+  @Get('board/options')
+  async getJobBoardOptions() {
+    return this.jobBoardService.filterOptions();
   }
 
   @Get('mine')

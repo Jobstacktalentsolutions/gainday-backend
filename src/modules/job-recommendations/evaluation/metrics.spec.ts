@@ -42,7 +42,9 @@ describe('selectMatches', () => {
       [pair('c1', 'j1', 0.9), pair('c1', 'j2', 0.9), pair('c2', 'j1', 0.9)],
       RULES,
     );
-    expect(new Set(selected.map((m) => m.candidateId))).toEqual(new Set(['c1']));
+    expect(new Set(selected.map((m) => m.candidateId))).toEqual(
+      new Set(['c1']),
+    );
   });
 });
 

@@ -15,9 +15,10 @@ export const parsedJobDescriptionSchema = z.object({
     .string()
     .nullable()
     .describe(
-      'A short label (2-4 words) for the broad role domain this posting belongs to, e.g. ' +
-        '"Finance", "Sales", "Customer Support", "Logistics". Use the posting\'s own terms — do ' +
-        'not force it into any fixed list. Null only if genuinely undeterminable.',
+      'The role as "Top > Sub-role": the top-level domain (Finance, Sales, Customer Service, or another ' +
+        'short domain name in the posting\'s own terms), then " > " and the sub-role when the posting names ' +
+        'one, e.g. "Finance > Private Equity" or "Customer Service > Retention". Do not force the domain ' +
+        'into a fixed list. Null only if genuinely undeterminable.',
     ),
   skillLevel: z
     .enum(['Entry level', 'Mid level', 'Senior level'])

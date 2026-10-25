@@ -7,6 +7,8 @@ import {
   parsedJobDescriptionSchema,
   ParsedJobDescription,
 } from './schemas/parsed-job-description.schema';
+import { dropUnspecifiedFields } from './drop-unspecified-fields';
+import { roleInferenceInstructions } from '../generation/roles/role-inference';
 
 const logger = new Logger('JobDescriptionParserService');
 
@@ -19,8 +21,8 @@ Rules:
 - Never invent information that is not present in the text — return null for any field you cannot
   determine from the text.
 - Normalize enum-shaped fields (skillLevel, employmentType) to exactly one of the allowed values
-  described on each field — do not return any other spelling or value. "role" is free text — use
-  a short label in the posting's own terms rather than forcing it into a fixed list.
+  described on each field — do not return any other spelling or value. For "role", follow this:
+  ${roleInferenceInstructions()}
 - The rewritten description should preserve all substantive content (responsibilities,
   requirements, context) from the original — it's a cleanup and reformat, not a summary that drops
   information.
@@ -63,28 +65,27 @@ export class JobDescriptionParserService {
       `Parsed job description: title="${result.title ?? 'null'}", role=${result.role ?? 'null'}, businessProblem=${result.businessProblem ? 'present' : 'null'}`,
     );
 
-    return this.omitUnspecified({
+    // Strict structured output makes the model fill every field, so an unmentioned field can come
+    // back as null or as a placeholder ("null", -1). Those are dropped here so the frontend never
+    // prefills the form with them.
+    const withDeadline: ParsedJobDescription = {
       ...result,
       deadline: this.normalizeDeadline(result.deadline),
-    });
-  }
+    };
+    const cleaned = dropUnspecifiedFields(withDeadline);
 
-  // Strict structured output forces the model to emit every field, so a field the text never
-  // mentioned comes back as null or as an "empty" filler (0 salary, "" string, [] list). Those
-  // aren't real values — drop them so the response only carries what the posting actually
-  // specified, instead of the frontend prefilling the form with filler. `false` is kept: it is a
-  // legitimate answer for isRemoteFriendly (explicitly on-site).
-  private omitUnspecified(
-    parsed: ParsedJobDescription,
-  ): Partial<ParsedJobDescription> {
-    return Object.fromEntries(
-      Object.entries(parsed).filter(([, value]) => {
-        if (value === null || value === 0) return false;
-        if (typeof value === 'string') return value.trim() !== '';
-        if (Array.isArray(value)) return value.length > 0;
-        return true;
-      }),
-    );
+    const dropped = (
+      Object.keys(withDeadline) as (keyof ParsedJobDescription)[]
+    ).filter((key) => withDeadline[key] !== null && !(key in cleaned));
+    if (dropped.length > 0) {
+      logger.warn(
+        `Dropped unspecified values the model returned: ${dropped
+          .map((key) => `${key}=${JSON.stringify(withDeadline[key])}`)
+          .join(', ')}`,
+      );
+    }
+
+    return cleaned;
   }
 
   // Normalizes whatever date format the model read from the text into a strict "YYYY-MM-DD"

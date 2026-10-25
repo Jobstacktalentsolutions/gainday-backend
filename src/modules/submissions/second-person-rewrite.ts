@@ -51,7 +51,7 @@ const VERB_PHRASES: { pattern: RegExp; singular: string; plural: string }[] = [
 // Words after which a lowercase "you" is still the subject ("...and you chose..."), rather than
 // an object ("...gave you...").
 const SUBJECT_LEADERS =
-  /\b(and|but|that|because|so|if|when|while|as|since|although|though|which|whether|how|what|where)\s+you\b/gi;
+  /(\b(?:and|but|that|because|so|if|when|while|as|since|although|though|which|whether|how|what|where|once|after|before|until|unless|whenever|even)\s+|[,;:(]\s*)you\b/gi;
 
 const matchCase = (source: string, replacement: string) =>
   source[0] === source[0].toUpperCase()
@@ -79,9 +79,10 @@ export function rewriteSecondPersonForEmployer(
   }
 
   return result
-    .replace(SUBJECT_LEADERS, (_match, leader: string) => `${leader} ${forms.subject}`)
+    .replace(SUBJECT_LEADERS, (_match, leader: string) => `${leader}${forms.subject}`)
     .replace(/\byourself\b/gi, (match) => matchCase(match, forms.reflexive))
     .replace(/\byour\b/gi, (match) => matchCase(match, forms.possessive))
     .replace(/\bYou\b/g, forms.subject.charAt(0).toUpperCase() + forms.subject.slice(1))
+    .replace(/\byou(?=['’](ll|d|ve|re|m)\b)/g, forms.subject)
     .replace(/\byou\b/g, forms.object);
 }

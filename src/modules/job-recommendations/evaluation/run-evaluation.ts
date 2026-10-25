@@ -76,7 +76,9 @@ async function main(): Promise<void> {
   console.log('Score spread');
   console.table({
     correct: summarise(pairs.filter(isCorrect).map((p) => p.score)),
-    incorrect: summarise(pairs.filter((p) => !isCorrect(p)).map((p) => p.score)),
+    incorrect: summarise(
+      pairs.filter((p) => !isCorrect(p)).map((p) => p.score),
+    ),
   });
 
   // 2. For each job, are the right candidates ranked near the top?
@@ -146,7 +148,9 @@ async function main(): Promise<void> {
       bestIsCorrect: isCorrect(best),
     };
   });
-  console.log(`Candidates notified at minScore ${minScore}: ${notified.size}/${EVAL_CANDIDATES.length}`);
+  console.log(
+    `Candidates notified at minScore ${minScore}: ${notified.size}/${EVAL_CANDIDATES.length}`,
+  );
   if (missed.length > 0) {
     console.log('Not notified:');
     console.table(missed);

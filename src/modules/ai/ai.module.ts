@@ -22,7 +22,7 @@ import {
  * embedding model regardless (see the EMBEDDINGS provider below, which does not branch on
  * provider).
  */
-function buildChatModel(
+export function buildChatModel(
   config: ConfigService,
   role:
     'generationModel' | 'criticModel' | 'taskGenerationModel' | 'gradingModel',

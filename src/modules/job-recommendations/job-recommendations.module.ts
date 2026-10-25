@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { JobsModule } from '../jobs/jobs.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { JOB_RECOMMENDATIONS_QUEUE } from './job-recommendations.constants';
 import { JobMatchEmbeddingService } from './job-match-embedding.service';
@@ -11,6 +12,7 @@ import { JobRecommendationsService } from './job-recommendations.service';
   imports: [
     BullModule.registerQueue({ name: JOB_RECOMMENDATIONS_QUEUE }),
     NotificationsModule,
+    JobsModule,
   ],
   providers: [
     JobMatchEmbeddingService,

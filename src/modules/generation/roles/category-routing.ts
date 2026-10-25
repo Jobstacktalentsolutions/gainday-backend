@@ -1,17 +1,29 @@
-/** The category retention, renewal and account-management roles belong to. Sales owns these: the sales
- *  doc defines the CSM sub-role as renewal and retention conversations, and the customer service module
- *  covers service issues only. */
-export const RETENTION_CATEGORY = 'Sales > CSM';
+// Role values saved before the form used category labels. They still resolve to the same role. This is
+// a data migration, not a routing rule: it only renames values the product itself used to save.
+const LEGACY_ROLE_NAMES: Record<string, string> = {
+  FINANCE: 'Finance',
+  SALES: 'Sales',
+  CUSTOMER_SERVICE: 'Customer Service',
+};
 
-// Sub-role words that mean retention, whatever top-level category the extraction step chose.
-const RETENTION_SUBROLE = /\b(retention|renewals?|customer success|account managers?|account management|csm)\b/i;
+/** A role name as the product stores it: trimmed, with a legacy value renamed. Nothing is inferred here. */
+export function canonicalCategory(role: string): string {
+  const trimmed = role.trim();
+  return LEGACY_ROLE_NAMES[trimmed.toUpperCase()] ?? trimmed;
+}
 
 /**
- * Maps the category the extraction step returned to the one the engine routes and grades by. The
- * category string is stored with the task, and grading resolves anchors from it, so this runs once,
- * right after extraction: every later stage then agrees on the same role.
+ * The category for a job. The employer's chosen role is the top level and is never overridden: a
+ * sub-role the employer named is used as is, and otherwise the inferred sub-role is kept only when it
+ * sits under the same top level. Without a chosen role, the inferred category is used.
  */
-export function canonicalCategory(extracted: string): string {
-  const subRole = extracted.includes('>') ? extracted.split('>').slice(1).join('>') : extracted;
-  return RETENTION_SUBROLE.test(subRole) ? RETENTION_CATEGORY : extracted.trim();
+export function resolveCategory(declaredRole: string | undefined, inferred: string): string {
+  const inferredCategory = canonicalCategory(inferred);
+  if (declaredRole === undefined || declaredRole.trim() === '') return inferredCategory;
+
+  const declared = canonicalCategory(declaredRole);
+  if (declared.includes('>')) return declared;
+
+  const inferredTop = inferredCategory.split('>')[0].trim().toLowerCase();
+  return inferredTop === declared.toLowerCase() ? inferredCategory : declared;
 }

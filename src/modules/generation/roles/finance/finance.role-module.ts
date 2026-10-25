@@ -9,6 +9,9 @@ import { journalEntrySpec } from './templates/journal-entry.template';
 import { varianceSpec } from './templates/variance.template';
 import { forecastSpec } from './templates/forecast.template';
 import { statementAnalysisSpec } from './templates/statement-analysis.template';
+import { lineTrendSpec } from './templates/line-trend.template';
+import { revenueUnitsComboSpec } from './templates/revenue-units-combo.template';
+import { varianceBridgeSpec } from './templates/variance-bridge.template';
 
 /** Finance's task-pattern-type keys. Every figure-bearing type is a spec template: the model
  *  supplies raw inputs and code derives the table, chart and answer key (finance doc Section 6.2).
@@ -19,6 +22,9 @@ export enum FinanceTaskType {
   BUDGET_VARIANCE = 'BUDGET_VARIANCE',
   FORECAST_UPDATE = 'FORECAST_UPDATE',
   STATEMENT_ANALYSIS = 'STATEMENT_ANALYSIS',
+  LINE_TREND = 'LINE_TREND',
+  REVENUE_UNITS_COMBO = 'REVENUE_UNITS_COMBO',
+  VARIANCE_BRIDGE = 'VARIANCE_BRIDGE',
   STAKEHOLDER_PUSHBACK_RESPONSE = 'STAKEHOLDER_PUSHBACK_RESPONSE',
 }
 
@@ -74,6 +80,36 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
     spec: statementAnalysisSpec,
   },
   {
+    key: FinanceTaskType.LINE_TREND,
+    label: 'Trend over periods',
+    objectiveComponentType: 'NUMERIC_INPUT',
+    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
+    description:
+      'Read a revenue trend from a line chart, compute the change across the whole period, and explain what is driving it.',
+    interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
+    spec: lineTrendSpec,
+  },
+  {
+    key: FinanceTaskType.REVENUE_UNITS_COMBO,
+    label: 'Revenue and units (combo chart)',
+    objectiveComponentType: 'NUMERIC_TABLE',
+    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
+    description:
+      'Read revenue bars and units sold on a second axis, compute revenue per unit for each period, and explain the pricing or volume effect.',
+    interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
+    spec: revenueUnitsComboSpec,
+  },
+  {
+    key: FinanceTaskType.VARIANCE_BRIDGE,
+    label: 'Variance bridge (waterfall chart)',
+    objectiveComponentType: 'NUMERIC_INPUT',
+    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
+    description:
+      'Read a budget-to-actual bridge, compute the variance the named drivers do not explain, and say what to investigate.',
+    interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
+    spec: varianceBridgeSpec,
+  },
+  {
     key: FinanceTaskType.STAKEHOLDER_PUSHBACK_RESPONSE,
     label: 'Stakeholder pushback response',
     openEndedComponentType: 'STAKEHOLDER_PUSHBACK_RESPONSE',
@@ -89,7 +125,7 @@ export const FinanceRoleModule: RoleModule = {
   extraction: {
     categorySubDomainGuidance:
       'Finance sub-domains are typically areas like Reconciliation, Financial Reporting, ' +
-      'Accounts Payable/Receivable, Budgeting & Forecasting, Audit, or Treasury. Extract the ' +
+      'Accounts Payable/Receivable, Budgeting & Forecasting, Audit, Treasury, or Private Equity (deal analysis, portfolio company reporting, fund accounting). Extract the ' +
       'specific sub-domain implied by the job description (e.g. "Finance > Reconciliation"), ' +
       'not just "Finance" alone, when the description supports it.',
     intentFramingGuidance:

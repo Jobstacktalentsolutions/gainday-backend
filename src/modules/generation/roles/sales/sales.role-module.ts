@@ -96,12 +96,12 @@ export const SalesRoleModule: RoleModule = {
   extraction: {
     categorySubDomainGuidance:
       'Sales sub-domains map to sub-roles — SDR/BDR (prospecting-focused), AE (closing-focused), ' +
-      'or CSM/Account Manager (retention, renewal and account management; customer retention roles route here) — extract the specific sub-role implied by the ' +
+      'or account executive (closing-focused) — extract the specific sub-role implied by the ' +
       'job description (e.g. "Sales > SDR") when the description supports it, not just "Sales" alone.',
     intentFramingGuidance:
       'Sales intent centers on skills like prospecting and outreach effectiveness, objection ' +
       'handling, deal/pipeline judgment, negotiation and deal-value protection, and stakeholder ' +
-      'awareness — which of these matters most depends on the sub-role (SDR vs. AE vs. CSM).',
+      'awareness — which of these matters most depends on the sub-role (SDR vs. AE).',
     expectedTaskGuidance:
       'Sales is primarily conversational/situational rather than static/data-based: the candidate ' +
       'reacts to a persona, an objection, or a live situation. Restrict expected tasks to the ' +

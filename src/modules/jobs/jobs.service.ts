@@ -17,6 +17,7 @@ import {
   JobStatus,
   UserRole,
 } from '../../db/schema';
+import { JobBoardCacheService } from './job-board/job-board-cache.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
 
@@ -24,7 +25,10 @@ type JobDetailsInput = CreateJobDto | SaveDraftJobDto;
 
 @Injectable()
 export class JobsService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDb,
+    private readonly jobBoardCache: JobBoardCacheService,
+  ) {}
 
   private toJobValues(dto: JobDetailsInput): Partial<NewJob> {
     const values: Partial<NewJob> = {
@@ -103,6 +107,7 @@ export class JobsService {
     if (!job) {
       throw new NotFoundException('Job not found');
     }
+    await this.jobBoardCache.invalidateAll();
     return job;
   }
 

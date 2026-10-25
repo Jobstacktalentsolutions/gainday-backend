@@ -11,6 +11,7 @@ import {
 } from '../../db/schema';
 import { GENERATION_QUEUE } from './generation.constants';
 import { GenerationService } from './generation.service';
+import { JobBoardCacheService } from '../jobs/job-board/job-board-cache.service';
 
 @Processor(GENERATION_QUEUE)
 @Injectable()
@@ -20,6 +21,7 @@ export class GenerationProcessor extends WorkerHost {
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly generationService: GenerationService,
+    private readonly jobBoardCache: JobBoardCacheService,
   ) {
     super();
   }
@@ -70,6 +72,7 @@ export class GenerationProcessor extends WorkerHost {
           updatedAt: new Date(),
         })
         .where(eq(jobs.id, jobId));
+      await this.jobBoardCache.invalidateAll();
 
       this.logger.log(
         `Generation complete for Job ID ${jobId}: ${result.finalizedTasks.length} tasks, ${result.adminReviewItemsPersisted} sent to admin review.` +

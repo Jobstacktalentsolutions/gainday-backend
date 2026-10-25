@@ -246,7 +246,7 @@ As with sales and finance, "customer service" is not one bucket; Category needs 
 - **Technical support:** 2.4, 2.1, 2.5, 2.7. Highest risk of invented product behaviour.
 - **Complaints and escalations:** 2.2, 2.3, 2.5. Kaizo's complaints template emphasises de-escalation, remedy, root cause, ownership without bouncing, regulatory handling and handover documentation, with the highest pass mark of its templates (90%).
 - **Support lead / QA:** 2.6, 2.7, and the deferred QA-review task.
-- **Customer success / retention:** owned by the sales module as "Sales > CSM" (Section 8). The customer service module does not generate retention tasks.
+- **Customer success / retention:** owned by the customer service module as "Customer Service > Retention" (Section 8). Retention work is support work for this product, not a sales role.
 
 ---
 
@@ -276,7 +276,7 @@ As with sales and finance, "customer service" is not one bucket; Category needs 
 - **Case File Panel spec:** tabs, supported content (text, small tables), maximum length, always-visible behaviour.
 - **Gate handling:** decided as cap and flag (Section 5.5). Built: cap at 20 on judgment, `gateTriggered` per task. Not yet shown on the employer review page.
 - **Commercial/domain awareness for customer service:** the definition in Section 5.4 is used. Its weight is 0.15 (`customer-service.anchor-config.ts`), and the one-item-per-task rule is not yet enforced.
-- **Routing for customer success and retention roles:** decided. Retention, renewal, customer success and account-management roles are owned by the sales module as "Sales > CSM" (`canonicalCategory`, applied right after category extraction). The customer service module covers service issues only. Sales CSM task types are not built yet: CSM postings currently get the general sales tasks.
+- **Routing for customer success and retention roles:** decided, and this replaces the earlier sales decision. Retention, customer success, CSM and account-management support roles route to "Customer Service > Retention" (`canonicalCategory`, applied right after category extraction). The sales module has no CSM sub-role. Open risk: a quota-carrying account manager or renewals seller will also match these words and route to customer service. Check those postings after a run.
 - **Channel defaults and employer disclosure:** default when the posting is silent, and what the employer is told for phone-heavy roles.
 - **Calibration set:** who scores the human reference replies, and how tone is calibrated across locales.
 - **SJT keying method,** if forced-choice items are added: policy-determined keys only, or expert-reviewed keys.

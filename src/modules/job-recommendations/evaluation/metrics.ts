@@ -66,7 +66,8 @@ export function scoreSelection(
 ): SelectionQuality {
   const correct = selected.filter(isCorrect).length;
   return {
-    candidatesNotified: new Set(selected.map((match) => match.candidateId)).size,
+    candidatesNotified: new Set(selected.map((match) => match.candidateId))
+      .size,
     emitted: selected.length,
     precision: selected.length === 0 ? 0 : correct / selected.length,
     recall: totalCorrectPairs === 0 ? 0 : correct / totalCorrectPairs,

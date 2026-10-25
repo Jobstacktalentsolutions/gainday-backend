@@ -1,4 +1,4 @@
-import { combineCategoryScores, criteriaForLlm } from './task-category-scores';
+import { combineCategoryScores, criteriaForLlm, GATE_JUDGMENT_CAP } from './task-category-scores';
 import { LlmCategoryScores } from './schemas/task-grading-result.schema';
 
 const llmScores: LlmCategoryScores = {
@@ -49,5 +49,32 @@ describe('combineCategoryScores', () => {
     expect(() =>
       combineCategoryScores({ writtenCommunication: llmScores.writtenCommunication }, null),
     ).toThrow('The grader returned no score for problemSolving');
+  });
+
+  describe('gate cap', () => {
+    it('caps judgment at the gate cap when the LLM owns judgment', () => {
+      const scores = combineCategoryScores(llmScores, null, {
+        triggered: true,
+        description: 'Promises a refund',
+      });
+      expect(scores.judgmentExecution.score).toBe(GATE_JUDGMENT_CAP);
+      expect(scores.judgmentExecution.rationale).toContain('Capped at 20');
+      expect(scores.problemSolving.score).toBe(10);
+    });
+
+    it('leaves judgment alone when no gate is triggered', () => {
+      expect(
+        combineCategoryScores(llmScores, null, { triggered: false, description: 'x' }).judgmentExecution.score,
+      ).toBe(20);
+    });
+
+    it('never overrides a judgment settled by the answer key', () => {
+      const scores = combineCategoryScores(
+        llmScores,
+        { score: 100, correctParts: 2, totalParts: 2 },
+        { triggered: true, description: 'x' },
+      );
+      expect(scores.judgmentExecution.score).toBe(100);
+    });
   });
 });

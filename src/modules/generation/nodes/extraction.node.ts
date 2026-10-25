@@ -5,41 +5,26 @@ import {
   GenerationState,
   GenerationStateUpdate,
 } from '../state/generation-state';
-import {
-  categoryExtractionSchema,
-  intentProblemExtractionSchema,
-} from '../schemas/extraction.schema';
+import { intentProblemExtractionSchema } from '../schemas/extraction.schema';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
-import { canonicalCategory } from '../roles/category-routing';
+import { resolveCategory } from '../roles/category-routing';
+import { inferRole } from '../roles/role-inference';
 
 const logger = new Logger('GenerationPipeline:extraction');
-
-const CATEGORY_EXTRACTION_PROMPT = `You are extracting the job Category from a recruiter's job
-posting input. Category is the true domain and sub-domain of the role (e.g. "Finance >
-Reconciliation", "Sales", "Customer Support > Technical Troubleshooting", "Logistics > Fleet
-Operations"). Extract the domain the role actually belongs to — do not force-fit it into Finance
-or Sales if it clearly belongs elsewhere; we support any domain. Customer retention, renewal and account-management roles are "Sales > CSM", never Customer Service. If a sub-domain is evident from
-the description, include it after " > ".`;
 
 export function extractionNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
     logger.log(`Starting extraction for job ${state.jobId}`);
 
-    const categoryModel = withGeminiSafeStructuredOutput(
-      ctx.generationModel,
-      categoryExtractionSchema,
-    );
-    const categoryResult = await categoryModel.invoke([
-      new SystemMessage(CATEGORY_EXTRACTION_PROMPT),
-      new HumanMessage(
-        JSON.stringify({
-          jobDescription: state.jobDescription,
-          requiredSkills: state.requiredSkills,
-        }),
-      ),
-    ]);
-    const category = canonicalCategory(categoryResult.category);
-    logger.log(`Category extracted: "${category}"`);
+    // The role is inferred from the posting by the shared classifier (see role-inference.ts). The
+    // employer's chosen top level is kept by resolveCategory; the inferred sub-role refines it.
+    const inferred = await inferRole(ctx.generationModel, {
+      jobDescription: state.jobDescription,
+      requiredSkills: state.requiredSkills,
+      chosenRole: state.declaredRole ?? null,
+    });
+    const category = resolveCategory(state.declaredRole, inferred.role);
+    logger.log(`Category extracted: "${category}" — ${inferred.rationale}`);
 
     const roleModule = ctx.roleRegistry.resolve(category);
     logger.log(

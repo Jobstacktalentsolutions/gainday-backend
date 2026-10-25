@@ -119,6 +119,43 @@ describe('gradeObjective', () => {
     });
   });
 
+  describe('MULTI_SELECT_UNDER_CONSTRAINT', () => {
+    const component = {
+      options: ['Q1', 'Q2', 'Q3', 'Q4'],
+      selectCount: 2,
+      correctOptionIndices: [0, 1],
+    };
+
+    it('scores a correct pair fully', () => {
+      expect(gradeObjective('MULTI_SELECT_UNDER_CONSTRAINT', component, [1, 0])?.score).toBe(100);
+    });
+
+    it('cancels a wrong pick against a right one, never below zero', () => {
+      expect(gradeObjective('MULTI_SELECT_UNDER_CONSTRAINT', component, [0, 3])).toEqual({
+        score: 0,
+        correctParts: 0,
+        totalParts: 2,
+      });
+    });
+  });
+
+  describe('KEYED_CLASSIFICATION', () => {
+    const component = {
+      items: ['T-1', 'T-2'],
+      buckets: ['Work first', 'Defer'],
+      correctMapping: [
+        { item: 'T-1', bucket: 'Work first' },
+        { item: 'T-2', bucket: 'Defer' },
+      ],
+    };
+
+    it('gives one part per item that lands in its correct bucket', () => {
+      expect(
+        gradeObjective('KEYED_CLASSIFICATION', component, { 'T-1': 'Work first', 'T-2': 'Work first' }),
+      ).toEqual({ score: 50, correctParts: 1, totalParts: 2 });
+    });
+  });
+
   it('returns null for component types without an answer key, so the LLM grades them', () => {
     expect(isDeterministic('CLASSIFICATION')).toBe(false);
     expect(gradeObjective('CLASSIFICATION', { items: [], buckets: [] }, null)).toBeNull();

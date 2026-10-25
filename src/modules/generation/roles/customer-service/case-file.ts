@@ -29,7 +29,7 @@ export function factTable(
   rows: [string, string][],
   headers: [string, string] = ['Field', 'Value'],
 ): string {
-  const escape = (text: string) => text.replace(/\|/g, '\|');
+  const escape = (text: string) => text.replace(/\|/g, '\\|');
   return [
     `| ${headers[0]} | ${headers[1]} |`,
     '|---|---|',

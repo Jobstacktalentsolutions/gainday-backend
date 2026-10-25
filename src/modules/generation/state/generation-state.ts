@@ -43,6 +43,8 @@ export const GenerationStateAnnotation = Annotation.Root({
   jobDescription: Annotation<string>,
   requiredSkills: Annotation<string[]>,
   businessProblemRaw: Annotation<string | undefined>,
+  /** The role the employer chose on the job form, e.g. "Finance" or "Finance > Private Equity". */
+  declaredRole: Annotation<string | undefined>,
 
   // Stage 3 output
   category: Annotation<string>,

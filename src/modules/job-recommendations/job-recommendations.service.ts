@@ -22,6 +22,7 @@ import {
 } from '../notifications/notification-preferences.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RecommendedJob } from '../notifications/job-recommendation-email';
+import { JobBoardCacheService } from '../jobs/job-board/job-board-cache.service';
 import { JobMatchEmbeddingService } from './job-match-embedding.service';
 import { findCandidateMatches } from './job-match-query';
 import {
@@ -66,6 +67,7 @@ export class JobRecommendationsService {
     private readonly candidateNotifications: CandidateNotificationsService,
     private readonly preferences: NotificationPreferencesService,
     private readonly notifications: NotificationsService,
+    private readonly jobBoardCache: JobBoardCacheService,
   ) {}
 
   async runPass(): Promise<void> {
@@ -89,6 +91,8 @@ export class JobRecommendationsService {
       if (activatedJobs.length > 0) {
         await this.embeddings.syncCandidates();
         await this.embeddings.syncJobs(activatedJobs.map((job) => job.id));
+        // The new jobs' similarities only exist now, so rankings cached before this are stale.
+        await this.jobBoardCache.invalidateAll();
         const matches = await this.findMatches(
           activatedJobs.map((job) => job.id),
         );
@@ -158,7 +162,9 @@ export class JobRecommendationsService {
           lte(jobs.activatedAt, to),
         ),
       );
-    return rows.flatMap((row) => (row.title ? [{ ...row, title: row.title }] : []));
+    return rows.flatMap((row) =>
+      row.title ? [{ ...row, title: row.title }] : [],
+    );
   }
 
   private findMatches(jobIds: string[]): Promise<CandidateMatch[]> {

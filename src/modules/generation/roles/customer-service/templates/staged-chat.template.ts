@@ -85,13 +85,11 @@ export const stagedChatSpec = defineTaskSpec(dataSchema, (data) => {
     { label: 'Ticket history', content: data.ticketHistory },
     { label: 'Policy', content: data.policy },
   ];
-  const caseFileText = [data.displayName, ...tabs.map((tab) => tab.content)].join('\n');
-
   const serverData: StagedChatServerData = {
     turns: data.turns,
     branches: data.branches,
   };
-  validateStagedScript(serverData, data.turnCount, caseFileText);
+  validateStagedScript(serverData, data.turnCount);
 
   return {
     interfacePayload: {

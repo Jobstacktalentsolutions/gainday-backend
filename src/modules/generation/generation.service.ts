@@ -47,6 +47,7 @@ import {
 } from './task-content-generator';
 import { randomUUID } from 'crypto';
 import { TaskSpecError } from './roles/role-module.interface';
+import { JobBoardCacheService } from '../jobs/job-board/job-board-cache.service';
 
 export interface GenerationResult {
   category: string;
@@ -83,6 +84,7 @@ export class GenerationService {
     @Inject(EMBEDDINGS) private readonly embeddings: Embeddings,
     private readonly roleRegistry: RoleRegistry,
     private readonly configService: ConfigService,
+    private readonly jobBoardCache: JobBoardCacheService,
   ) {}
 
   async queueGeneration(jobId: string): Promise<void> {
@@ -137,6 +139,7 @@ export class GenerationService {
       jobDescription: job.description,
       requiredSkills: job.requiredSkills,
       businessProblemRaw: job.businessProblem || undefined,
+      declaredRole: job.role === null ? undefined : job.role,
     };
 
     const tracker = new GenerationProgressTracker(config.selectedTaskCount);
@@ -282,7 +285,9 @@ export class GenerationService {
       } else {
         const patternTypeDef =
           roleModule.allowedTaskPatternTypes[
-            Math.floor(Math.random() * roleModule.allowedTaskPatternTypes.length)
+            Math.floor(
+              Math.random() * roleModule.allowedTaskPatternTypes.length,
+            )
           ];
         taskContent = await generateTaskContent({
           model: this.taskGenerationModel,
@@ -380,7 +385,7 @@ export class GenerationService {
         title: 'Pipeline Test Job',
         description: dto.description,
         requiredSkills: dto.requiredSkills ?? [],
-        role: 'FINANCE',
+        role: 'Finance',
         skillLevel: 'Unspecified',
         location: 'N/A',
         employmentType: 'N/A',
@@ -402,6 +407,7 @@ export class GenerationService {
         .update(jobs)
         .set({ status: 'ACTIVE', updatedAt: new Date() })
         .where(eq(jobs.id, testJob.id));
+      await this.jobBoardCache.invalidateAll();
       return result;
     } catch (err) {
       await this.db

@@ -78,16 +78,36 @@ const csvDataPanelSchema = z.object({
 // A data table with a chart drawn from the same numbers (finance doc Section 5): the chart series
 // are columns of the table, so the two cannot disagree. Both are built in code from one dataset
 // (see roles/finance), never written by the model.
-const chartSchema = z.object({
+// Four chart shapes (finance doc Section 5). Bar and line share one series shape. A combo draws each
+// series as bars or a line, on a primary or secondary axis. A waterfall is a bridge: each value is a
+// step, and a total step starts again from zero. Every shape has equal-length arrays; the templates check that.
+const seriesSchema = z.object({ name: z.string(), values: z.array(z.number()) });
+
+const barOrLineChartSchema = z.object({
   type: z.enum(['bar', 'line']),
   categories: z.array(z.string()),
+  series: z.array(seriesSchema),
+});
+
+const comboChartSchema = z.object({
+  type: z.literal('combo'),
+  categories: z.array(z.string()),
   series: z.array(
-    z.object({
-      name: z.string(),
-      values: z.array(z.number()),
+    seriesSchema.extend({
+      kind: z.enum(['bar', 'line']),
+      axis: z.enum(['primary', 'secondary']),
     }),
   ),
 });
+
+const waterfallChartSchema = z.object({
+  type: z.literal('waterfall'),
+  categories: z.array(z.string()),
+  values: z.array(z.number()),
+  totals: z.array(z.boolean()),
+});
+
+const chartSchema = z.union([barOrLineChartSchema, comboChartSchema, waterfallChartSchema]);
 
 const tableViewWithChartSchema = z.object({
   interfaceType: z.enum([InterfaceType.TABLE_VIEW_WITH_CHART]),
