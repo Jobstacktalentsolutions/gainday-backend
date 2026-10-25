@@ -52,6 +52,17 @@ export interface GenerationResult {
 
 const TEST_EMPLOYER_EMAIL = 'pipeline-test@gainday.internal';
 
+const REQUIRED_TASK_FIELDS = [
+  'title',
+  'scenarioDescription',
+  'questionPrompt',
+  'interfacePayload',
+] as const;
+
+function hasRequiredTaskFields(task: SimulationTask): boolean {
+  return REQUIRED_TASK_FIELDS.every((field) => task[field] != null);
+}
+
 @Injectable()
 export class GenerationService {
   private readonly logger = new Logger(GenerationService.name);
@@ -178,7 +189,7 @@ export class GenerationService {
     // Review rows are written by adminReviewFlagNode as each slot is flagged.
     const adminReviewItemsPersisted = finalState.adminReviewItems.length;
 
-    const finalizedTasks: SimulationTask[] = finalState.finalizedTasks.map(
+    const mappedTasks: SimulationTask[] = finalState.finalizedTasks.map(
       (task, index) => ({
         id: `${job.id}-task-${index + 1}`,
         questionBankId: task.questionBankId,
@@ -194,6 +205,12 @@ export class GenerationService {
         interfacePayload: task.taskContent.interfacePayload,
       }),
     );
+    const finalizedTasks = mappedTasks.filter(hasRequiredTaskFields);
+    if (finalizedTasks.length < mappedTasks.length) {
+      this.logger.warn(
+        `Dropped ${mappedTasks.length - finalizedTasks.length} task(s) with null required fields for Job ID ${job.id}`,
+      );
+    }
 
     return {
       category: finalState.category,
