@@ -1,4 +1,5 @@
 import {
+  capabilityScoreHistory,
   slugifyDomain,
   toCategoryScores,
 } from '../submissions/employer-submission.view';
@@ -21,18 +22,22 @@ export interface AggregatableRow {
   categoryScores: CategoryScores;
 }
 
-/** Composite score after each row, oldest first — rows must already be in that order (this is
- *  just `runningAverage` composed with each row's `capabilityPoints`, cross-domain). */
-export function buildHistory(points: number[]): {
+/** Composite score after each row, oldest first — rows must already be in that order. Cross-domain:
+ *  `points[i]` is the `capabilityPoints` of `rows[i]`. */
+export function buildHistory(
+  rows: { completedAt: Date }[],
+  points: number[],
+): {
   history: number[];
   compositeScore: number;
   compositeDelta: number;
 } {
-  let sum = 0;
-  const history = points.map((point, index) => {
-    sum += point;
-    return Math.round(sum / (index + 1));
-  });
+  const history = capabilityScoreHistory(
+    rows.map((row, index) => ({
+      points: points[index],
+      completedAt: row.completedAt,
+    })),
+  );
   const compositeScore = history.at(-1) ?? 0;
   const compositeDelta =
     history.length > 1 ? compositeScore - history[history.length - 2] : 0;

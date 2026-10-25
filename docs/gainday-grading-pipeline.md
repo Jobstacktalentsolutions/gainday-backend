@@ -206,8 +206,8 @@ in Section 3 — there is no LLM call here on purpose. For each of the 4 categor
 
 (carried forward unchanged from the old scoring stub's weighting), rounded to a whole number. Every score in the pipeline is on the same 0-100 scale, so category
 scores stay directly comparable to any individual task's score and to the headline "out of 100"
-number shown to employers/candidates. (The capability score — see "Remaining Gaps" — is the
-only thing out of 1000: a candidate's average across applications, times 10.)
+number shown to employers/candidates. (The capability score is the only thing out of 1000 — see
+`gainday-capability-score.md`.)
 
 If **zero** tasks could be graded for a submission (e.g. every task lacks a `questionBankId` —
 Section 8), grading marks the submission `GRADING_FAILED` (Section 9) rather than persisting a
@@ -335,8 +335,8 @@ domain, each worth 1000 points, using only the three categories that apply acros
 (problem solving, judgment/execution, written communication). Commercial/domain awareness is left
 out because a candidate's earlier results can come from other domains, so mixing them in would
 skew the score. It still needs a proper treatment (for example, only averaging it over
-applications in the same domain). The average is also deliberately flat for now — every
-application weighs the same; weighting newer applications more is planned.
+applications in the same domain). The score is recency-weighted and shrunk toward a neutral prior
+— see `gainday-capability-score.md`.
 
 **Anchors and ranking tasks:** tasks with a `PRIORITY_RANKING` objective component carry no
 stored ideal order. What a strong, mid and weak ranking looks like is decided during anchor

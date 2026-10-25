@@ -61,7 +61,10 @@ export class CapabilityPassportService {
     }
 
     const points = rows.map((row) => capabilityPoints(row.categoryScores));
-    const { history, compositeScore, compositeDelta } = buildHistory(points);
+    const { history, compositeScore, compositeDelta } = buildHistory(
+      rows,
+      points,
+    );
 
     const domains = buildDomainBreakdown(rows, points);
     const dimensions = buildDimensions(rows);

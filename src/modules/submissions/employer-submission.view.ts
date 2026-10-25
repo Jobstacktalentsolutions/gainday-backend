@@ -188,13 +188,39 @@ export function capabilityPoints(categoryScores: CategoryScores): number {
   return Math.round(average * 10);
 }
 
-/** Running average after each application, oldest first, so the last entry is the candidate's
- *  current capability score. Every application weighs the same for now. */
-export function runningAverage(points: number[]): number[] {
-  let sum = 0;
-  return points.map((point, index) => {
-    sum += point;
-    return Math.round(sum / (index + 1));
+/** An application's capability points and when it was completed. */
+export interface TimedPoints {
+  points: number;
+  completedAt: Date;
+}
+
+/** An application's weight halves every this many days, measured back from the newest one. */
+export const CAPABILITY_HALF_LIFE_DAYS = 180;
+/** The neutral score (out of 1000) that a candidate's score is pulled toward. */
+export const CAPABILITY_PRIOR_SCORE = 500;
+/** How many fully weighted applications the prior is worth. Larger means more dampening. */
+export const CAPABILITY_PRIOR_WEIGHT = 2;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Capability score after each application, oldest first, so the last entry is the candidate's
+ * current score. Each application is weighted by recency, and the weighted mean is pulled toward
+ * `CAPABILITY_PRIOR_SCORE`: thin histories stay near the prior, while long ones reflect their
+ * results. Newer applications weigh more.
+ */
+export function capabilityScoreHistory(applications: TimedPoints[]): number[] {
+  return applications.map((_, index) => {
+    const newest = applications[index].completedAt.getTime();
+    let weightedPoints = CAPABILITY_PRIOR_WEIGHT * CAPABILITY_PRIOR_SCORE;
+    let totalWeight = CAPABILITY_PRIOR_WEIGHT;
+    for (const application of applications.slice(0, index + 1)) {
+      const ageDays = (newest - application.completedAt.getTime()) / DAY_MS;
+      const weight = 0.5 ** (ageDays / CAPABILITY_HALF_LIFE_DAYS);
+      weightedPoints += weight * application.points;
+      totalWeight += weight;
+    }
+    return Math.round(weightedPoints / totalWeight);
   });
 }
 

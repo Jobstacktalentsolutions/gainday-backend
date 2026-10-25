@@ -31,8 +31,8 @@ import {
   buildTaskResults,
   capabilityDomainSql,
   capabilityPoints,
+  capabilityScoreHistory,
   deriveIntegrityStatus,
-  runningAverage,
   summarizeIntegrityEvents,
   toCategoryScores,
   toDisplayId,
@@ -362,7 +362,10 @@ export class SubmissionsService {
   // the brief stays behind the unlock with the rest of the identifying details. Null once the
   // candidate's account has been deleted.
   private toEmployerCandidateProfile(
-    candidate: Pick<JobSeekerProfile, 'gender' | 'pronouns' | 'title' | 'brief'> | null,
+    candidate: Pick<
+      JobSeekerProfile,
+      'gender' | 'pronouns' | 'title' | 'brief'
+    > | null,
     isUnlocked: boolean,
   ) {
     if (!candidate) {
@@ -445,6 +448,7 @@ export class SubmissionsService {
         id: submissions.id,
         candidateId: submissions.candidateId,
         categoryScores: submissions.categoryScores,
+        completedAt: submissions.completedAt,
       })
       .from(submissions)
       .innerJoin(jobs, eq(jobs.id, submissions.jobId))
@@ -468,8 +472,11 @@ export class SubmissionsService {
       gradedByCandidate.set(row.candidateId, candidateRows);
     }
     for (const candidateRows of gradedByCandidate.values()) {
-      const running = runningAverage(
-        candidateRows.map((row) => capabilityPoints(row.categoryScores!)),
+      const running = capabilityScoreHistory(
+        candidateRows.map((row) => ({
+          points: capabilityPoints(row.categoryScores!),
+          completedAt: row.completedAt!,
+        })),
       );
       candidateRows.forEach((row, index) => {
         histories.set(row.id, running.slice(0, index + 1));

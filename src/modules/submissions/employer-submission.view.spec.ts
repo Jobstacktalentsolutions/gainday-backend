@@ -2,9 +2,10 @@ import type { AntiCheatEvent } from '../../db/schema';
 import { InterfaceType } from '../generation/roles/interface-type';
 import {
   buildEmployerTaskResults,
+  CAPABILITY_HALF_LIFE_DAYS,
   capabilityPoints,
+  capabilityScoreHistory,
   deriveIntegrityStatus,
-  runningAverage,
   summarizeIntegrityEvents,
   toDisplayId,
 } from './employer-submission.view';
@@ -77,9 +78,38 @@ describe('employer submission view', () => {
     ).toBe(800);
   });
 
-  it('averages applications equally as they accumulate', () => {
-    expect(runningAverage([800, 600, 700])).toEqual([800, 700, 700]);
-    expect(runningAverage([])).toEqual([]);
+  describe('capabilityScoreHistory', () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const at = (days: number, points: number) => ({
+      points,
+      completedAt: new Date(Date.UTC(2026, 0, 1) + days * DAY_MS),
+    });
+
+    it('returns an empty history for no applications', () => {
+      expect(capabilityScoreHistory([])).toEqual([]);
+    });
+
+    it('dampens a single application toward the prior', () => {
+      // (2 * 500 + 1 * 900) / (2 + 1)
+      expect(capabilityScoreHistory([at(0, 900)])).toEqual([633]);
+    });
+
+    it('weighs applications completed at the same time equally', () => {
+      // (1000 + 600) / 3, (1000 + 600 + 800) / 4, (1000 + 600 + 800 + 700) / 5
+      expect(
+        capabilityScoreHistory([at(0, 600), at(0, 800), at(0, 700)]),
+      ).toEqual([533, 600, 620]);
+    });
+
+    it('weighs an application half as much after one half-life', () => {
+      // Older weight 0.5, newer weight 1: (1000 + 0.5 * 400) / 3, then (1000 + 0.5 * 400 + 1000) / 3.5
+      expect(
+        capabilityScoreHistory([
+          at(0, 400),
+          at(CAPABILITY_HALF_LIFE_DAYS, 1000),
+        ]),
+      ).toEqual([467, 629]);
+    });
   });
 
   describe('buildEmployerTaskResults', () => {

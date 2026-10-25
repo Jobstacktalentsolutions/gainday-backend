@@ -5,6 +5,7 @@ import {
   findWeakestCategory,
   findWeakestDomain,
 } from './capability-passport.util';
+import { CAPABILITY_HALF_LIFE_DAYS } from '../submissions/employer-submission.view';
 import type { CategoryScores } from '../../db/schema';
 
 const categoryScores = (
@@ -27,25 +28,34 @@ const categoryScores = (
   },
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const completedOn = (days: number) => ({
+  completedAt: new Date(Date.UTC(2026, 0, 1) + days * DAY_MS),
+});
+
 describe('buildHistory', () => {
-  it('computes a running average and derives compositeScore/compositeDelta from it', () => {
-    const { history, compositeScore, compositeDelta } = buildHistory([
-      600, 800, 700,
-    ]);
-    expect(history).toEqual([600, 700, 700]);
-    expect(compositeScore).toBe(700);
-    expect(compositeDelta).toBe(0);
+  it('derives compositeScore/compositeDelta from the capability score history', () => {
+    const rows = [completedOn(0), completedOn(0), completedOn(0)];
+    const { history, compositeScore, compositeDelta } = buildHistory(
+      rows,
+      [600, 800, 700],
+    );
+    expect(history).toEqual([533, 600, 620]);
+    expect(compositeScore).toBe(620);
+    expect(compositeDelta).toBe(20);
   });
 
   it('compositeDelta is 0 with fewer than 2 points', () => {
-    expect(buildHistory([500]).compositeDelta).toBe(0);
-    expect(buildHistory([]).compositeScore).toBe(0);
+    expect(buildHistory([completedOn(0)], [500]).compositeDelta).toBe(0);
+    expect(buildHistory([], []).compositeScore).toBe(0);
   });
 
   it('compositeDelta reflects the most recent movement, not the whole trend', () => {
-    const { compositeDelta } = buildHistory([400, 1000]);
-    // running average: [400, 700] -> delta = 700 - 400 = 300
-    expect(compositeDelta).toBe(300);
+    const rows = [completedOn(0), completedOn(CAPABILITY_HALF_LIFE_DAYS)];
+    const { history, compositeDelta } = buildHistory(rows, [400, 1000]);
+    // history: [467, 629] -> delta = 629 - 467 = 162
+    expect(history).toEqual([467, 629]);
+    expect(compositeDelta).toBe(162);
   });
 });
 
