@@ -25,10 +25,14 @@ export class NotificationsService {
     to: string,
     token: string,
     role: UserRole = UserRole.EMPLOYER,
+    redirectPath?: string,
   ): Promise<void> {
     const appUrl = this.configService.get<string>('email.appUrl');
     const rolePath = role === UserRole.JOB_SEEKER ? 'candidate' : 'employer';
-    const verifyLink = `${appUrl}/${rolePath}/verify-email?token=${token}`;
+    const redirectParam = redirectPath
+      ? `&redirect=${encodeURIComponent(redirectPath)}`
+      : '';
+    const verifyLink = `${appUrl}/${rolePath}/verify-email?token=${token}${redirectParam}`;
     const year = new Date().getFullYear();
 
     await this.emailQueueService.enqueueEmail({

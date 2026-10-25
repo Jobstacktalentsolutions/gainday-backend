@@ -4,6 +4,9 @@ import {
   IsNotEmpty,
   MinLength,
   IsBoolean,
+  IsOptional,
+  MaxLength,
+  Matches,
 } from 'class-validator';
 
 export class SignupEmployerDto {
@@ -28,4 +31,12 @@ export class SignupEmployerDto {
 
   @IsBoolean()
   agreedToTerms: boolean;
+
+  /** Where to send the employer after they verify their email, e.g. back to a pack purchase.
+   *  Must be a same-site path. The frontend checks it again before using it. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(512)
+  @Matches(/^\/(?!\/)/, { message: 'redirectPath must be a same-site path' })
+  redirectPath?: string;
 }

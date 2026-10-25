@@ -342,7 +342,7 @@ export class AuthService {
   }
 
   async registerEmployer(dto: SignupEmployerDto) {
-    const { email, password, fullName, companyName, agreedToTerms } = dto;
+    const { email, password, fullName, companyName, agreedToTerms, redirectPath } = dto;
 
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
@@ -392,6 +392,7 @@ export class AuthService {
       email,
       emailVerificationToken,
       UserRole.EMPLOYER,
+      redirectPath,
     );
 
     return this.login(user);
