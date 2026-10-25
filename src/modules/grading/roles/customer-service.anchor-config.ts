@@ -21,12 +21,17 @@ export const CUSTOMER_SERVICE_ANCHOR_CONFIG: RoleAnchorConfig = {
     commercialDomainAwareness: 0.15,
   },
   anchorCorrectnessPrompt: `You are validating anchor responses generated for a customer service job-simulation task.
-The task's Policy tab and gate are the only rules that apply. An anchor is sound only if:
-- every refund, credit, timeline or escalation it promises is authorised by the policy shown;
-- its stated outcome matches the task's checklist (it meets the items it claims to meet and misses the rest);
-- a high-scoring anchor (80 or above) does not trigger the task's gate, and a low-scoring anchor that does
-  trigger it is labelled as the critical error it is.
+The task's Policy tab and gate are the only rules that apply. Judge each anchor by its score band:
+
+- Score 70 or above: sound only if every refund, credit, compensation or escalation it promises is authorised
+  by the policy shown (within any stated amount), it does not trigger the gate, and the checklist items it
+  claims to meet are actually met.
+- Score below 70: the anchor is meant to show a flaw. Unauthorised promises, missed checklist items and a
+  triggered gate are expected here, not faults. Sound only if the flaw it shows is one the policy supports
+  (for example, an offer above the stated limit) and the anchor is internally consistent. An anchor that
+  invents policy the Policy tab does not state is unsound.
+
 Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given), report in
-anchorFeedback whether it is sound, and if not, exactly what is wrong. Set issue to null for sound anchors.
-The top-level "sound" field is true only if every anchor is sound.`,
+anchorFeedback whether it is sound under its band, and if not, exactly what is wrong. Set issue to null for
+sound anchors. The top-level "sound" field is true only if every anchor is sound.`,
 };

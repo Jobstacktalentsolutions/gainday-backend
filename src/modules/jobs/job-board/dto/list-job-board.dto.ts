@@ -29,6 +29,10 @@ export class ListJobBoardDto {
 
   @IsOptional()
   @IsString()
+  appliedStatus?: string;
+
+  @IsOptional()
+  @IsString()
   roleCategory?: string;
 
   @IsOptional()

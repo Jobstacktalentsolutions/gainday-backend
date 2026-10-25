@@ -44,7 +44,15 @@ function loadActiveJobs(db: DrizzleDb) {
 
 function matchesFilters(job: BoardJob, query: ListJobBoardDto): boolean {
   const search = query.search?.trim().toLowerCase() ?? '';
-  if (search && !(job.title ?? '').toLowerCase().includes(search)) return false;
+  if (
+    search &&
+    !(job.title ?? '').toLowerCase().includes(search) &&
+    !(job.role ?? '').toLowerCase().includes(search) &&
+    !(job.skillCategory ?? '').toLowerCase().includes(search) &&
+    !(job.requiredSkills ?? []).some((s) => s.toLowerCase().includes(search))
+  ) {
+    return false;
+  }
   if (query.roleCategory && roleCategoryOf(job) !== query.roleCategory)
     return false;
   if (query.location && locationOf(job) !== query.location) return false;
@@ -84,9 +92,18 @@ export class JobBoardService {
       ? await this.appliedJobIds(candidate.profileId)
       : new Set<string>();
 
+    const appliedFilter = query.appliedStatus?.toLowerCase();
     const matching = rankedIds.flatMap((id) => {
       const job = jobsById.get(id);
-      return job && matchesFilters(job, query) ? [job] : [];
+      if (!job || !matchesFilters(job, query)) return [];
+      const isApplied = appliedIds.has(job.id);
+      if (appliedFilter === 'applied' && !isApplied) return [];
+      if (
+        (appliedFilter === 'not-applied' || appliedFilter === 'not_applied') &&
+        isApplied
+      )
+        return [];
+      return [job];
     });
     const ordered = [
       ...matching.filter((job) => !appliedIds.has(job.id)),
