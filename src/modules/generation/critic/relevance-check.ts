@@ -1,6 +1,6 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import { relevanceCheckSchema } from '../schemas/critic-result.schema';
+import { taskCriticSchema } from '../schemas/critic-result.schema';
 import {
   ExtractionResult,
   GeneratedTaskCandidate,
@@ -27,7 +27,7 @@ export async function checkRelevance(
 }> {
   const structuredModel = withGeminiSafeStructuredOutput(
     criticModel,
-    relevanceCheckSchema,
+    taskCriticSchema,
   );
   return structuredModel.invoke([
     new SystemMessage(RELEVANCE_CHECK_PROMPT),
