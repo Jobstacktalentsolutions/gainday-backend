@@ -1,102 +1,87 @@
 import {
+  GeneratedTaskCandidate,
   RoleModule,
   TaskPatternTypeDefinition,
 } from '../role-module.interface';
 import { InterfaceType } from '../interface-type';
 import { RoleCategory } from '../role-category.enum';
-// TODO(finance-interface-types): doc Section 10 — finance needs dedicated interface types for
-// charts/computed figures; none of the 3 current sales-derived types are designed for that.
-// Using TABLE_VIEW_RESPONSE_PANEL/TEXT_AREA/RICH_TEXT_COMPOSER as an interim best fit.
+import { unsourcedFigures } from '../narrative-figures';
+import { reconciliationSpec } from './templates/reconciliation.template';
+import { journalEntrySpec } from './templates/journal-entry.template';
+import { varianceSpec } from './templates/variance.template';
+import { forecastSpec } from './templates/forecast.template';
+import { statementAnalysisSpec } from './templates/statement-analysis.template';
 
-/** Finance's task-pattern-type keys, given literal typing here so this module and its call
- *  sites get autocomplete/typo-safety — kept local to finance rather than a shared cross-role
- *  enum, since each role owns and grows its own key set independently (doc Section 2.3). */
+/** Finance's task-pattern-type keys. Every figure-bearing type is a spec template: the model
+ *  supplies raw inputs and code derives the table, chart and answer key (finance doc Section 6.2).
+ *  The pushback type carries no figures, so it stays free text. */
 export enum FinanceTaskType {
-  NUMERIC_INPUT = 'NUMERIC_INPUT',
-  CLASSIFICATION = 'CLASSIFICATION',
-  PROCEDURAL_SEQUENCING = 'PROCEDURAL_SEQUENCING',
-  SINGLE_BEST_ACTION = 'SINGLE_BEST_ACTION',
-  MULTI_SELECT_UNDER_CONSTRAINT = 'MULTI_SELECT_UNDER_CONSTRAINT',
-  WRITTEN_JUSTIFICATION = 'WRITTEN_JUSTIFICATION',
-  DRAFTED_COMMUNICATION = 'DRAFTED_COMMUNICATION',
-  INTERPRETATION_ANALYSIS = 'INTERPRETATION_ANALYSIS',
+  RECONCILIATION_CASH = 'RECONCILIATION_CASH',
+  JOURNAL_ENTRY_CLASSIFICATION = 'JOURNAL_ENTRY_CLASSIFICATION',
+  BUDGET_VARIANCE = 'BUDGET_VARIANCE',
+  FORECAST_UPDATE = 'FORECAST_UPDATE',
+  STATEMENT_ANALYSIS = 'STATEMENT_ANALYSIS',
   STAKEHOLDER_PUSHBACK_RESPONSE = 'STAKEHOLDER_PUSHBACK_RESPONSE',
-  NUMERIC_INPUT_WITH_JUSTIFICATION = 'NUMERIC_INPUT_WITH_JUSTIFICATION',
 }
 
 const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
   {
-    key: FinanceTaskType.NUMERIC_INPUT,
-    label: 'Numeric input',
-    objectiveComponentType: 'NUMERIC_INPUT',
-    description: 'Calculate a value, checked against a tolerance range.',
-    interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
-  },
-  {
-    key: FinanceTaskType.CLASSIFICATION,
-    label: 'Classification',
-    objectiveComponentType: 'CLASSIFICATION',
-    description: 'Sort items into correct buckets.',
-    interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
-  },
-  {
-    key: FinanceTaskType.PROCEDURAL_SEQUENCING,
-    label: 'Procedural sequencing',
-    objectiveComponentType: 'PROCEDURAL_SEQUENCING',
-    description: 'Order steps that have a genuinely correct process order.',
-    interfaceType: InterfaceType.TEXT_AREA,
-  },
-  {
-    key: FinanceTaskType.SINGLE_BEST_ACTION,
-    label: 'Single-best-action selection',
-    objectiveComponentType: 'SINGLE_BEST_ACTION',
-    description: 'Pick the one correct action among plausible distractors.',
-    interfaceType: InterfaceType.TEXT_AREA,
-  },
-  {
-    key: FinanceTaskType.MULTI_SELECT_UNDER_CONSTRAINT,
-    label: 'Multi-select under constraint',
-    objectiveComponentType: 'MULTI_SELECT_UNDER_CONSTRAINT',
-    description:
-      'E.g. "choose 2 of 3," graded against an ideal set membership.',
-    interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
-  },
-  {
-    key: FinanceTaskType.WRITTEN_JUSTIFICATION,
-    label: 'Written justification',
+    key: FinanceTaskType.RECONCILIATION_CASH,
+    label: 'Bank reconciliation',
+    objectiveComponentType: 'RECONCILIATION',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
-    description: 'Written justification of a decision already made.',
-    interfaceType: InterfaceType.TEXT_AREA,
-  },
-  {
-    key: FinanceTaskType.DRAFTED_COMMUNICATION,
-    label: 'Drafted communication',
-    openEndedComponentType: 'DRAFTED_COMMUNICATION',
-    description: 'Message/summary to a stakeholder.',
-    interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
-  },
-  {
-    key: FinanceTaskType.INTERPRETATION_ANALYSIS,
-    label: 'Interpretation / analysis',
-    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
-    description: 'Interpretation/analysis of data.',
+    description:
+      'Classify each reconciling item as a bank-side or ledger-side adjustment, compute the adjusted cash balance, and justify the entries that need posting.',
     interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
+    spec: reconciliationSpec,
+  },
+  {
+    key: FinanceTaskType.JOURNAL_ENTRY_CLASSIFICATION,
+    label: 'Capex vs opex and journal entries',
+    objectiveComponentType: 'JOURNAL_ENTRY',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description:
+      'Post a journal entry for each clear-cut transaction, and justify in writing the treatment of one debatable transaction.',
+    interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
+    spec: journalEntrySpec,
+  },
+  {
+    key: FinanceTaskType.BUDGET_VARIANCE,
+    label: 'Budget variance and explanation',
+    objectiveComponentType: 'NUMERIC_TABLE',
+    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
+    description:
+      'Compute the variance and variance percentage for each budget line, then explain the drivers to a non-finance leader.',
+    interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
+    spec: varianceSpec,
+  },
+  {
+    key: FinanceTaskType.FORECAST_UPDATE,
+    label: 'Forecast update',
+    objectiveComponentType: 'NUMERIC_INPUT',
+    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
+    description:
+      'Compute the revised operating result after a price, volume or one-off change, then explain its effect for the decision-maker.',
+    interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
+    spec: forecastSpec,
+  },
+  {
+    key: FinanceTaskType.STATEMENT_ANALYSIS,
+    label: 'Margin analysis from statements',
+    objectiveComponentType: 'NUMERIC_TABLE',
+    openEndedComponentType: 'INTERPRETATION_ANALYSIS',
+    description:
+      'Compute gross and operating margins across periods from a chart and table, then flag what to raise with the CFO.',
+    interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
+    spec: statementAnalysisSpec,
   },
   {
     key: FinanceTaskType.STAKEHOLDER_PUSHBACK_RESPONSE,
     label: 'Stakeholder pushback response',
     openEndedComponentType: 'STAKEHOLDER_PUSHBACK_RESPONSE',
-    description: 'Response to stakeholder pushback.',
-    interfaceType: InterfaceType.TEXT_AREA,
-  },
-  {
-    key: FinanceTaskType.NUMERIC_INPUT_WITH_JUSTIFICATION,
-    label: 'Numeric input with written justification',
-    objectiveComponentType: 'NUMERIC_INPUT',
-    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
     description:
-      'Paired objective + open-ended component, used when the objective answer alone would not reveal whether the candidate understands why it is correct.',
-    interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
+      'Reply in writing to a stakeholder who challenges a finance decision, without quoting figures.',
+    interfaceType: InterfaceType.TEXT_AREA,
   },
 ];
 
@@ -113,11 +98,21 @@ export const FinanceRoleModule: RoleModule = {
       'Finance intent centers on skills like numerical accuracy, procedural rigor, ' +
       'regulatory/policy awareness, and the ability to interpret and communicate financial data.',
     expectedTaskGuidance:
-      'Finance is primarily a static, data/document-based case study: the candidate is given ' +
-      'numbers, tables, or a written scenario, and produces a calculation and/or written analysis.',
+      'Finance is a static, data-based case study: the candidate is given figures in a table, ' +
+      'and produces a calculation and/or written analysis. Choose the task type whose inputs the ' +
+      'scenario naturally has.',
   },
 
   allowedTaskPatternTypes: financeTaskPatternTypes,
 
-  criticChecks: {},
+  criticChecks: {
+    validateTask: (task: GeneratedTaskCandidate) => {
+      const figures = unsourcedFigures(task);
+      return figures.length === 0
+        ? []
+        : [
+            `The text states figures the table does not show (${figures.join(', ')}). Remove them, or put them in the data.`,
+          ];
+    },
+  },
 };

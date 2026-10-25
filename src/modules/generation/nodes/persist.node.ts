@@ -26,6 +26,10 @@ export function persistNode(ctx: GenerationContext) {
     }
 
     const { embedding } = state.currentCriticResult;
+    if (!draft.taskContent || !embedding) {
+      throw new Error('persist node invoked with a draft that has no content or embedding');
+    }
+    const taskContent = draft.taskContent;
 
     let questionBankId: string;
     try {
@@ -35,7 +39,7 @@ export function persistNode(ctx: GenerationContext) {
           category: state.category,
           intent: state.intent,
           taskType: draft.taskType,
-          taskContent: draft.taskContent,
+          taskContent,
           sourceJobId: state.jobId,
           embedding,
         })
@@ -54,7 +58,7 @@ export function persistNode(ctx: GenerationContext) {
     }
 
     logger.log(
-      `Slot ${state.currentSlotIndex}: persisted "${draft.taskContent.title}" to question_bank`,
+      `Slot ${state.currentSlotIndex}: persisted "${taskContent.title}" to question_bank`,
     );
 
     return {
@@ -63,7 +67,7 @@ export function persistNode(ctx: GenerationContext) {
           candidateId: draft.candidateId,
           questionBankId,
           taskType: draft.taskType,
-          taskContent: draft.taskContent,
+          taskContent,
         },
       ],
     };

@@ -9,10 +9,4 @@ export interface GradingConfig {
   rateLimitBackoffMaxMs: number;
   sweepIntervalMs: number;
   stuckThresholdMs: number;
-  categoryWeights: {
-    problemSolving: number;
-    judgmentExecution: number;
-    writtenCommunication: number;
-    commercialDomainAwareness: number;
-  };
 }

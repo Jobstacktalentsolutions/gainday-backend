@@ -4,6 +4,12 @@ import {
   RoleModule,
 } from '../generation/roles/role-module.interface';
 import { RoleRegistry } from '../generation/roles/role-registry';
+import {
+  journalEntrySchema,
+  keyedClassificationSchema,
+  numericTableSchema,
+  reconciliationSchema,
+} from '../generation/roles/component-schemas';
 
 export interface CandidateObjectiveComponent {
   /** Tells the frontend which answer widget to render (see
@@ -21,16 +27,45 @@ export type CandidateSimulationTask = Omit<
   objectiveComponent: CandidateObjectiveComponent | null;
 };
 
-// The field(s) per component type that hand the candidate the correct answer outright.
-// Never sent to a candidate before they've submitted — see sanitizeTaskForCandidate.
-const ANSWER_KEY_FIELDS: Record<ObjectiveComponentType, string[]> = {
-  SINGLE_BEST_ACTION: ['correctOptionIndex'],
-  MULTI_SELECT_UNDER_CONSTRAINT: ['correctOptionIndices'],
-  NUMERIC_INPUT: ['correctValue'],
-  // New tasks no longer store a mapping; still stripped so older rows that have one never leak it.
-  CLASSIFICATION: ['correctMapping'],
-  PROCEDURAL_SEQUENCING: ['correctOrder'],
-  PRIORITY_RANKING: [], // no answer key — good orderings are defined by the grading anchors
+type StoredComponent = Record<string, unknown>;
+
+function omitKeys(...keys: string[]) {
+  return (component: StoredComponent): StoredComponent =>
+    Object.fromEntries(
+      Object.entries(component).filter(([key]) => !keys.includes(key)),
+    );
+}
+
+// What the candidate may see of each stored objective component: everything except the answer key,
+// and any tolerance that would reveal how exact the answer must be. Typed as a Record over every
+// component type, so a new type cannot ship without deciding what the candidate sees of it.
+const CANDIDATE_VIEW: Record<
+  ObjectiveComponentType,
+  (component: StoredComponent) => StoredComponent
+> = {
+  SINGLE_BEST_ACTION: omitKeys('correctOptionIndex'),
+  MULTI_SELECT_UNDER_CONSTRAINT: omitKeys('correctOptionIndices'),
+  // Older rows may still hold a stored mapping; it is stripped so it never leaks.
+  CLASSIFICATION: omitKeys('correctMapping'),
+  PROCEDURAL_SEQUENCING: omitKeys('correctOrder'),
+  PRIORITY_RANKING: (component) => component, // no answer key: the anchors define a good ordering
+  NUMERIC_INPUT: omitKeys('correctValue', 'tolerance'),
+  RECONCILIATION: (component) => {
+    const { items, sideOptions, unit } = reconciliationSchema.parse(component);
+    return { items, sideOptions, unit };
+  },
+  JOURNAL_ENTRY: (component) => {
+    const { accounts, entries, unit } = journalEntrySchema.parse(component);
+    return { accounts, references: entries.map((entry) => entry.reference), unit };
+  },
+  KEYED_CLASSIFICATION: (component) => {
+    const { items, buckets } = keyedClassificationSchema.parse(component);
+    return { items, buckets };
+  },
+  NUMERIC_TABLE: (component) => {
+    const { rowLabels, columns } = numericTableSchema.parse(component);
+    return { rowLabels, columnLabels: columns.map((column) => column.label) };
+  },
 };
 
 function resolvePatternType(task: SimulationTask, roleRegistry: RoleRegistry) {
@@ -57,7 +92,8 @@ export function sanitizeTaskForCandidate(
   task: SimulationTask,
   roleRegistry: RoleRegistry,
 ): CandidateSimulationTask {
-  const { objectiveComponent, ...rest } = task;
+  // The rubric holds the gate and checklist the answer is graded on, so it never reaches the candidate.
+  const { objectiveComponent, rubric: _rubric, ...rest } = task;
   const componentType = resolvePatternType(
     task,
     roleRegistry,
@@ -67,10 +103,11 @@ export function sanitizeTaskForCandidate(
     return { ...rest, objectiveComponent: null };
   }
 
-  const sanitized = { ...objectiveComponent };
-  for (const field of ANSWER_KEY_FIELDS[componentType]) {
-    delete sanitized[field];
-  }
-
-  return { ...rest, objectiveComponent: { ...sanitized, componentType } };
+  return {
+    ...rest,
+    objectiveComponent: {
+      ...CANDIDATE_VIEW[componentType](objectiveComponent),
+      componentType,
+    },
+  };
 }

@@ -74,10 +74,17 @@ export class AdminService {
    * side. Small, static-ish payload; safe to fetch once and cache.
    */
   listTaskPatternTypes() {
+    // Serialisable metadata only: a spec template carries a zod schema and a function, which
+    // must not reach the client.
     return this.roleRegistry.getAllModules().flatMap((module) =>
       module.allowedTaskPatternTypes.map((patternType) => ({
         categoryKeys: module.categoryKeys,
-        ...patternType,
+        key: patternType.key,
+        label: patternType.label,
+        description: patternType.description,
+        objectiveComponentType: patternType.objectiveComponentType,
+        openEndedComponentType: patternType.openEndedComponentType,
+        interfaceType: patternType.interfaceType,
       })),
     );
   }

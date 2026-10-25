@@ -11,8 +11,20 @@ import { checkRelevance } from '../critic/relevance-check';
 import { embedTaskContent } from '../utils/embedding.util';
 import { findCsvProblem } from '../utils/csv.util';
 import { InterfaceType } from '../roles/interface-type';
+import { GeneratedTaskCandidate } from '../roles/role-module.interface';
 
 const logger = new Logger('GenerationPipeline:critic');
+
+function failedWithoutContent(state: GenerationState): CriticResult {
+  return {
+    passed: false,
+    failureReasons: state.draftProblems,
+    noveltyDistance: null,
+    isDuplicate: false,
+    relevant: false,
+    embedding: null,
+  };
+}
 
 export function criticNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
@@ -20,11 +32,18 @@ export function criticNode(ctx: GenerationContext) {
     if (!draft) {
       throw new Error('critic node invoked with no currentTaskDraft in state');
     }
+    if (!draft.taskContent) {
+      return { currentCriticResult: failedWithoutContent(state) };
+    }
 
+    const candidate: GeneratedTaskCandidate = {
+      taskType: draft.taskType,
+      taskContent: draft.taskContent,
+    };
     const failureReasons: string[] = [];
 
     // Novelty + duplicate check
-    const embedding = await embedTaskContent(ctx.embeddings, draft.taskContent);
+    const embedding = await embedTaskContent(ctx.embeddings, candidate.taskContent);
     const matches = await findSimilarQuestions(
       ctx.db,
       state.category,
@@ -48,7 +67,7 @@ export function criticNode(ctx: GenerationContext) {
     );
 
     // Relevance check
-    const relevanceResult = await checkRelevance(ctx.criticModel, draft, {
+    const relevanceResult = await checkRelevance(ctx.criticModel, candidate, {
       category: state.category,
       intent: state.intent,
       problem: state.problem,
@@ -61,7 +80,7 @@ export function criticNode(ctx: GenerationContext) {
     if (state.roleModule.criticChecks.additionalRelevanceCheck) {
       const additional =
         await state.roleModule.criticChecks.additionalRelevanceCheck(
-          draft,
+          candidate,
           {
             category: state.category,
             intent: state.intent,
@@ -79,9 +98,9 @@ export function criticNode(ctx: GenerationContext) {
     // (strict Structured Outputs reject refinements), so it is checked here, and a failure
     // regenerates the slot like any other critic failure.
     let payloadValid = true;
-    if (draft.taskContent.interfaceType === InterfaceType.CSV_DATA_PANEL) {
+    if (candidate.taskContent.interfaceType === InterfaceType.CSV_DATA_PANEL) {
       const csvProblem = findCsvProblem(
-        (draft.taskContent.interfacePayload as { csv: string }).csv,
+        (candidate.taskContent.interfacePayload as { csv: string }).csv,
       );
       if (csvProblem) {
         payloadValid = false;
@@ -89,9 +108,14 @@ export function criticNode(ctx: GenerationContext) {
       }
     }
 
+    // Role-specific deterministic checks, e.g. finance: no figure in the text that the table lacks.
+    const roleReasons = state.roleModule.criticChecks.validateTask?.(candidate) ?? [];
+    failureReasons.push(...roleReasons);
+
     const criticResult: CriticResult = {
       passed:
         payloadValid &&
+        roleReasons.length === 0 &&
         !duplicateResult.isDuplicate &&
         relevanceResult.relevant &&
         additionalRelevanceOk,

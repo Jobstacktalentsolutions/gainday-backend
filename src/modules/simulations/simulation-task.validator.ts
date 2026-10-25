@@ -24,6 +24,20 @@ const baseTaskSchema = z.object({
   questionPrompt: z.string(),
   objectiveComponent: z.record(z.string(), z.unknown()).optional(),
   openEndedComponent: z.record(z.string(), z.unknown()).optional(),
+  rubric: z
+    .object({
+      checklist: z.array(z.string()),
+      gate: z.string().nullable(),
+      authorisedCommitments: z
+        .array(
+          z.object({
+            kind: z.enum(['CASH_REFUND', 'STORE_CREDIT', 'COMPENSATION', 'ESCALATION']),
+            amount: z.number().nullable(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
   businessProblemDerived: z.boolean(),
   interfaceType: z.nativeEnum(InterfaceType),
   interfacePayload: z.record(z.string(), z.unknown()),

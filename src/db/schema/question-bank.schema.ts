@@ -14,8 +14,18 @@ import { InterfaceType } from '../../modules/generation/roles/interface-type';
 
 const EMBEDDING_DIMENSIONS = 3072; // must match ai.gemini.embeddingDimensions (gemini-embedding-001)
 
+/** A promise a reply makes to the customer. `amount` is null when the reply states none. */
+export type CommitmentKind = 'CASH_REFUND' | 'STORE_CREDIT' | 'COMPENSATION' | 'ESCALATION';
+
+export interface Commitment {
+  kind: CommitmentKind;
+  amount: number | null;
+}
+
 export interface AnchorResponse {
   score: number; // 20, 40, 60, 80, 100 (generationConfig.anchorScorePoints)
+  /** Commitments the reply makes. Absent on anchors generated before commitment tags existed. */
+  commitments?: Commitment[];
   responseText: string;
   criteria: {
     problemSolving: string;
@@ -32,9 +42,20 @@ export interface AnchorResponse {
  *  rehype-raw), so content can never inject arbitrary markup. */
 export type MarkdownString = string;
 
+/** What the grader checks an answer against, derived from the task's policy or spec. Never shown
+ *  to the candidate: `gate` names the critical error that caps judgment (see grading). */
+export interface TaskRubric {
+  checklist: string[];
+  gate: string | null;
+  /** The promises the policy authorises. Anchors that score 70 or more may make only these. Absent
+   *  for task types that make no commitment check. */
+  authorisedCommitments?: Commitment[];
+}
+
 export interface QuestionBankTaskContent {
   taskType: string;
   title: string;
+  rubric?: TaskRubric;
   /** Markdown — see {@link MarkdownString}. */
   scenarioDescription: MarkdownString;
   /** Markdown — see {@link MarkdownString}. */

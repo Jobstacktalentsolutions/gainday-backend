@@ -7,10 +7,13 @@ import { FailedGenerationAttempt } from '../../../db/schema/generation-review.sc
 export interface TaskDraft {
   candidateId: string;
   taskType: string;
-  taskContent: QuestionBankTaskContent;
+  /** Null when a spec-backed task's inputs could not form a valid task; the reasons are then in
+   *  GenerationState.draftProblems and the critic fails the draft without checking it. */
+  taskContent: QuestionBankTaskContent | null;
 }
 
-export interface FinalizedTask extends TaskDraft {
+export interface FinalizedTask extends Omit<TaskDraft, 'taskContent'> {
+  taskContent: QuestionBankTaskContent;
   /** The persisted question_bank row this task was inserted as — grading looks up anchors
    *  by this id, so it must survive from persist.node.ts through to SimulationTask. Only
    *  known once persist.node.ts has actually inserted the row, hence the separate TaskDraft
@@ -25,8 +28,8 @@ export interface CriticResult {
   isDuplicate: boolean;
   relevant: boolean;
   /** Embedding computed for the novelty/duplicate check — carried forward so persist.node.ts
-   *  doesn't recompute it for the same unchanged taskContent. */
-  embedding: number[];
+   *  doesn't recompute it for the same unchanged taskContent. Null when the draft had no content. */
+  embedding: number[] | null;
 }
 
 export const GenerationStateAnnotation = Annotation.Root({
@@ -83,6 +86,11 @@ export const GenerationStateAnnotation = Annotation.Root({
   currentTaskDraft: Annotation<TaskDraft | null>({
     reducer: (_left, right) => right,
     default: () => null,
+  }),
+  /** Why the current draft could not be built (spec inputs that cannot form a valid task). */
+  draftProblems: Annotation<string[]>({
+    reducer: (_left, right) => right,
+    default: () => [],
   }),
   currentCriticResult: Annotation<CriticResult | null>({
     reducer: (_left, right) => right,

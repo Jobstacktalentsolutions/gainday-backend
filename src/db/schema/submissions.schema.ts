@@ -77,6 +77,10 @@ export interface TaskGradingResult {
   questionBankId: string;
   categoryScores: CategoryScores;
   summary: string;
+  /** Rubric checklist marks, in the task's checklist order (customer service doc Section 5.3). */
+  checklist?: { item: string; met: boolean; evidence: string }[];
+  /** True when the response did what the task's gate forbids; caps judgment at the gate cap. */
+  gateTriggered?: boolean;
 }
 
 /**

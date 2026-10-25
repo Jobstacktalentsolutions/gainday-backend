@@ -16,8 +16,17 @@ const anchorCriteriaSchema = z.object({
   commercialDomainAwareness: z.string(),
 });
 
+// A promise the reply makes. The kinds match CommitmentKind in question-bank.schema.ts.
+const commitmentSchema = z.object({
+  kind: z.enum(['CASH_REFUND', 'STORE_CREDIT', 'COMPENSATION', 'ESCALATION']),
+  amount: z.number().nullable().describe('The amount the reply states, or null if none.'),
+});
+
 const anchorSchema = z.object({
   score: z.number(),
+  commitments: z
+    .array(commitmentSchema)
+    .describe('Each promise the reply makes to the customer. [] if it makes none.'),
   responseText: z
     .string()
     .describe('A realistic candidate response that would earn this score.'),

@@ -41,21 +41,25 @@ Each role supplies its own version of the following, as a self-contained, indepe
 ### 2.3 Extensibility model
 Adding a new role means writing a new self-contained module (extraction specifics, allowed task types, criteria framing, critic checks, presentation spec) and registering it under a new Category value. It does not require editing any existing role's module or the shared skeleton. Removing a role means removing its registration. Retuning a role over time means editing only that role's module.
 
-### 2.4 Current rollout plan
-**Sales first.** Sales content is primarily text-based at this stage, which means it can be built and validated inside the current architecture without also having to solve a data-visualization presentation layer at the same time. Finance requires that visual/tabular presentation work in addition to the generation logic, so it's sequenced second, once the sales module has proven the role-isolated architecture end to end. The companion document — GAINDAY Sales Role: Simulation Categories & Grading — is the content that fills the sales module described in 2.2, sourced from research into how sales candidates are actually assessed.
+### 2.4 Current rollout status
+Both role modules are registered in `roles/role-registry.ts` (`SalesRoleModule`, `FinanceRoleModule`), with `GenericRoleModule` as the fallback for any other category.
+
+- **Sales first.** Sales content is primarily text-based, so it could be built and validated inside the current architecture without also solving a data-visualization presentation layer. The companion document — GAINDAY Sales Role: Simulation Categories & Grading — fills the sales module described in 2.2.
+- **Finance second.** Finance needs tabular and, later, chart presentation on top of the generation logic. Its content is specified in `docs/gainday-finance-role-simulation-research.md`. The finance module's figure-bearing tasks are spec templates: the model supplies raw inputs, and code derives the table, chart and answer key (Section 5, `docs/gainday-finance-role-simulation-research.md`).
 
 ### 2.5 Interface Type Taxonomy
 Different task categories need to be presented differently — this was underspecified as a single generic "presentation-layer requirements" bullet in 2.2 and is formalized here as its own taxonomy, analogous to the task-pattern taxonomy in Section 5. Every generated task is tagged with an **interface type** as part of its metadata (Section 6.1), which tells the frontend how to render it.
 
-**Current interface types (MVP scope — sales):**
+**Current interface types:**
 - **Rich Text Composer** — for tasks where the candidate produces a standalone written deliverable with no one replying to them (e.g. a cold outreach email, an account plan). Supports basic formatting (paragraphs, bullets) matching what the real deliverable would look like.
 - **Text Area** — for tasks where the candidate responds to a described scenario or a persona's statement shown as read-only context above the input, but no back-and-forth thread is presented (e.g. an objection-handling reply, a situational-judgment response). Deliberately not a chat/message-thread interface — kept simple for now, no multi-turn UI.
 - **Table View + Response Panel** — for tasks built on structured data the candidate has to work with (e.g. a mock CRM lead list for prioritization): a data table alongside a response area for the ranking/classification and its justification.
 - **CSV Data Panel** (`CSV_DATA_PANEL`) — the same read-a-table-then-answer experience, but the data travels as CSV text (a header row, then at most 25 data rows) in `interfacePayload.csv`. It is far shorter for the model to produce than nested rows, the candidate can download it to open in a spreadsheet, and it is parsed into the same table layout (so a classification still takes its bucket on each row). The schema cannot express "well-formed CSV" (strict Structured Outputs reject refinements), so `findCsvProblem` checks it in the critic, which regenerates the slot on failure, and when an employer edits a task. The generic role module offers it through its `DATA_INTERPRETATION` task type, for roles whose real work involves reading data; the generator chooses it only when the task fits. Data never goes in `openEndedComponent.dataToInterpret`, which candidates do not see.
+- **Table with chart** (`TABLE_VIEW_WITH_CHART`) — a data table with a read-only bar or line chart drawn from the same figures. Used by finance (Section 5).
 
 **Interface type vs. structured answer widget:** the interface type only controls how the task context and the written response are rendered. Structured objective answers (single-best-action options, classification buckets, sequencing, priority ranking) are rendered separately, per objective component type, by the candidate-side objective answer registry, and the candidate's structured answer is stored as given (`CandidateAnswer.objectiveResponse`, next to `textResponse`) and also flattened to text in `CandidateAnswer.responseBody` for the grader. Review pages render the structured answer read-only with the same registries. A ranking task therefore uses the Text Area interface plus the `PRIORITY_RANKING` component (Section 5), not a dedicated interface type.
 
-**Extensibility note:** this taxonomy is expected to grow as new roles are added — finance, for instance, will need an interface type (or types) for charts, computed figures, or other visual/numeric data display that none of the three current types cover. Each role module (Section 2.2) can introduce new interface types rather than being constrained to the three above; this list is the current baseline, not a ceiling.
+**Extensibility note:** this taxonomy is expected to grow as new roles are added. Finance added `TABLE_VIEW_WITH_CHART` (a table with a chart drawn from the same figures) and defers a Spreadsheet Grid and an Inbox View; see `docs/gainday-finance-role-simulation-research.md` Section 4. Each role module (Section 2.2) can introduce new interface types rather than being constrained to the list above; it is the current baseline, not a ceiling.
 
 ---
 
@@ -108,6 +112,8 @@ Each task is built from one or both of two component types:
 
 **Combination rule:** not every task needs both component types. Pair an objective and open-ended component only when the objective answer alone wouldn't reveal whether the candidate actually understands *why* it's correct. Otherwise, use whichever single component type fits what's being tested.
 
+**Figure-based tasks (finance):** where a task's figures must be exact, the model supplies only raw inputs. Code derives the interface payload and the objective component's answer key from them, through the role's `spec` template (`TaskPatternTypeDefinition.spec`). Their keys are stored with the task and graded in code (`docs/gainday-grading-pipeline.md` Section 8). Figures cannot be edited by the employer, only regenerated.
+
 **Priority ranking (applies across roles):** priority-ranking is not supported as a *standalone* mechanic — ranking by priority is usually a judgment call disguised as an objective mechanic, lacking genuine ground truth. It is supported only as the objective half of a pair: the `PRIORITY_RANKING` component (a shuffled list of items, each with a label and description) is always combined with a `WRITTEN_JUSTIFICATION` open-ended component, and the items must carry enough signal that some orderings are clearly better than others. No ideal order is stored at generation time: what a strong, mid and weak ranking looks like is defined later by the grading anchors, which receive the full task content including the items, and the candidate's reasoning is graded through the same four criteria as every other task (no new grading category). Currently used by sales (`INBOX_PRIORITIZATION`, `TEXT_AREA` interface); the generic role module stays text-only.
 
 ---
@@ -151,11 +157,12 @@ The critic agent is a separate step from generation. It validates each generated
 - **Novelty check:** the generated question is compared against the existing question bank using pgvector similarity search (Postgres vector extension) to retrieve semantically similar stored questions.
 - **Duplicate check:** flags near-identical matches from the novelty search above a similarity threshold.
 - **Relevance check:** confirms the generated task genuinely aligns with the extracted Category and Intent (not just novel, but actually on-target).
+- **Figure check (finance):** every number in candidate-facing text must appear in the task's data table. Role-specific, deterministic (`roles/finance/narrative-figures.ts`).
 - **Anchor correctness check (moved to grading as of 2026-08-30; not run by the generation critic — the rationale below still applies there):** because there is no external grounding source, the good/bad/mid-range anchor responses (Section 6.2) are themselves LLM-generated and could be subtly wrong. The critic verifies they are sound — an incorrect "100/100" anchor would silently corrupt every future grading decision made against it. What "sound" means is role-specific: factual/numeric correctness for finance, sound sales practice for sales (Section 2.2) — the role module defines the correctness check, not one generic definition.
 
 ### 7.2 Regeneration loop
 - If a task fails critique (duplicate, irrelevant, or anchor-correctness failure), the generation agent selects another candidate from the original overgenerated pool (Section 4) rather than restarting extraction.
-- **Iteration cap:** a hard maximum number of regeneration attempts per task slot is enforced — proposed default: **3 attempts**. Without a cap, an unbounded loop risks stalling indefinitely on a niche or oversaturated role category.
+- **Iteration cap:** a hard maximum number of regeneration attempts per task slot is enforced — **3 attempts** (`generationConfig.maxCriticAttempts`). Without a cap, an unbounded loop risks stalling indefinitely on a niche or oversaturated role category.
 - **Fallback on cap exhaustion:** if a task slot fails all attempts, it routes to an admin review view (generations the engine failed to validate) rather than being silently dropped or forced through unvalidated.
 
 ### 7.3 On success
@@ -183,10 +190,8 @@ Generation and grading run at different points and use different model settings.
 
 ## 10. Open Items
 
-- **Ranking criterion for candidate-task selection (Section 4)** must be made concrete — an explicit LLM-as-judge rubric scoring relevance to Intent/Category/Problem, not an implicit "pick the best" step.
-- **Iteration cap value (Section 7.2)** proposed at 3 — needs testing/tuning against real generation failure rates.
-- **Anchor-correctness validation method (Section 7.1)** needs to be specified concretely per role — e.g. a second-pass LLM check against known domain rules, or periodic human/expert spot-review — not left as an unspecified checkbox.
-- **Role config schema** — a concrete schema (what fields every role module must implement: extraction prompt, task types, criteria framing, critic checks, presentation spec) needs to be defined so future roles beyond sales and finance can be added consistently.
+- **Iteration cap value (Section 7.2)** is set to 3 — needs testing/tuning against real generation failure rates.
+- **Anchor-correctness validation method (Section 7.1)** — implemented in grading as a per-role `anchorCorrectnessPrompt` (see `docs/gainday-grading-pipeline.md` Section 2.3–2.4). Open: whether periodic human/expert spot-review is also needed.
 - **Presentation-layer ownership** — needs a decision on whether presentation requirements live in the same LangGraph module as generation logic, or are tracked as a separate frontend-facing spec per role that references it.
-- **Finance interface types (Section 2.5)** are not yet defined — charts, tables of computed figures, and other visual/numeric display needs will have to be specified when the finance module is built, since none of the three current sales-derived interface types (Rich Text Composer, Text Area, Table View) are designed for that.
-- **Sales sub-role granularity** — Category extraction for sales needs to distinguish SDR / AE / CSM (Section 3), not treat "Sales" as one bucket; the companion Sales document covers why.
+- **Finance interface types (Section 2.5)** — built: `TABLE_VIEW_WITH_CHART`, and the Reconciliation, Journal Entry and Numeric Table answers. The Spreadsheet Grid and Inbox View remain deferred (`docs/gainday-finance-role-simulation-research.md` Section 3).
+- **Sales sub-role granularity** — Category extraction for sales needs to distinguish SDR / AE / CSM (Section 3), not treat "Sales" as one bucket; the companion Sales document covers why. Finance has the same need (see the finance document Section 7).

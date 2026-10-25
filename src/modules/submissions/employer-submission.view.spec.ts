@@ -143,6 +143,8 @@ describe('employer submission view', () => {
           answer: { objectiveResponse: null, textResponse: 'my answer' },
           score: null,
           evidence: null,
+          checklist: null,
+          gateTriggered: null,
         },
         {
           taskId: 't2',
@@ -153,6 +155,8 @@ describe('employer submission view', () => {
           answer: null,
           score: null,
           evidence: null,
+          checklist: null,
+          gateTriggered: null,
         },
       ]);
     });

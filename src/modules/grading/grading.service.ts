@@ -22,6 +22,15 @@ import { gradingConfig } from '../../config/ai.config';
 import { AnchorGenerationService } from './anchors/anchor-generation.service';
 import { TaskGradingService } from './task-grading.service';
 import { rollUpTaskScores } from './roll-up';
+import { gradeObjective, ObjectiveGradeResult } from './objective/objective-grader';
+import {
+  combineCategoryScores,
+  criteriaForLlm,
+  describeObjectiveResult,
+} from './task-category-scores';
+import { checklistResults, gateOutcome } from './rubric-results';
+import { RoleRegistry } from '../generation/roles/role-registry';
+import { SimulationTask } from '../../db/schema/simulations.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AdminNotificationsService } from '../notifications/admin-notifications.service';
 import { toDisplayId } from '../submissions/employer-submission.view';
@@ -40,6 +49,7 @@ export class GradingService {
     private readonly anchorGenerationService: AnchorGenerationService,
     private readonly taskGradingService: TaskGradingService,
     private readonly roleRegistry: AnchorRoleRegistry,
+    private readonly taskRoleRegistry: RoleRegistry,
     private readonly notificationsService: NotificationsService,
     private readonly adminNotificationsService: AdminNotificationsService,
     private readonly jobSeekerProfileService: JobSeekerProfileService,
@@ -144,6 +154,20 @@ export class GradingService {
     }
   }
 
+  /** Checks the objective part against its answer key, for the component types that have one.
+   *  Null when the task has no such part, so the LLM grades the whole answer as before. */
+  private gradeObjectivePart(
+    task: SimulationTask,
+    objectiveResponse: unknown,
+  ): ObjectiveGradeResult | null {
+    if (!task.objectiveComponent) return null;
+    const componentType = this.taskRoleRegistry
+      .resolve(task.category)
+      .allowedTaskPatternTypes.find((t) => t.key === task.taskType)?.objectiveComponentType;
+    if (!componentType) return null;
+    return gradeObjective(componentType, task.objectiveComponent, objectiveResponse);
+  }
+
   async gradeSubmission(submissionId: string): Promise<void> {
     this.logger.log(`Starting grading for submission ${submissionId}`);
 
@@ -233,6 +257,7 @@ export class GradingService {
       }
 
       try {
+        const objectiveResult = this.gradeObjectivePart(task, answer.objectiveResponse);
         const anchors = await this.anchorGenerationService.ensureAnchors(row);
 
         const result = await this.taskGradingService.gradeTask({
@@ -242,13 +267,21 @@ export class GradingService {
           questionPrompt: task.questionPrompt,
           anchors,
           candidateResponse: answer.responseBody,
+          criteria: criteriaForLlm(objectiveResult !== null),
+          verifiedResult: objectiveResult
+            ? describeObjectiveResult(objectiveResult)
+            : undefined,
+          rubric: task.rubric,
         });
 
+        const gate = gateOutcome(task.rubric, result);
         const taskResult: TaskGradingResult = {
           taskId: task.id,
           questionBankId: task.questionBankId,
-          categoryScores: result.categoryScores,
+          categoryScores: combineCategoryScores(result.categoryScores, objectiveResult, gate),
           summary: result.summary,
+          checklist: checklistResults(task.rubric, result),
+          gateTriggered: gate?.triggered,
         };
 
         taskResults.push(taskResult);

@@ -25,7 +25,8 @@ arithmetically correct, any referenced accounting/finance procedure must reflect
 defensible practice, and classification/sequencing answers must reflect a genuinely correct
 order or bucket — not merely a plausible-sounding one.
 
-Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given),
+Where the task has an objectiveComponent (an answer key), every figure an anchor cites must match
+that key. Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given),
 report in anchorFeedback whether it is sound, and if not, exactly what is wrong (e.g. "the stated
 total is off by $200", "score doesn't match reasoning quality — this reads like a 50/100 answer but
 is scored 100"). Set issue to null for sound anchors. The top-level "sound" field is true only if

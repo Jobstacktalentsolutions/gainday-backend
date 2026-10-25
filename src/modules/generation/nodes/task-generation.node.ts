@@ -6,6 +6,8 @@ import {
 } from '../state/generation-state';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { generateTaskContent } from '../task-content-generator';
+import { TaskSpecError } from '../roles/role-module.interface';
+import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 
 const logger = new Logger('GenerationPipeline:taskGeneration');
 
@@ -51,15 +53,31 @@ export function taskGenerationNode(ctx: GenerationContext) {
       `Slot ${state.currentSlotIndex}, attempt ${state.currentAttempt + 1}: generating task for candidate ${candidate.candidateId} [${candidate.taskType}]`,
     );
 
-    const taskContent = await generateTaskContent({
-      model: ctx.taskGenerationModel,
-      roleModule: state.roleModule,
-      category: state.category,
-      intent: state.intent,
-      problem: state.problem,
-      taskType: candidate.taskType,
-      briefDescription: candidate.briefDescription,
-    });
+    let taskContent: QuestionBankTaskContent;
+    try {
+      taskContent = await generateTaskContent({
+        model: ctx.taskGenerationModel,
+        roleModule: state.roleModule,
+        category: state.category,
+        intent: state.intent,
+        problem: state.problem,
+        taskType: candidate.taskType,
+        briefDescription: candidate.briefDescription,
+      });
+    } catch (err) {
+      if (!(err instanceof TaskSpecError)) throw err;
+      logger.warn(
+        `Slot ${state.currentSlotIndex}: model inputs could not form a valid task — ${err.message}`,
+      );
+      return {
+        currentTaskDraft: {
+          candidateId: candidate.candidateId,
+          taskType: candidate.taskType,
+          taskContent: null,
+        },
+        draftProblems: [`The figures do not form a valid task: ${err.message}.`],
+      };
+    }
 
     logger.log(
       `Slot ${state.currentSlotIndex}: generated "${taskContent.title}" (interfaceType=${taskContent.interfaceType})`,
@@ -71,6 +89,7 @@ export function taskGenerationNode(ctx: GenerationContext) {
         taskType: taskContent.taskType,
         taskContent,
       },
+      draftProblems: [],
     };
   };
 }

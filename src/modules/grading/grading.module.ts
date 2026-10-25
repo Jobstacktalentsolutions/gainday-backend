@@ -10,9 +10,11 @@ import { TaskGradingService } from './task-grading.service';
 import { AnchorRoleRegistry } from './roles/anchor-role-registry';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { GenerationModule } from '../generation/generation.module';
 
 @Module({
   imports: [
+    GenerationModule,
     BullModule.registerQueue({
       name: GRADING_QUEUE,
       defaultJobOptions: {

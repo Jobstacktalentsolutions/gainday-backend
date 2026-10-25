@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
@@ -41,6 +46,7 @@ import {
   modifyTaskContent,
 } from './task-content-generator';
 import { randomUUID } from 'crypto';
+import { TaskSpecError } from './roles/role-module.interface';
 
 export interface GenerationResult {
   category: string;
@@ -200,6 +206,7 @@ export class GenerationService {
         questionPrompt: task.taskContent.questionPrompt,
         objectiveComponent: task.taskContent.objectiveComponent,
         openEndedComponent: task.taskContent.openEndedComponent,
+        rubric: task.taskContent.rubric,
         businessProblemDerived: task.taskContent.businessProblemDerived,
         interfaceType: task.taskContent.interfaceType,
         interfacePayload: task.taskContent.interfacePayload,
@@ -261,31 +268,40 @@ export class GenerationService {
 
     let taskContent: Awaited<ReturnType<typeof generateTaskContent>>;
 
-    if (guidance && existingTask) {
-      taskContent = await modifyTaskContent({
-        model: this.taskGenerationModel,
-        roleModule,
-        category: extraction.category,
-        intent: extraction.intent,
-        problem: extraction.problem,
-        existingTask,
-        guidance,
-      });
-    } else {
-      const patternTypeDef =
-        roleModule.allowedTaskPatternTypes[
-          Math.floor(Math.random() * roleModule.allowedTaskPatternTypes.length)
-        ];
-      taskContent = await generateTaskContent({
-        model: this.taskGenerationModel,
-        roleModule,
-        category: extraction.category,
-        intent: extraction.intent,
-        problem: extraction.problem,
-        taskType: patternTypeDef.key,
-        briefDescription: patternTypeDef.description,
-        guidance,
-      });
+    try {
+      if (guidance && existingTask) {
+        taskContent = await modifyTaskContent({
+          model: this.taskGenerationModel,
+          roleModule,
+          category: extraction.category,
+          intent: extraction.intent,
+          problem: extraction.problem,
+          existingTask,
+          guidance,
+        });
+      } else {
+        const patternTypeDef =
+          roleModule.allowedTaskPatternTypes[
+            Math.floor(Math.random() * roleModule.allowedTaskPatternTypes.length)
+          ];
+        taskContent = await generateTaskContent({
+          model: this.taskGenerationModel,
+          roleModule,
+          category: extraction.category,
+          intent: extraction.intent,
+          problem: extraction.problem,
+          taskType: patternTypeDef.key,
+          briefDescription: patternTypeDef.description,
+          guidance,
+        });
+      }
+    } catch (err) {
+      if (err instanceof TaskSpecError) {
+        throw new BadRequestException(
+          `The model's figures did not form a valid task (${err.message}). Try regenerating.`,
+        );
+      }
+      throw err;
     }
 
     return {

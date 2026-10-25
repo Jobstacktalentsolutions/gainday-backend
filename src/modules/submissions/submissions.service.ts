@@ -25,6 +25,7 @@ import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { CandidateNotificationsService } from '../notifications/candidate-notifications.service';
 import { RoleRegistry } from '../generation/roles/role-registry';
 import { sanitizeTaskForCandidate } from '../simulations/candidate-task.util';
+import { parseAnswers } from './answer-validation';
 import { resolveCandidateContact } from './candidate-contact';
 import {
   buildEmployerTaskResults,
@@ -155,15 +156,24 @@ export class SubmissionsService {
 
   async submitAnswers(
     submissionId: string,
-    answers: CandidateAnswer[],
+    rawAnswers: unknown,
     clientAntiCheatEvents: AntiCheatEvent[] = [],
   ) {
     const submission = await this.db.query.submissions.findFirst({
       where: eq(submissions.id, submissionId),
+      with: { simulation: true },
     });
     if (!submission) {
       throw new Error('Submission not found');
     }
+    if (!submission.simulation) {
+      throw new Error(`Submission ${submissionId} has no linked simulation`);
+    }
+    const answers = parseAnswers(
+      rawAnswers,
+      submission.simulation.tasks,
+      this.roleRegistry,
+    );
 
     const completedAt = new Date();
     const timeTakenSeconds = Math.floor(

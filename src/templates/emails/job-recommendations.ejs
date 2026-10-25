@@ -20,7 +20,7 @@
         <div class="standout-box">
           <div class="standout-title">Your matches</div>
           <% jobs.forEach(function (job) { %>
-            <div style="margin: 0 0 18px 0;">
+            <div class="job-card">
               <a href="<%= job.url %>" style="color: #1817fe; text-decoration: none;"><span class="badge"><%= job.title %></span></a>
               <% if (job.location) { %>
                 <div style="margin-top: 8px; font-size: 12px; color: #767592;"><%= job.location %></div>

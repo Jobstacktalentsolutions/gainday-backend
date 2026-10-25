@@ -123,7 +123,8 @@ a sales objection-handling reply.
 
 The 4 grading criteria — `problemSolving`, `judgmentExecution`, `writtenCommunication`,
 `commercialDomainAwareness` — are fixed and shared across roles, but *what they mean* is
-role-specific. `roles/finance.anchor-config.ts` and `roles/sales.anchor-config.ts` each supply:
+role-specific. `roles/finance.anchor-config.ts`, `roles/sales.anchor-config.ts` and `roles/generic.anchor-config.ts`
+(the fallback for categories with no dedicated module) each supply:
 
 - `criteriaFraming`: one sentence per criterion, substituted into both the anchor-generation
   prompt and the task-grading prompt (Section 3), so anchors and real candidate grading are
@@ -194,26 +195,18 @@ in Section 3 — there is no LLM call here on purpose. For each of the 4 categor
 - **Evidence**: a synthesized list of each task's score for that category, e.g. *"Onboarding
   Friction Analysis: 70/100; Retention Strategy Priority: 80/100; ..."*.
 
-**`overallScore`** is a weighted sum of the 4 rolled-up category scores, using
-`gradingConfig.categoryWeights` (`src/config/ai.config.ts`):
+**`overallScore`** is a weighted sum of the 4 rolled-up category scores, using the **submission's
+role** `categoryWeights` (`grading/roles/*.anchor-config.ts`). The roll-up reads no global weights.
+Finance (`finance.anchor-config.ts`):
 
 | Category | Weight |
 |---|---|
 | Problem-solving | 0.4 |
-| Judgment/execution | 0.2 |
-| Written communication | 0.2 |
+| Judgment/execution | 0.3 |
+| Written communication | 0.1 |
 | Commercial/domain awareness | 0.2 |
 
-(carried forward unchanged from the old scoring stub's weighting), rounded to a whole number. Every score in the pipeline is on the same 0-100 scale, so category
-scores stay directly comparable to any individual task's score and to the headline "out of 100"
-number shown to employers/candidates. (The capability score is the only thing out of 1000 — see
-`gainday-capability-score.md`.)
-
-If **zero** tasks could be graded for a submission (e.g. every task lacks a `questionBankId` —
-Section 8), grading marks the submission `GRADING_FAILED` (Section 9) rather than persisting a
-meaningless score. Nothing gradable is not transient, so it is not retried.
-
----
+Rounded to a whole number. Each role's weights must sum to 1.
 
 ## 5. Persistence, Capability Scores, and the Results Email
 
@@ -250,12 +243,9 @@ same `gradingConfig` object — see Section 9.
 ```ts
 export const gradingConfig = {
   maxAnchorAttempts: 3,
-  categoryWeights: {
-    problemSolving: 0.4,
-    judgmentExecution: 0.2,
-    writtenCommunication: 0.2,
-    commercialDomainAwareness: 0.2,
-  },
+  maxJobAttempts: 10,
+  maxStallRecoveries: 3,
+  // ...retry, backoff and sweeper settings (Section 9). Category weights live in each role's config.
 };
 ```
 
@@ -300,6 +290,7 @@ src/modules/grading/
     anchor-role-registry.ts            category string -> RoleAnchorConfig resolver
     finance.anchor-config.ts
     sales.anchor-config.ts
+    generic.anchor-config.ts
   README.md                           Design notes + "what's not done" (kept up to date)
   ANCHOR_ARCHITECTURE.md              Historical: the original (pre-removal) anchor design
 ```
@@ -343,15 +334,14 @@ stored ideal order. What a strong, mid and weak ranking looks like is decided du
 generation, which receives the full `taskContent` (including the items to rank). The candidate's
 ranking reaches the grader as numbered text inside `responseBody`.
 
-**Also out of scope by explicit product decision, not a gap:** objective-component tasks
-(numeric input, classification, sequencing, etc.) are graded through the same 4-axis LLM path as
-everything else — there is no separate deterministic "is this numeric answer correct" check. This
-was considered (an `objectiveResult` field: `{isCorrect, awardedPoints, maxPoints}`, computed in
-code rather than by an LLM) and deliberately dropped. `CandidateAnswer` now carries the structured
-answer (`objectiveResponse`), so a deterministic check would have something to compare against,
-but there is no stored answer key to compare it with: ranking and classification tasks store none
-on purpose (anchors define a good answer), and the other objective types' keys are not read by
-grading.
+**Objective answers are checked in code where the component has an answer key.** The finance
+components (`RECONCILIATION`, `JOURNAL_ENTRY`, `NUMERIC_TABLE`, `NUMERIC_INPUT`) carry a key derived from
+the task's figures, so `objective/objective-grader.ts` grades them deterministically, with partial
+credit per part. This reverses the earlier decision to grade every objective part through the LLM.
+Component types without a key (sales classification, priority ranking, and the rest) still go to the
+LLM. For a task with a checked objective part, problem-solving and judgment come from the check, and
+written communication and commercial awareness come from the LLM (`task-category-scores.ts`). See
+`docs/gainday-finance-role-simulation-research.md` Sections 5–6.
 
 **Review pages show the answer the way it was given.** The employer submission detail
 (`GET /submissions/:id`) and the admin job detail return, per task, its `interfaceType`,

@@ -1,5 +1,6 @@
+import { z } from 'zod';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
+import { QuestionBankTaskContent, TaskRubric } from '../../../db/schema/question-bank.schema';
 import { InterfaceType } from './interface-type';
 import { RoleCategory } from './role-category.enum';
 
@@ -9,13 +10,43 @@ export type ObjectiveComponentType =
   | 'PROCEDURAL_SEQUENCING'
   | 'SINGLE_BEST_ACTION'
   | 'MULTI_SELECT_UNDER_CONSTRAINT'
-  | 'PRIORITY_RANKING';
+  | 'PRIORITY_RANKING'
+  | 'RECONCILIATION'
+  | 'JOURNAL_ENTRY'
+  | 'NUMERIC_TABLE'
+  | 'KEYED_CLASSIFICATION';
 
 export type OpenEndedComponentType =
   | 'WRITTEN_JUSTIFICATION'
   | 'DRAFTED_COMMUNICATION'
   | 'INTERPRETATION_ANALYSIS'
   | 'STAKEHOLDER_PUSHBACK_RESPONSE';
+
+/** The render and answer-key data a spec-backed task derives from its raw inputs. */
+export interface MaterializedTaskData {
+  interfacePayload: Record<string, unknown>;
+  objectiveComponent?: Record<string, unknown>;
+  rubric?: TaskRubric;
+}
+
+/** Thrown when the model's raw inputs cannot form a valid task (e.g. a balance comes out
+ *  negative). The generation node turns it into a failed critic check, so the slot regenerates. */
+export class TaskSpecError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TaskSpecError';
+  }
+}
+
+/**
+ * A task whose figures are computed in code, never written by the model (finance doc Section
+ * 6.2). The model fills `dataSchema` with raw inputs; `materialize` derives the table, chart and
+ * answer key from them, so every stored number follows from the inputs by construction.
+ */
+export interface TaskSpecTemplate {
+  readonly dataSchema: z.ZodType;
+  materialize(data: unknown): MaterializedTaskData;
+}
 
 export interface TaskPatternTypeDefinition {
   key: string;
@@ -25,6 +56,8 @@ export interface TaskPatternTypeDefinition {
   description: string;
   /** Declarative per task-pattern type, not chosen by the LLM. See InterfaceType in interface-type.ts. */
   interfaceType: InterfaceType;
+  /** Set for tasks whose figures must be computed rather than generated (see TaskSpecTemplate). */
+  spec?: TaskSpecTemplate;
 }
 
 export interface ExtractionResult {
@@ -67,6 +100,9 @@ export interface RoleModule {
       extraction: ExtractionResult,
       criticModel: BaseChatModel,
     ): Promise<RelevanceCheckResult | null>;
+    /** Deterministic role-specific checks on a generated task. Returns failure reasons; an empty
+     *  array passes. */
+    validateTask?(task: GeneratedTaskCandidate): string[];
   };
 }
 

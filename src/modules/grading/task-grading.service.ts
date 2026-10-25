@@ -3,8 +3,14 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { GRADING_MODEL } from '../ai/ai.constants';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
-import { AnchorResponse } from '../../db/schema/question-bank.schema';
-import { taskGradingResultSchema } from './schemas/task-grading-result.schema';
+import { AnchorResponse, TaskRubric } from '../../db/schema/question-bank.schema';
+import {
+  buildTaskGradingResultSchema,
+  GradedCriterion,
+  LlmCategoryScores,
+  LlmGradeOutput,
+  LlmRubricResult,
+} from './schemas/task-grading-result.schema';
 import { buildTaskGradingPrompt } from './prompts/task-grading.prompt';
 import { AnchorRoleRegistry } from './roles/anchor-role-registry';
 
@@ -15,7 +21,15 @@ export interface GradeTaskInput {
   questionPrompt: string;
   anchors: AnchorResponse[];
   candidateResponse: string;
+  /** The criteria the model scores. Criteria settled by an answer key are left to the caller. */
+  criteria: readonly GradedCriterion[];
+  /** Short description of the code-checked objective result, when there is one. */
+  verifiedResult?: string;
+  /** The task's checklist and gate, when the task has them. */
+  rubric?: TaskRubric;
 }
+
+export type GradeTaskOutput = LlmGradeOutput;
 
 /** Grades one candidate answer for one task against that task's own anchors — deliberately
  *  scoped to a single (task, answer, anchors) triple per call rather than batching a whole
@@ -30,15 +44,22 @@ export class TaskGradingService {
     private readonly roleRegistry: AnchorRoleRegistry,
   ) {}
 
-  async gradeTask(input: GradeTaskInput) {
+  async gradeTask(input: GradeTaskInput): Promise<GradeTaskOutput> {
     const roleConfig = this.roleRegistry.resolve(input.category);
     const model = withGeminiSafeStructuredOutput(
       this.gradingModel,
-      taskGradingResultSchema,
+      buildTaskGradingResultSchema(input.criteria, input.rubric),
     );
 
     return model.invoke([
-      new SystemMessage(buildTaskGradingPrompt(roleConfig.criteriaFraming)),
+      new SystemMessage(
+        buildTaskGradingPrompt(
+          roleConfig.criteriaFraming,
+          input.criteria,
+          input.verifiedResult,
+          input.rubric,
+        ),
+      ),
       new HumanMessage(
         JSON.stringify({
           task: {

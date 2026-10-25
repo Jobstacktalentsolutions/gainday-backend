@@ -10,4 +10,5 @@
 export enum RoleCategory {
   FINANCE = 'Finance',
   SALES = 'Sales',
+  CUSTOMER_SERVICE = 'Customer Service',
 }

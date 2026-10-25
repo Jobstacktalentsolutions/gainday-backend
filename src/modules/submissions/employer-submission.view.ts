@@ -168,6 +168,8 @@ export function buildEmployerTaskResults(
       evidence: result
         ? rewriteSecondPersonForEmployer(result.summary, pronouns)
         : null,
+      checklist: result ? (result.checklist ?? null) : null,
+      gateTriggered: result ? (result.gateTriggered ?? null) : null,
     };
   });
 }

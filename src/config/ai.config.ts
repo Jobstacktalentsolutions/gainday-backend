@@ -108,12 +108,6 @@ export const gradingConfig = {
   // live queue job.
   sweepIntervalMs: 10 * 60_000,
   stuckThresholdMs: 30 * 60_000,
-  // Weights applied to the 4 (0-100 scale) category scores when rolling a submission's per-task
-  // results up into the single 0-100 overallScore shown to employers/candidates.
-  categoryWeights: {
-    problemSolving: 0.4,
-    judgmentExecution: 0.2,
-    writtenCommunication: 0.2,
-    commercialDomainAwareness: 0.2,
-  },
+  // Category weights are not configured here: each role's anchor config owns them
+  // (grading/roles/*.anchor-config.ts) and the roll-up reads the submission's role.
 };

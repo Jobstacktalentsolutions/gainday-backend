@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RoleModule } from './role-module.interface';
 import { FinanceRoleModule } from './finance/finance.role-module';
 import { SalesRoleModule } from './sales/sales.role-module';
+import { CustomerServiceRoleModule } from './customer-service/customer-service.role-module';
 import { GenericRoleModule } from './generic/generic.role-module';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class RoleRegistry {
   constructor() {
     this.register(FinanceRoleModule);
     this.register(SalesRoleModule);
+    this.register(CustomerServiceRoleModule);
   }
 
   register(module: RoleModule): void {

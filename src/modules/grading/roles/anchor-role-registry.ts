@@ -4,6 +4,7 @@ import { RoleAnchorConfig } from './anchor-role-config.interface';
 import { FINANCE_ANCHOR_CONFIG } from './finance.anchor-config';
 import { SALES_ANCHOR_CONFIG } from './sales.anchor-config';
 import { GENERIC_ANCHOR_CONFIG } from './generic.anchor-config';
+import { CUSTOMER_SERVICE_ANCHOR_CONFIG } from './customer-service.anchor-config';
 
 /** Resolves a question_bank.category string (e.g. "Sales > SDR") to its anchor/grading config.
  *  Same exact-then-'>'-prefix-fallback resolution as generation's RoleRegistry, kept as an
@@ -17,6 +18,7 @@ export class AnchorRoleRegistry {
   private readonly configs = new Map<string, RoleAnchorConfig>([
     [this.normalize(RoleCategory.FINANCE), FINANCE_ANCHOR_CONFIG],
     [this.normalize(RoleCategory.SALES), SALES_ANCHOR_CONFIG],
+    [this.normalize(RoleCategory.CUSTOMER_SERVICE), CUSTOMER_SERVICE_ANCHOR_CONFIG],
   ]);
 
   resolve(category: string): RoleAnchorConfig {

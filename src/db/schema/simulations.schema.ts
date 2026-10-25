@@ -3,7 +3,7 @@ import { relations } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { jobs } from './jobs.schema';
 import { submissions } from './submissions.schema';
-import { MarkdownString } from './question-bank.schema';
+import { MarkdownString, TaskRubric } from './question-bank.schema';
 import { InterfaceType } from '../../modules/generation/roles/interface-type';
 
 // Shown to both employers (Review & Publish, the simulation builder) and candidates (job details,
@@ -20,7 +20,11 @@ export type ObjectiveComponentType =
   | 'PROCEDURAL_SEQUENCING'
   | 'SINGLE_BEST_ACTION'
   | 'MULTI_SELECT_UNDER_CONSTRAINT'
-  | 'PRIORITY_RANKING';
+  | 'PRIORITY_RANKING'
+  | 'RECONCILIATION'
+  | 'JOURNAL_ENTRY'
+  | 'NUMERIC_TABLE'
+  | 'KEYED_CLASSIFICATION';
 
 export type OpenEndedComponentType =
   | 'WRITTEN_JUSTIFICATION'
@@ -44,6 +48,8 @@ export interface SimulationTask {
   questionPrompt: MarkdownString;
   objectiveComponent?: Record<string, unknown>;
   openEndedComponent?: Record<string, unknown>;
+  /** What grading checks the answer against. Never sent to candidates (see sanitizeTaskForCandidate). */
+  rubric?: TaskRubric;
   businessProblemDerived: boolean;
   /** Tells the frontend how to render this task (doc Section 2.5). */
   interfaceType: InterfaceType;

@@ -537,11 +537,11 @@
                 <h4 style="color: #166534;">🎯 Step 2: Prepare Anchor Responses (Reference Standards)</h4>
                 <p style="color: #166534;">Before grading a task, the system needs <strong>reference answers</strong> to calibrate scoring against. Think of these as:</p>
                 <ul style="margin-top: 10px; margin-left: 20px; color: #166534;">
-                    <li><strong>A perfect answer (10/10)</strong></li>
-                    <li><strong>A strong answer (7/10)</strong></li>
-                    <li><strong>An okay answer (5/10)</strong></li>
-                    <li><strong>A weak answer (3/10)</strong></li>
-                    <li><strong>A poor answer (0/10)</strong></li>
+                    <li><strong>A perfect answer (100/100)</strong></li>
+                    <li><strong>A strong answer (80/100)</strong></li>
+                    <li><strong>An okay answer (60/100)</strong></li>
+                    <li><strong>A weak answer (40/100)</strong></li>
+                    <li><strong>A poor answer (20/100)</strong></li>
                 </ul>
                 <p style="margin-top: 10px; font-weight: 600; color: #166534;">Important: These anchors are created <strong>only the first time</strong> a candidate answers a task. After that, they're reused for all future candidates on the same task. This saves cost and ensures consistency.</p>
             </div>
@@ -571,14 +571,14 @@
             </div>
 
             <div class="key-insight">
-                💡 <strong>Why 5 anchors, not just 2?</strong> Comparing to only "good" (10) and "bad" (0) doesn't help grade the middle—where most real answers fall. With anchors at 0, 3, 5, 7, and 10, the AI can accurately distinguish between a 6 and a 7 (the hardest and most important distinction in hiring).
+                💡 <strong>Why 5 anchors, not just 2?</strong> Comparing to only "good" (100) and "bad" (0) doesn't help grade the middle—where most real answers fall. With anchors at 20, 40, 60, 80, and 100, the AI can accurately distinguish between a 55 and a 65 (the hardest and most important distinction in hiring).
             </div>
 
             <div class="info-box" style="border-left-color: #10b981; background: #f0fdf4; border-color: #dcfce7; margin-top: 30px;">
                 <h4 style="color: #166534;">📈 Step 4: Roll Up Scores</h4>
-                <p style="color: #166534;">Each task is now scored (0-10) on all 4 dimensions. The system then:</p>
+                <p style="color: #166534;">Each task is now scored (0-100) on all 4 dimensions. The system then:</p>
                 <ul style="margin-top: 10px; margin-left: 20px; color: #166534;">
-                    <li><strong>Averages each dimension</strong> across all tasks (e.g., problem-solving scores: 8, 7, 9 → average 8.0)</li>
+                    <li><strong>Averages each dimension</strong> across all tasks (e.g., problem-solving scores: 80, 70, 90 → average 80)</li>
                     <li><strong>Weights them</strong> by importance:</li>
                 </ul>
                 <div style="margin-top: 12px; margin-left: 20px; background: #f3f4f6; padding: 12px; border-radius: 6px; font-size: 0.95em; border-left: 3px solid #10b981; color: #166534;">
@@ -595,7 +595,7 @@
                 <p style="color: #166534;">The system stores:</p>
                 <ul style="margin-top: 10px; margin-left: 20px; color: #166534;">
                     <li>The candidate's overall score (0-100)</li>
-                    <li>Their score on each of the 4 dimensions (0-10)</li>
+                    <li>Their score on each of the 4 dimensions (0-100)</li>
                     <li>Detailed breakdowns per task</li>
                     <li>A summary of their strengths and weaknesses</li>
                 </ul>

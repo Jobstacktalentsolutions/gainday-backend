@@ -7,7 +7,12 @@ import {
   OBJECTIVE_COMPONENT_SCHEMAS,
   OPEN_ENDED_COMPONENT_SCHEMAS,
 } from './roles/component-schemas';
-import { RoleModule } from './roles/role-module.interface';
+import {
+  RoleModule,
+  TaskPatternTypeDefinition,
+  TaskSpecTemplate,
+} from './roles/role-module.interface';
+import { taskSpecSchema } from './schemas/task-spec.schema';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 
 /**
@@ -79,6 +84,18 @@ export async function generateTaskContent(
       `No task-pattern-type definition found for taskType "${taskType}" in role module for category "${category}"`,
     );
   }
+  if (patternTypeDef.spec) {
+    return generateSpecTaskContent({
+      model,
+      patternTypeDef,
+      spec: patternTypeDef.spec,
+      category,
+      intent,
+      problem,
+      briefDescription,
+      guidance,
+    });
+  }
   const interfaceType = patternTypeDef.interfaceType;
   const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
   const objectiveComponentSchema = patternTypeDef.objectiveComponentType
@@ -140,6 +157,103 @@ export async function generateTaskContent(
   };
 }
 
+const SPEC_TASK_PROMPT_BASE = `Generate one job-simulation task. Put every figure the candidate needs into
+\`data\` as raw inputs: the system derives every total, balance, variance, margin and answer from them,
+and draws the data table. In scenarioDescription and questionPrompt, state no number at all — the
+table shows every figure.
+
+${CANDIDATE_FACING_TEXT_RULES}
+
+${MARKDOWN_RULES}`;
+
+const SPEC_TASK_MODIFICATION_PROMPT_BASE = `You are given an existing task and an employer's requested change.
+Return the whole task with the change applied. Keep the data inputs and text the change does not touch.
+
+${CANDIDATE_FACING_TEXT_RULES}
+
+${MARKDOWN_RULES}`;
+
+interface GenerateSpecTaskContentParams {
+  model: BaseChatModel;
+  patternTypeDef: TaskPatternTypeDefinition;
+  spec: TaskSpecTemplate;
+  category: string;
+  intent: string;
+  problem: string | null;
+  briefDescription: string;
+  guidance?: string;
+  /** Set when editing an existing task: the model returns that task with the guidance applied. */
+  existingTask?: QuestionBankTaskContent;
+}
+
+/**
+ * Spec-backed generation (finance doc Section 6.2): the model writes the text and raw inputs, and
+ * the template derives the table, chart and answer key in code. Throws TaskSpecError when the
+ * inputs cannot form a valid task; the generation graph turns that into a failed critic check.
+ */
+async function generateSpecTaskContent(
+  params: GenerateSpecTaskContentParams,
+): Promise<QuestionBankTaskContent> {
+  const {
+    model,
+    patternTypeDef,
+    spec,
+    category,
+    intent,
+    problem,
+    briefDescription,
+    guidance,
+    existingTask,
+  } = params;
+
+  const openEndedComponentSchema = patternTypeDef.openEndedComponentType
+    ? OPEN_ENDED_COMPONENT_SCHEMAS[patternTypeDef.openEndedComponentType]
+    : null;
+  const schema = taskSpecSchema(spec.dataSchema, openEndedComponentSchema);
+  const structuredModel = withGeminiSafeStructuredOutput(model, schema);
+
+  const basePrompt = existingTask
+    ? SPEC_TASK_MODIFICATION_PROMPT_BASE
+    : SPEC_TASK_PROMPT_BASE;
+  const guidanceClause = guidance
+    ? `\n\nThe employer's direction for this task: ${guidance}`
+    : '';
+
+  const result = await structuredModel.invoke([
+    new SystemMessage(
+      `${basePrompt}\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}`,
+    ),
+    new HumanMessage(
+      JSON.stringify({
+        category,
+        intent,
+        problem,
+        candidate: { taskType: patternTypeDef.key, briefDescription },
+        existingTask,
+      }),
+    ),
+  ]);
+
+  const derived = spec.materialize(result.data);
+  const businessProblemDerived =
+    problem === null ? false : result.businessProblemDerived;
+
+  return {
+    taskType: patternTypeDef.key,
+    title: result.title,
+    scenarioDescription: result.scenarioDescription,
+    questionPrompt: result.questionPrompt,
+    objectiveComponent: derived.objectiveComponent,
+    openEndedComponent: result.openEndedComponent
+      ? result.openEndedComponent
+      : undefined,
+    businessProblemDerived,
+    interfaceType: patternTypeDef.interfaceType,
+    interfacePayload: { interfaceType: patternTypeDef.interfaceType, ...derived.interfacePayload },
+    rubric: derived.rubric,
+  };
+}
+
 const TASK_MODIFICATION_PROMPT_BASE = `You are given an existing job-simulation task and a specific
 change an employer wants made to it. Modify the task to reflect that request as directly and
 minimally as possible — this is an edit, not a rewrite: keep the title, scenario, numbers, options,
@@ -192,6 +306,19 @@ export async function modifyTaskContent(
     throw new Error(
       `No task-pattern-type definition found for taskType "${existingTask.taskType}" in role module for category "${category}"`,
     );
+  }
+  if (patternTypeDef.spec) {
+    return generateSpecTaskContent({
+      model,
+      patternTypeDef,
+      spec: patternTypeDef.spec,
+      category,
+      intent,
+      problem,
+      briefDescription: existingTask.title,
+      guidance,
+      existingTask,
+    });
   }
   const interfaceType = patternTypeDef.interfaceType;
   const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
