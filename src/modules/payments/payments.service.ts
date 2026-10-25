@@ -23,6 +23,10 @@ import {
   recommendPack,
 } from '../credits/credit-packs';
 import { SubmissionsService } from '../submissions/submissions.service';
+import {
+  toPurchaseHistoryItem,
+  toUnlockHistoryItem,
+} from './payment-history.mapper';
 import { StripeService } from './stripe.service';
 
 @Injectable()
@@ -39,6 +43,16 @@ export class PaymentsService {
 
   getPacks() {
     return CREDIT_PACKS;
+  }
+
+  async listPurchases(employerId: string) {
+    const rows = await this.creditPurchases.listForEmployer(employerId);
+    return rows.map(toPurchaseHistoryItem);
+  }
+
+  async listUnlocks(employerId: string) {
+    const rows = await this.creditLedger.listUnlocksForEmployer(employerId);
+    return rows.map(toUnlockHistoryItem);
   }
 
   async getBalance(employerId: string) {

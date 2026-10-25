@@ -6,6 +6,8 @@ import {
   creditLedgerEntries,
   creditPurchases,
   employerProfiles,
+  jobSeekerProfiles,
+  jobs,
   submissions,
 } from '../../db/schema';
 import type { DbExecutor } from './db-executor.type';
@@ -33,6 +35,33 @@ export class CreditLedgerService {
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly signupBonusSettings: SignupBonusSettingsService,
   ) {}
+
+  /**
+   * One row per candidate this employer has unlocked, newest first. Left joins: a deleted
+   * submission or candidate keeps its ledger row, so the history never loses a charge.
+   */
+  listUnlocksForEmployer(employerId: string) {
+    return this.db
+      .select({
+        id: creditLedgerEntries.id,
+        submissionId: creditLedgerEntries.submissionId,
+        jobId: submissions.jobId,
+        jobTitle: jobs.title,
+        candidateName: jobSeekerProfiles.fullName,
+        unlockedAt: creditLedgerEntries.createdAt,
+      })
+      .from(creditLedgerEntries)
+      .leftJoin(submissions, eq(submissions.id, creditLedgerEntries.submissionId))
+      .leftJoin(jobs, eq(jobs.id, submissions.jobId))
+      .leftJoin(jobSeekerProfiles, eq(jobSeekerProfiles.id, submissions.candidateId))
+      .where(
+        and(
+          eq(creditLedgerEntries.employerId, employerId),
+          eq(creditLedgerEntries.type, 'UNLOCK'),
+        ),
+      )
+      .orderBy(desc(creditLedgerEntries.createdAt));
+  }
 
   async getBalance(
     employerId: string,

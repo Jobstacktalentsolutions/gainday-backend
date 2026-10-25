@@ -60,6 +60,20 @@ export class PaymentsController {
     return this.paymentsService.createPurchase(user.profileId, dto.packId);
   }
 
+  @Get('purchases')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  listPurchases(@CurrentUser() user: AuthenticatedEmployer) {
+    return this.paymentsService.listPurchases(user.profileId);
+  }
+
+  @Get('unlocks')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  listUnlocks(@CurrentUser() user: AuthenticatedEmployer) {
+    return this.paymentsService.listUnlocks(user.profileId);
+  }
+
   @Get('purchases/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER)

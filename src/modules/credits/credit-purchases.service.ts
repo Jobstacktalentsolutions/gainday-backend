@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import { creditPurchases, NewCreditPurchase } from '../../db/schema';
@@ -14,6 +14,15 @@ export class CreditPurchasesService {
       .values(purchase)
       .returning();
     return created;
+  }
+
+  /** Every purchase this employer has started, newest first, whatever its status. */
+  listForEmployer(employerId: string) {
+    return this.db
+      .select()
+      .from(creditPurchases)
+      .where(eq(creditPurchases.employerId, employerId))
+      .orderBy(desc(creditPurchases.createdAt));
   }
 
   async findForEmployer(employerId: string, purchaseId: string) {
