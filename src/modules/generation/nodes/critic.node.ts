@@ -44,7 +44,10 @@ export function criticNode(ctx: GenerationContext) {
     const failureReasons: string[] = [];
 
     // Novelty + duplicate check
-    const embedding = await embedTaskContent(ctx.embeddings, candidate.taskContent);
+    const embedding = await embedTaskContent(
+      ctx.embeddings,
+      candidate.taskContent,
+    );
     const matches = await findSimilarQuestions(
       ctx.db,
       state.category,
@@ -95,6 +98,14 @@ export function criticNode(ctx: GenerationContext) {
       }
     }
 
+    // Coaching is reported as one reason, so the repair step sees every sentence to remove.
+    const coaching = relevanceResult.coachingSentences;
+    if (coaching.length > 0) {
+      failureReasons.push(
+        `Coaching in candidate text, remove: ${coaching.map((sentence) => `"${sentence}"`).join(' ')}`,
+      );
+    }
+
     // A data panel is only usable if its CSV can be shown as a table. The schema cannot say so
     // (strict Structured Outputs reject refinements), so it is checked here, and a failure
     // regenerates the slot like any other critic failure.
@@ -112,6 +123,7 @@ export function criticNode(ctx: GenerationContext) {
     const criticResult: CriticResult = {
       passed:
         payloadValid &&
+        coaching.length === 0 &&
         !duplicateResult.isDuplicate &&
         relevanceResult.relevant &&
         additionalRelevanceOk,
@@ -119,7 +131,10 @@ export function criticNode(ctx: GenerationContext) {
       noveltyDistance: duplicateResult.closestMatch?.distance ?? null,
       isDuplicate: duplicateResult.isDuplicate,
       relevant: relevanceResult.relevant && additionalRelevanceOk,
-      repairable: !duplicateResult.isDuplicate && relevanceResult.relevant && additionalRelevanceOk,
+      repairable:
+        !duplicateResult.isDuplicate &&
+        relevanceResult.relevant &&
+        additionalRelevanceOk,
       embedding,
     };
 
