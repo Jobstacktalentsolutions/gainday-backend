@@ -9,7 +9,6 @@ import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
   jobExtractions,
-  generationReviewItems,
   jobs,
   users,
   employerProfiles,
@@ -23,7 +22,10 @@ import {
 } from '../ai/ai.constants';
 import { GENERATION_QUEUE } from './generation.constants';
 import { RoleRegistry } from './roles/role-registry';
-import { buildGenerationGraph } from './graph/generation.graph';
+import {
+  buildGenerationGraph,
+  generationRecursionLimit,
+} from './graph/generation.graph';
 import { GenerationConfig } from './graph/generation-context';
 import { GenerationState } from './state/generation-state';
 import {
@@ -125,11 +127,12 @@ export class GenerationService {
 
     const stream = await graph.stream(initialState, {
       streamMode: ['updates', 'values'],
+      recursionLimit: generationRecursionLimit(config),
     });
     let finalState: GenerationState | undefined;
     for await (const [mode, chunk] of stream) {
       if (mode === 'values') {
-        finalState = chunk as GenerationState;
+        finalState = chunk;
         continue;
       }
       for (const [node, update] of Object.entries(
@@ -172,16 +175,8 @@ export class GenerationService {
         },
       });
 
-    let adminReviewItemsPersisted = 0;
-    for (const item of finalState.adminReviewItems) {
-      await this.db.insert(generationReviewItems).values({
-        jobId: job.id,
-        slotIndex: item.slotIndex,
-        category: item.category,
-        attempts: item.attempts,
-      });
-      adminReviewItemsPersisted++;
-    }
+    // Review rows are written by adminReviewFlagNode as each slot is flagged.
+    const adminReviewItemsPersisted = finalState.adminReviewItems.length;
 
     const finalizedTasks: SimulationTask[] = finalState.finalizedTasks.map(
       (task, index) => ({

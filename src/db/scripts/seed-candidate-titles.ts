@@ -67,7 +67,9 @@ async function main(): Promise<void> {
     console.table(plan.map(({ id, title }) => ({ id, title })));
 
     if (!apply) {
-      console.log('Dry run: nothing written. Re-run with -- --apply to write these titles.');
+      console.log(
+        'Dry run: nothing written. Re-run with -- --apply to write these titles.',
+      );
       return;
     }
 

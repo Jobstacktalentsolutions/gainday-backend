@@ -28,7 +28,8 @@ material itself (emails, line items, data), never HTML, and never to list what t
 
 const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simulation task,
 matching the given candidate's taskType. Produce a scenario and the task components appropriate
-to that taskType.
+to that taskType. The task must need knowledge, judgment, or conventions specific to the role's
+domain: someone with only general common sense should not be able to answer it well.
 
 ${CANDIDATE_FACING_TEXT_RULES}
 

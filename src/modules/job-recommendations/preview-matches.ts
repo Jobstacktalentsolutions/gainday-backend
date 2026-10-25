@@ -71,7 +71,9 @@ async function main(): Promise<void> {
       rules,
     );
 
-    const candidateIds = [...new Set(matches.map((match) => match.candidateId))];
+    const candidateIds = [
+      ...new Set(matches.map((match) => match.candidateId)),
+    ];
     const candidates = candidateIds.length
       ? await db
           .select({ id: jobSeekerProfiles.id, title: jobSeekerProfiles.title })

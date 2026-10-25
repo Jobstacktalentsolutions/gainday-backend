@@ -13,8 +13,9 @@ import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-outpu
 const logger = new Logger('GenerationPipeline:overgenerate');
 
 const OVERGENERATE_PROMPT = `Generate a diverse candidate pool of plausible on-the-job tasks for
-this role, using general and industry-specific knowledge. Generate more candidates than will
-ultimately be used — variety at this stage is what avoids repetitive/generic output later.
+this role, using general and industry-specific knowledge. Favour tasks that need role-specific
+expertise rather than general office skills. Generate more candidates than will ultimately be
+used — variety at this stage is what avoids repetitive/generic output later.
 Each candidate's taskType MUST be one of the allowed types listed below; do not invent new types.`;
 
 export function overgenerateNode(ctx: GenerationContext) {

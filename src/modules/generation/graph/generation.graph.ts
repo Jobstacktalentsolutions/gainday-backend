@@ -4,7 +4,7 @@ import {
   GenerationStateAnnotation,
   GenerationStateUpdate,
 } from '../state/generation-state';
-import { GenerationContext } from './generation-context';
+import { GenerationConfig, GenerationContext } from './generation-context';
 import { extractionNode } from '../nodes/extraction.node';
 import { overgenerateNode } from '../nodes/overgenerate.node';
 import { rankSelectNode } from '../nodes/rank-select.node';
@@ -34,6 +34,19 @@ function prepareRetryNode() {
 function prepareNextSlotNode() {
   return (state: GenerationState): GenerationStateUpdate =>
     slotAdvanceStateUpdate(state);
+}
+
+/**
+ * Upper bound on LangGraph supersteps for one run (LangGraph's default limit is 25, which a
+ * 4-slot run with critic retries exceeds). Preamble is extraction, overgenerate, rankSelect. Each
+ * slot runs up to maxCriticAttempts attempts of taskGeneration, critic and one routed node, plus
+ * prepareNextSlot.
+ */
+export function generationRecursionLimit(config: GenerationConfig): number {
+  const preambleSteps = 3;
+  const stepsPerAttempt = 3;
+  const stepsPerSlot = config.maxCriticAttempts * stepsPerAttempt + 1;
+  return preambleSteps + config.selectedTaskCount * stepsPerSlot;
 }
 
 export function buildGenerationGraph(ctx: GenerationContext) {
