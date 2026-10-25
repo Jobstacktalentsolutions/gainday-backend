@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailQueueService } from '../email/email-queue.service';
+import {
+  buildJobRecommendationsEmail,
+  RecommendedJob,
+} from './job-recommendation-email';
 import { UserRole } from '../../db/schema/users.schema';
 
 @Injectable()
@@ -187,28 +191,24 @@ export class NotificationsService {
     to: string,
     recommendation: {
       candidateName: string;
-      jobs: { id: string; title: string }[];
+      jobs: RecommendedJob[];
       unsubscribeUrl: string;
     },
   ): Promise<void> {
-    const appUrl = this.configService.get<string>('email.appUrl');
-    const year = new Date().getFullYear();
-    const count = recommendation.jobs.length;
+    const appUrl = this.configService.getOrThrow<string>('email.appUrl');
+    const email = buildJobRecommendationsEmail({
+      appUrl,
+      candidateName: recommendation.candidateName,
+      jobs: recommendation.jobs,
+      unsubscribeUrl: recommendation.unsubscribeUrl,
+      year: new Date().getFullYear(),
+    });
 
     await this.emailQueueService.enqueueEmail({
       to,
-      subject: `${count} new ${count === 1 ? 'job matches' : 'jobs match'} your job title`,
+      subject: email.subject,
       template: 'job-recommendations',
-      context: {
-        candidateName: recommendation.candidateName,
-        jobs: recommendation.jobs.map((job) => ({
-          title: job.title,
-          url: `${appUrl}/job-board/${job.id}`,
-        })),
-        jobBoardUrl: `${appUrl}/job-board`,
-        unsubscribeUrl: recommendation.unsubscribeUrl,
-        year,
-      },
+      context: email.context,
     });
 
     this.logger.log(`Job recommendations email enqueued for ${to}`);

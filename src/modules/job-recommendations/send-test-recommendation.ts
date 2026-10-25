@@ -22,6 +22,7 @@ import {
   users,
 } from '../../db/schema';
 import { EmailService } from '../email/email.service';
+import { buildJobRecommendationsEmail } from '../notifications/job-recommendation-email';
 import { NotificationPreferencesService } from '../notifications/notification-preferences.service';
 
 function emailArgument(): string {
@@ -59,7 +60,13 @@ async function main(): Promise<void> {
     }
 
     const activeJobs = await db
-      .select({ id: jobs.id, title: jobs.title })
+      .select({
+        id: jobs.id,
+        title: jobs.title,
+        location: jobs.location,
+        isRemoteFriendly: jobs.isRemoteFriendly,
+        description: jobs.description,
+      })
       .from(jobs)
       .where(and(eq(jobs.status, JobStatus.ACTIVE), isNotNull(jobs.title)));
     if (activeJobs.length === 0) {
@@ -82,17 +89,18 @@ async function main(): Promise<void> {
     });
 
     const emailService = new EmailService(config);
+    const built = buildJobRecommendationsEmail({
+      appUrl,
+      candidateName: recipient.fullName,
+      jobs: [{ ...job, title: job.title }],
+      unsubscribeUrl,
+      year: new Date().getFullYear(),
+    });
     await emailService.sendEmail({
       to: email,
-      subject: '1 new job matches your job title',
+      subject: built.subject,
       template: 'job-recommendations',
-      context: {
-        candidateName: recipient.fullName,
-        jobs: [{ title: job.title, url: `${appUrl}/job-board/${job.id}` }],
-        jobBoardUrl: `${appUrl}/job-board`,
-        unsubscribeUrl,
-        year: new Date().getFullYear(),
-      },
+      context: built.context,
     });
 
     console.log(`Sent to ${email}: "${job.title}"`);

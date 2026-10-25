@@ -21,6 +21,7 @@ import {
   NotificationPreferencesService,
 } from '../notifications/notification-preferences.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RecommendedJob } from '../notifications/job-recommendation-email';
 import { JobMatchEmbeddingService } from './job-match-embedding.service';
 import { findCandidateMatches } from './job-match-query';
 import {
@@ -30,8 +31,7 @@ import {
 
 const WRITE_BATCH_SIZE = 500;
 
-interface ActivatedJob {
-  id: string;
+interface ActivatedJob extends RecommendedJob {
   title: string;
 }
 
@@ -143,7 +143,13 @@ export class JobRecommendationsService {
     to: Date,
   ): Promise<ActivatedJob[]> {
     const rows = await this.db
-      .select({ id: jobs.id, title: jobs.title })
+      .select({
+        id: jobs.id,
+        title: jobs.title,
+        location: jobs.location,
+        isRemoteFriendly: jobs.isRemoteFriendly,
+        description: jobs.description,
+      })
       .from(jobs)
       .where(
         and(
@@ -152,9 +158,7 @@ export class JobRecommendationsService {
           lte(jobs.activatedAt, to),
         ),
       );
-    return rows.flatMap((row) =>
-      row.title ? [{ id: row.id, title: row.title }] : [],
-    );
+    return rows.flatMap((row) => (row.title ? [{ ...row, title: row.title }] : []));
   }
 
   private findMatches(jobIds: string[]): Promise<CandidateMatch[]> {
@@ -217,13 +221,17 @@ export class JobRecommendationsService {
       return notifiable;
     });
 
-    await this.sendEmails(deliveries);
+    await this.sendEmails(deliveries, activatedJobs);
     return rows.length;
   }
 
   /** One email per candidate listing that candidate's new matches. A failed enqueue is logged, not
    *  rethrown: the recommendations are already saved, so a retry would never send the email. */
-  private async sendEmails(deliveries: Delivery[]): Promise<void> {
+  private async sendEmails(
+    deliveries: Delivery[],
+    activatedJobs: ActivatedJob[],
+  ): Promise<void> {
+    const jobById = new Map(activatedJobs.map((job) => [job.id, job]));
     const byCandidate = new Map<string, Delivery[]>();
     for (const delivery of deliveries) {
       const existing = byCandidate.get(delivery.candidateId);
@@ -242,10 +250,10 @@ export class JobRecommendationsService {
         );
         await this.notifications.sendJobRecommendationsEmail(recipient.email, {
           candidateName: recipient.fullName,
-          jobs: candidateDeliveries.map((delivery) => ({
-            id: delivery.jobId,
-            title: delivery.jobTitle,
-          })),
+          jobs: candidateDeliveries.flatMap((delivery) => {
+            const job = jobById.get(delivery.jobId);
+            return job ? [job] : [];
+          }),
           unsubscribeUrl,
         });
       } catch (err) {
