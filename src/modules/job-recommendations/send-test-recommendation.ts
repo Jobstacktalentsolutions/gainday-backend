@@ -1,7 +1,7 @@
 /**
  * Sends one job-recommendation notification to a single account, so the in-app notification, the
  * email, and its unsubscribe link can be checked end to end. The job is picked at random from the
- * active jobs. No recommendation, pass record, or other user is touched.
+ * active jobs (three at a time). No recommendation, pass record, or other user is touched.
  *
  * Email goes straight through Brevo rather than the BullMQ queue, so no Redis or running worker is
  * needed. Run with: pnpm recs:send-test -- --email someone@example.com
@@ -25,11 +25,15 @@ import { EmailService } from '../email/email.service';
 import { buildJobRecommendationsEmail } from '../notifications/job-recommendation-email';
 import { NotificationPreferencesService } from '../notifications/notification-preferences.service';
 
+const SAMPLE_SIZE = 3;
+
 function emailArgument(): string {
   const index = process.argv.indexOf('--email');
   const email = index === -1 ? undefined : process.argv[index + 1];
   if (!email) {
-    throw new Error('Pass the recipient: pnpm recs:send-test -- --email someone@example.com');
+    throw new Error(
+      'Pass the recipient: pnpm recs:send-test -- --email someone@example.com',
+    );
   }
   return email;
 }
@@ -72,27 +76,31 @@ async function main(): Promise<void> {
     if (activeJobs.length === 0) {
       throw new Error('No active job with a title to attach');
     }
-    const job = activeJobs[Math.floor(Math.random() * activeJobs.length)];
-    if (!job.title) {
-      throw new Error('Picked job has no title');
-    }
+    const sampled = [...activeJobs]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, SAMPLE_SIZE)
+      .flatMap((job) => (job.title ? [{ ...job, title: job.title }] : []));
 
     const preferences = new NotificationPreferencesService(db, config);
-    const unsubscribeUrl = await preferences.getUnsubscribeUrl(recipient.userId);
+    const unsubscribeUrl = await preferences.getUnsubscribeUrl(
+      recipient.userId,
+    );
 
-    await db.insert(candidateNotifications).values({
-      candidateId: recipient.candidateId,
-      type: CandidateNotificationType.JOB_RECOMMENDATION,
-      title: `New job match: ${job.title}`,
-      message: `${job.title} matches the job title on your profile.`,
-      metadata: { jobId: job.id },
-    });
+    for (const job of sampled) {
+      await db.insert(candidateNotifications).values({
+        candidateId: recipient.candidateId,
+        type: CandidateNotificationType.JOB_RECOMMENDATION,
+        title: `New job match: ${job.title}`,
+        message: `${job.title} matches the job title on your profile.`,
+        metadata: { jobId: job.id },
+      });
+    }
 
     const emailService = new EmailService(config);
     const built = buildJobRecommendationsEmail({
       appUrl,
       candidateName: recipient.fullName,
-      jobs: [{ ...job, title: job.title }],
+      jobs: sampled,
       unsubscribeUrl,
       year: new Date().getFullYear(),
     });
@@ -103,7 +111,10 @@ async function main(): Promise<void> {
       context: built.context,
     });
 
-    console.log(`Sent to ${email}: "${job.title}"`);
+    console.log(`Sent to ${email}:`);
+    for (const job of sampled) {
+      console.log(`  - ${job.title}`);
+    }
     console.log(`Unsubscribe link: ${unsubscribeUrl}`);
   } finally {
     await pool.end();

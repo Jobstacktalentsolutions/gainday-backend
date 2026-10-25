@@ -11,24 +11,50 @@ export interface RecommendedJob {
 const SNIPPET_MAX_LINES = 3;
 const SNIPPET_MAX_CHARS = 280;
 
-/** The first few non-empty lines of a job description, cut at a word boundary. */
+/** Removes markdown syntax, keeping the words. Descriptions are stored as markdown, and the email
+ *  is plain text, so headings, emphasis, list markers, links, and code ticks would show literally. */
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/(^|\s)#{1,6}(?=\s)/g, '$1')
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/(^|\s)\*([^*\s][^*]*)\*(?=[\s.,;:!?]|$)/g, '$1$2')
+    .replace(/`+([^`]*)`+/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * The first few lines of a job description as plain text. Ends with "..." when anything was left
+ * out, whether whole lines or the cut to the length limit.
+ */
 export function descriptionSnippet(description: string | null): string | null {
   if (!description) return null;
-  const text = description
+  const lines = description
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, SNIPPET_MAX_LINES)
-    .join(' ');
-  if (text.length <= SNIPPET_MAX_CHARS) return text;
+    .filter(Boolean);
+  let text = stripMarkdown(lines.slice(0, SNIPPET_MAX_LINES).join(' '));
+  let truncated = lines.length > SNIPPET_MAX_LINES;
 
-  const cut = text.slice(0, SNIPPET_MAX_CHARS);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${cut.slice(0, lastSpace > 0 ? lastSpace : SNIPPET_MAX_CHARS).trimEnd()}…`;
+  if (text.length > SNIPPET_MAX_CHARS) {
+    const cut = text.slice(0, SNIPPET_MAX_CHARS);
+    const lastSpace = cut.lastIndexOf(' ');
+    text = cut
+      .slice(0, lastSpace > 0 ? lastSpace : SNIPPET_MAX_CHARS)
+      .trimEnd();
+    truncated = true;
+  }
+  if (text === '') return null;
+  return truncated ? `${text}...` : text;
 }
 
 /** "London · Remote-friendly", or null when neither is known. */
-export function locationLine(job: Pick<RecommendedJob, 'location' | 'isRemoteFriendly'>): string | null {
+export function locationLine(
+  job: Pick<RecommendedJob, 'location' | 'isRemoteFriendly'>,
+): string | null {
   const parts = [
     job.location,
     job.isRemoteFriendly ? 'Remote-friendly' : null,
