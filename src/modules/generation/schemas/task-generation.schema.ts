@@ -19,7 +19,7 @@ export const taskGenerationSchema = (
     questionPrompt: z
       .string()
       .describe(
-        'GitHub-flavored Markdown. The deliverable, its recipient, format or length, and any content the work must include. No tips: approach advice, example tactics, or what a good answer does.',
+        'GitHub-flavored Markdown. The requirements of the deliverable only. No tips: approach advice, example tactics, tone, or what a good answer does.',
       ),
     businessProblemDerived: z.boolean(),
     objectiveComponent: objectiveComponentSchema

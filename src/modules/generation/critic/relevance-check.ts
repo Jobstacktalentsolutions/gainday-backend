@@ -6,15 +6,15 @@ import {
   GeneratedTaskCandidate,
 } from '../roles/role-module.interface';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
+import { REQUIREMENT_VS_TIP_RULE } from '../task-text-rules';
 
 const RELEVANCE_CHECK_PROMPT = `You are validating a generated job-simulation task. Do two checks.
 1. Relevance: confirm the task aligns with the given Category and Intent, not just that it is novel
    but that it is on-target for what the employer is trying to assess.
-2. Tips: return each sentence in scenarioDescription or questionPrompt that advises the candidate on
-   how to do well: approach or steps, example tactics, or what a strong answer does or is judged on.
-   Requirements are not tips: the deliverable, recipient, format, length, a word limit, a deadline, and
-   content the work must include ("the plan must include a stakeholder map"). Return each sentence
-   verbatim, or an empty list.`;
+2. Tips: return each sentence in scenarioDescription or questionPrompt that is a tip. ${REQUIREMENT_VS_TIP_RULE}
+   Requirement: "Reply in no more than 150 words." Requirement: "Calculate the total cost per site."
+   Tip: "Keep the tone calm and avoid technical terms." Tip: "Start by acknowledging the delay."
+   Return each sentence verbatim, or an empty list.`;
 
 /** One call for both checks: relevance against the extraction, and tips in the candidate text. */
 export async function checkRelevance(

@@ -13,6 +13,7 @@ import {
   TaskSpecTemplate,
 } from './roles/role-module.interface';
 import { taskSpecSchema } from './schemas/task-spec.schema';
+import { REQUIREMENT_VS_TIP_RULE } from './task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 
 /**
@@ -21,12 +22,10 @@ import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.u
  * strong, mid and weak answer looks like is decided later, when the grading anchors are generated.
  */
 const CANDIDATE_FACING_TEXT_RULES = `The candidate reads the title, scenarioDescription, questionPrompt and any interfacePayload
-text. It may state requirements of the work, but never tips.
+text. It may state requirements of the work, never tips.
 - scenarioDescription: the situation, the facts, and the stimulus (the other person's message, or the data).
-- questionPrompt: the deliverable, its recipient, its format or length, and any content the work must include.
-A requirement is allowed: "the plan must include a stakeholder map". A tip is not: approach advice ("start with
-the largest account"), example tactics ("e.g., a pilot"), or what a strong answer does or is judged on.
-A word limit or deadline is a fact.`;
+- questionPrompt: the requirements of the deliverable.
+${REQUIREMENT_VS_TIP_RULE}`;
 
 const MARKDOWN_RULES = `Free-text fields are GitHub-flavored Markdown. Use lists, bold or italics only to present the
 material itself (emails, line items, data), never HTML, and never to list what the answer should contain.`;
