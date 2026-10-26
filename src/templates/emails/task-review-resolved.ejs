@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your tasks are ready</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'Your tasks are ready' }) %>
+
+      <div class="content">
+        <p class="intro">
+          The review of the tasks for <strong><%= jobTitle %></strong> is complete. Your job is saved as a draft and is ready for you to review and publish.
+        </p>
+
+        <div class="cta-wrap">
+          <a href="<%= previewUrl %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">Review and publish</a>
+        </div>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>

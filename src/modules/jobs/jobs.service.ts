@@ -18,6 +18,7 @@ import {
   UserRole,
 } from '../../db/schema';
 import { JobBoardCacheService } from './job-board/job-board-cache.service';
+import { countPendingTaskReviews } from '../generation/generation-review.util';
 import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
 
@@ -98,7 +99,24 @@ export class JobsService {
     return this.saveDraft(employerId, dto, jobId);
   }
 
+  /** Whether an employer's job has task slots still waiting on an admin, shown on the review page. */
+  async getTaskReviewStatus(jobId: string, employerId: string) {
+    const job = await this.findById(jobId);
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    if (job.employerId !== employerId) {
+      throw new ForbiddenException('You may only view your own jobs');
+    }
+    return { pendingCount: await countPendingTaskReviews(this.db, jobId) };
+  }
+
   async publishJob(jobId: string): Promise<Job> {
+    if ((await countPendingTaskReviews(this.db, jobId)) > 0) {
+      throw new ConflictException(
+        'Some tasks are still under admin review. The job can be published once they are resolved.',
+      );
+    }
     const [job] = await this.db
       .update(jobs)
       .set({ status: 'ACTIVE', activatedAt: new Date(), updatedAt: new Date() })

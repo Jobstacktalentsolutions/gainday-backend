@@ -159,6 +159,13 @@ export class AdminController {
     return this.adminService.listGenerationReviewItems(query);
   }
 
+  @Get('generation-reviews/by-job')
+  async listGenerationReviewsByJob(
+    @Query() query: ListGenerationReviewsQueryDto,
+  ) {
+    return this.adminService.listGenerationReviewJobs(query);
+  }
+
   @Put('generation-reviews/:id/approve')
   async approveGenerationReview(
     @Param('id') id: string,

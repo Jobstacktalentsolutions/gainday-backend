@@ -5,13 +5,24 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, desc, eq, or, ilike, inArray } from 'drizzle-orm';
+import {
+  and,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  or,
+  ilike,
+  inArray,
+  max,
+} from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { DRIZZLE } from '../../db/db.constants';
 import { buildTimeBuckets } from './analytics-buckets';
 import type { DrizzleDb } from '../../db/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { countPendingTaskReviews } from '../generation/generation-review.util';
 import {
   users,
   adminProfiles,
@@ -44,6 +55,16 @@ export interface PaginationMeta {
   totalPages: number;
   hasNextPage: boolean;
   hasPrevPage: boolean;
+}
+
+/** One job's generation review items, as the admin queue shows them. */
+export interface GenerationReviewJobGroup {
+  jobId: string;
+  job: typeof jobs.$inferSelect & {
+    employer: typeof employerProfiles.$inferSelect;
+  };
+  pendingCount: number;
+  items: (typeof generationReviewItems.$inferSelect)[];
 }
 
 export interface PaginatedResponse<T> {
@@ -821,6 +842,96 @@ export class AdminService {
     };
   }
 
+  /** Review items grouped by job, paginated by job, so one job's slots always appear together. */
+  async listGenerationReviewJobs(
+    query: ListGenerationReviewsQueryDto = {},
+  ): Promise<PaginatedResponse<GenerationReviewJobGroup>> {
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query.limit) || 10));
+    const offset = (page - 1) * limit;
+
+    const whereClause = query.status
+      ? eq(generationReviewItems.status, query.status as GenerationReviewStatus)
+      : undefined;
+
+    const [[{ total }], jobRows] = await Promise.all([
+      this.db
+        .select({ total: countDistinct(generationReviewItems.jobId) })
+        .from(generationReviewItems)
+        .where(whereClause),
+      this.db
+        .select({ jobId: generationReviewItems.jobId })
+        .from(generationReviewItems)
+        .where(whereClause)
+        .groupBy(generationReviewItems.jobId)
+        .orderBy(desc(max(generationReviewItems.createdAt)))
+        .limit(limit)
+        .offset(offset),
+    ]);
+    const jobIds = jobRows.map((row) => row.jobId);
+
+    const [groupJobs, items, pendingRows] =
+      jobIds.length === 0
+        ? [[], [], []]
+        : await Promise.all([
+            this.db.query.jobs.findMany({
+              where: inArray(jobs.id, jobIds),
+              with: { employer: true },
+            }),
+            this.db.query.generationReviewItems.findMany({
+              where: and(
+                inArray(generationReviewItems.jobId, jobIds),
+                whereClause,
+              ),
+              orderBy: (items, { asc }) => [asc(items.slotIndex)],
+            }),
+            this.db
+              .select({
+                jobId: generationReviewItems.jobId,
+                pendingCount: count(),
+              })
+              .from(generationReviewItems)
+              .where(
+                and(
+                  inArray(generationReviewItems.jobId, jobIds),
+                  eq(generationReviewItems.status, 'PENDING'),
+                ),
+              )
+              .groupBy(generationReviewItems.jobId),
+          ]);
+
+    const jobsById = new Map(groupJobs.map((job) => [job.id, job]));
+    const pendingByJob = new Map(
+      pendingRows.map((row) => [row.jobId, row.pendingCount]),
+    );
+    const groups = jobIds.flatMap((jobId) => {
+      const job = jobsById.get(jobId);
+      if (!job) return [];
+      return [
+        {
+          jobId,
+          job,
+          pendingCount: pendingByJob.get(jobId) ?? 0,
+          items: items.filter((item) => item.jobId === jobId),
+        },
+      ];
+    });
+
+    const totalCount = Number(total) || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+    return {
+      items: groups,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  }
+
   async approveGenerationReviewWithEdits(
     reviewItemId: string,
     adminProfileId: string,
@@ -834,6 +945,7 @@ export class AdminService {
       throw new Error('Generation review item not found');
     }
 
+    // Only a pending item can be resolved: a second approval would add the task twice.
     const [updatedReviewItem] = await this.db
       .update(generationReviewItems)
       .set({
@@ -843,8 +955,16 @@ export class AdminService {
         reviewedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(generationReviewItems.id, reviewItemId))
+      .where(
+        and(
+          eq(generationReviewItems.id, reviewItemId),
+          eq(generationReviewItems.status, 'PENDING'),
+        ),
+      )
       .returning();
+    if (!updatedReviewItem) {
+      throw new ConflictException('This review item has already been resolved');
+    }
 
     const embedding = await embedTaskContent(
       this.embeddings,
@@ -887,7 +1007,7 @@ export class AdminService {
         .where(eq(simulations.id, simulation.id));
     }
 
-    await this.reactivateJobIfReviewComplete(reviewItem.jobId);
+    await this.notifyEmployerIfReviewComplete(updatedReviewItem.jobId);
 
     return updatedReviewItem;
   }
@@ -901,37 +1021,42 @@ export class AdminService {
         reviewedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(generationReviewItems.id, reviewItemId))
+      .where(
+        and(
+          eq(generationReviewItems.id, reviewItemId),
+          eq(generationReviewItems.status, 'PENDING'),
+        ),
+      )
       .returning();
     if (!reviewItem) {
-      throw new Error('Generation review item not found');
+      throw new ConflictException(
+        'This review item was not found or has already been resolved',
+      );
     }
 
-    await this.reactivateJobIfReviewComplete(reviewItem.jobId);
+    await this.notifyEmployerIfReviewComplete(reviewItem.jobId);
 
     return reviewItem;
   }
 
-  /**
-   * Jobs with generation slots pending admin resolution currently stay ACTIVE
-   * rather than being held at a separate review status (deferred for now).
-   * This is a no-op placeholder retained for when that review-hold status
-   * returns.
-   */
-  private async reactivateJobIfReviewComplete(jobId: string): Promise<void> {
-    const [{ pendingCount }] = await this.db
-      .select({ pendingCount: count() })
-      .from(generationReviewItems)
-      .where(
-        and(
-          eq(generationReviewItems.jobId, jobId),
-          eq(generationReviewItems.status, 'PENDING'),
-        ),
-      );
-
-    if (pendingCount > 0) {
+  /** Once a job has no task slots left pending, tells its employer the tasks are ready to publish. */
+  private async notifyEmployerIfReviewComplete(jobId: string): Promise<void> {
+    if ((await countPendingTaskReviews(this.db, jobId)) > 0) {
       return;
     }
+
+    const job = await this.db.query.jobs.findFirst({
+      where: eq(jobs.id, jobId),
+      with: { employer: { with: { user: true } } },
+    });
+    if (!job) {
+      return;
+    }
+    await this.notificationsService.sendTaskReviewResolvedEmail(
+      job.employer.user.email,
+      job.title ?? 'Untitled role',
+      job.id,
+    );
   }
 
   async getCandidateDetail(userId: string) {

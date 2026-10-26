@@ -79,6 +79,13 @@ export class JobsController {
     return this.jobsService.findByIdWithSimulation(id);
   }
 
+  @Get(':id/task-review')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.EMPLOYER)
+  async getTaskReviewStatus(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.jobsService.getTaskReviewStatus(id, user.profileId);
+  }
+
   @Post('parse-description')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER)

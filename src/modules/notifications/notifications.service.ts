@@ -151,6 +151,24 @@ export class NotificationsService {
     );
   }
 
+  /** Tells an employer every task slot for their job is resolved, so they can review and publish. */
+  async sendTaskReviewResolvedEmail(
+    employerEmail: string,
+    jobTitle: string,
+    jobId: string,
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>('email.appUrl');
+    await this.emailQueueService.enqueueEmail({
+      to: employerEmail,
+      subject: `Your tasks for ${jobTitle} are ready`,
+      template: 'task-review-resolved',
+      context: {
+        jobTitle,
+        previewUrl: `${appUrl}/employer/jobs/${jobId}/preview`,
+      },
+    });
+  }
+
   async sendScoringResultsEmail(
     candidateEmail: string,
     jobTitle: string,

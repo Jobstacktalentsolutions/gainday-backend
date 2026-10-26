@@ -64,13 +64,19 @@ export class GenerationProcessor extends WorkerHost {
 
       const hasIncompleteSlots = result.adminReviewItemsPersisted > 0;
 
+      // A job with task slots awaiting admin review stays a draft until they are resolved, so it
+      // never goes live with missing tasks.
       await this.db
         .update(jobs)
-        .set({
-          status: 'ACTIVE',
-          activatedAt: new Date(),
-          updatedAt: new Date(),
-        })
+        .set(
+          hasIncompleteSlots
+            ? { status: 'DRAFT', updatedAt: new Date() }
+            : {
+                status: 'ACTIVE',
+                activatedAt: new Date(),
+                updatedAt: new Date(),
+              },
+        )
         .where(eq(jobs.id, jobId));
       await this.jobBoardCache.invalidateAll();
 
