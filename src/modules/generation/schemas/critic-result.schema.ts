@@ -5,8 +5,8 @@ export const relevanceCheckSchema = z.object({
   reasons: z.array(z.string()),
 });
 
-// The generic critic call: relevance plus the coaching sentences in the candidate-facing text.
-// An empty coachingSentences list passes.
+// The generic critic call: relevance plus the tip sentences in the candidate-facing text.
+// An empty tipSentences list passes.
 export const taskCriticSchema = relevanceCheckSchema.extend({
-  coachingSentences: z.array(z.string()),
+  tipSentences: z.array(z.string()),
 });

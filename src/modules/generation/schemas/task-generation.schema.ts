@@ -14,12 +14,12 @@ export const taskGenerationSchema = (
     taskType: z.enum(allowedTypeKeys),
     title: z.string(),
     scenarioDescription: z.string().describe('GitHub-flavored Markdown.'),
-    // The one place the no-coaching rule is repeated outside the prompt: field descriptions travel
+    // The one place the no-tips rule is repeated outside the prompt: field descriptions travel
     // with the schema the model fills in, and this is the field where it gets broken.
     questionPrompt: z
       .string()
       .describe(
-        'GitHub-flavored Markdown. One instruction: the deliverable, its recipient, format or length. No lists of points to cover, example tactics, or hints.',
+        'GitHub-flavored Markdown. The deliverable, its recipient, format or length, and any content the work must include. No tips: approach advice, example tactics, or what a good answer does.',
       ),
     businessProblemDerived: z.boolean(),
     objectiveComponent: objectiveComponentSchema

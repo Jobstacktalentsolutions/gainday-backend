@@ -14,7 +14,7 @@ export const taskSpecSchema = (
     questionPrompt: z
       .string()
       .describe(
-        'GitHub-flavored Markdown. One instruction: the deliverable, its recipient, format or length.',
+        'GitHub-flavored Markdown. The deliverable, its recipient, format or length, and any content the work must include. No tips.',
       ),
     businessProblemDerived: z.boolean(),
     data: dataSchema.describe(

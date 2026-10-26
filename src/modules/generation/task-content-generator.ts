@@ -16,17 +16,17 @@ import { taskSpecSchema } from './schemas/task-spec.schema';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 
 /**
- * What the candidate reads must not coach them. Shared by the generate and modify prompts so the
- * two cannot drift. What a strong, mid and weak answer looks like is decided later, when the
- * grading anchors are generated — none of it belongs in the task itself.
+ * What the candidate reads must not give them tips. Shared by the generate and modify prompts so the
+ * two cannot drift. Requirements of the work are allowed; tips on how to do well are not. What a
+ * strong, mid and weak answer looks like is decided later, when the grading anchors are generated.
  */
 const CANDIDATE_FACING_TEXT_RULES = `The candidate reads the title, scenarioDescription, questionPrompt and any interfacePayload
-text, so none of it may coach them — what makes an answer good is judged later, from separate grading anchors.
+text. It may state requirements of the work, but never tips.
 - scenarioDescription: the situation, the facts, and the stimulus (the other person's message, or the data).
-- questionPrompt: one instruction stating the deliverable, its recipient, and its format or length.
-Never include a list of points the answer should cover ("Your response should: 1. acknowledge …"),
-example tactics ("e.g., a pilot", "without cutting price"), or hints about what a strong answer does or
-is evaluated on. A word limit or deadline is a fact, not a hint.`;
+- questionPrompt: the deliverable, its recipient, its format or length, and any content the work must include.
+A requirement is allowed: "the plan must include a stakeholder map". A tip is not: approach advice ("start with
+the largest account"), example tactics ("e.g., a pilot"), or what a strong answer does or is judged on.
+A word limit or deadline is a fact.`;
 
 const MARKDOWN_RULES = `Free-text fields are GitHub-flavored Markdown. Use lists, bold or italics only to present the
 material itself (emails, line items, data), never HTML, and never to list what the answer should contain.`;

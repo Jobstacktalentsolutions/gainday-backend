@@ -98,11 +98,12 @@ export function criticNode(ctx: GenerationContext) {
       }
     }
 
-    // Coaching is reported as one reason, so the repair step sees every sentence to remove.
-    const coaching = relevanceResult.coachingSentences;
-    if (coaching.length > 0) {
+    // Tips are reported as one reason, so the repair step sees every sentence to reword. The fix
+    // keeps the requirement the sentence carries and drops only the advice.
+    const tips = relevanceResult.tipSentences;
+    if (tips.length > 0) {
       failureReasons.push(
-        `Coaching in candidate text, remove: ${coaching.map((sentence) => `"${sentence}"`).join(' ')}`,
+        `Tips in candidate text, reword as requirements of the work or remove the advice: ${tips.map((sentence) => `"${sentence}"`).join(' ')}`,
       );
     }
 
@@ -123,7 +124,7 @@ export function criticNode(ctx: GenerationContext) {
     const criticResult: CriticResult = {
       passed:
         payloadValid &&
-        coaching.length === 0 &&
+        tips.length === 0 &&
         !duplicateResult.isDuplicate &&
         relevanceResult.relevant &&
         additionalRelevanceOk,
