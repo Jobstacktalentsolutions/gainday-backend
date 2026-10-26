@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -7,6 +8,9 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+
+export const BOARD_SORTS = ['latest', 'oldest'] as const;
+export type BoardSort = (typeof BOARD_SORTS)[number];
 
 export class ListJobBoardDto {
   @IsOptional()
@@ -26,6 +30,10 @@ export class ListJobBoardDto {
   @IsString()
   @MaxLength(200)
   search?: string;
+
+  @IsOptional()
+  @IsIn(BOARD_SORTS)
+  sort?: BoardSort;
 
   @IsOptional()
   @IsString()

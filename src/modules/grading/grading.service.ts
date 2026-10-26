@@ -12,6 +12,8 @@ import {
   jobs,
   AdminNotificationSeverity,
   TaskGradingResult,
+  CandidateAnswer,
+  QuestionBankEntry,
 } from '../../db/schema';
 import {
   GRADE_SUBMISSION_JOB,
@@ -32,6 +34,7 @@ import { checklistResults, gateOutcome } from './rubric-results';
 import { RoleRegistry } from '../generation/roles/role-registry';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import { isGradedByAnswer } from './task-eligibility';
+import { isNotAttempted, notAttemptedResult } from './not-attempted';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AdminNotificationsService } from '../notifications/admin-notifications.service';
 import { toDisplayId } from '../submissions/employer-submission.view';
@@ -155,6 +158,47 @@ export class GradingService {
     }
   }
 
+  /** Grades an attempted answer: the answer key settles what it can, and the LLM scores the rest. */
+  private async gradeAnswer(
+    task: SimulationTask,
+    answer: CandidateAnswer,
+    row: QuestionBankEntry,
+  ): Promise<TaskGradingResult> {
+    const objectiveResult = this.gradeObjectivePart(
+      task,
+      answer.objectiveResponse,
+    );
+    const anchors = await this.anchorGenerationService.ensureAnchors(row);
+
+    const result = await this.taskGradingService.gradeTask({
+      category: row.category,
+      taskTitle: task.title,
+      scenarioDescription: task.scenarioDescription,
+      questionPrompt: task.questionPrompt,
+      anchors,
+      candidateResponse: answer.responseBody,
+      criteria: criteriaForLlm(objectiveResult !== null),
+      verifiedResult: objectiveResult
+        ? describeObjectiveResult(objectiveResult)
+        : undefined,
+      rubric: task.rubric,
+    });
+
+    const gate = gateOutcome(task.rubric, result);
+    return {
+      taskId: task.id,
+      questionBankId: row.id,
+      categoryScores: combineCategoryScores(
+        result.categoryScores,
+        objectiveResult,
+        gate,
+      ),
+      summary: result.summary,
+      checklist: checklistResults(task.rubric, result),
+      gateTriggered: gate?.triggered,
+    };
+  }
+
   /** Checks the objective part against its answer key, for the component types that have one.
    *  Null when the task has no such part, so the LLM grades the whole answer as before. */
   private gradeObjectivePart(
@@ -263,32 +307,10 @@ export class GradingService {
       }
 
       try {
-        const objectiveResult = this.gradeObjectivePart(task, answer.objectiveResponse);
-        const anchors = await this.anchorGenerationService.ensureAnchors(row);
-
-        const result = await this.taskGradingService.gradeTask({
-          category: row.category,
-          taskTitle: task.title,
-          scenarioDescription: task.scenarioDescription,
-          questionPrompt: task.questionPrompt,
-          anchors,
-          candidateResponse: answer.responseBody,
-          criteria: criteriaForLlm(objectiveResult !== null),
-          verifiedResult: objectiveResult
-            ? describeObjectiveResult(objectiveResult)
-            : undefined,
-          rubric: task.rubric,
-        });
-
-        const gate = gateOutcome(task.rubric, result);
-        const taskResult: TaskGradingResult = {
-          taskId: task.id,
-          questionBankId: task.questionBankId,
-          categoryScores: combineCategoryScores(result.categoryScores, objectiveResult, gate),
-          summary: result.summary,
-          checklist: checklistResults(task.rubric, result),
-          gateTriggered: gate?.triggered,
-        };
+        // An unattempted task scores zero without anchors or an LLM call.
+        const taskResult = isNotAttempted(answer)
+          ? notAttemptedResult(task, task.questionBankId)
+          : await this.gradeAnswer(task, answer, row);
 
         taskResults.push(taskResult);
         existingTaskScoresMap.set(task.id, taskResult);

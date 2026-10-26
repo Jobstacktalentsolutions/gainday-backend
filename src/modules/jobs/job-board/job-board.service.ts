@@ -11,7 +11,7 @@ import {
 import { hashText } from '../../job-recommendations/job-recommendation.util';
 import { JobBoardCacheService } from './job-board-cache.service';
 import { rankJobIds } from './job-board-ranking';
-import { ListJobBoardDto } from './dto/list-job-board.dto';
+import { BoardSort, ListJobBoardDto } from './dto/list-job-board.dto';
 
 export const JOB_BOARD_PAGE_SIZE = 12;
 
@@ -69,6 +69,14 @@ function matchesFilters(job: BoardJob, query: ListJobBoardDto): boolean {
 
 const uniqueSorted = (values: string[]) => [...new Set(values)].sort();
 
+// Orders by posting date, the same date the card shows as "Posted".
+function sortByPostedDate(jobs: BoardJob[], sort: BoardSort) {
+  const direction = sort === 'latest' ? -1 : 1;
+  jobs.sort(
+    (a, b) => direction * (a.createdAt.getTime() - b.createdAt.getTime()),
+  );
+}
+
 @Injectable()
 export class JobBoardService {
   constructor(
@@ -105,6 +113,8 @@ export class JobBoardService {
         return [];
       return [job];
     });
+    if (query.sort) sortByPostedDate(matching, query.sort);
+
     const ordered = [
       ...matching.filter((job) => !appliedIds.has(job.id)),
       ...matching.filter((job) => appliedIds.has(job.id)),
