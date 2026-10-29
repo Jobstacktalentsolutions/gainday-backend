@@ -15,6 +15,8 @@ import { GeneratedTaskCandidate } from '../roles/role-module.interface';
 
 const logger = new Logger('GenerationPipeline:critic');
 
+const DUPLICATE_SCENARIO_CHARS = 300;
+
 function failedWithoutContent(state: GenerationState): CriticResult {
   return {
     passed: false,
@@ -59,8 +61,15 @@ export function criticNode(ctx: GenerationContext) {
       ctx.config.duplicateSimilarityThreshold,
     );
     if (duplicateResult.isDuplicate) {
+      // The retry sees the matched scenario, so it can write a different situation. The scenario is
+      // cut short to keep the feedback small.
+      const match = duplicateResult.closestMatch;
+      const scenario = match?.scenario?.slice(0, DUPLICATE_SCENARIO_CHARS);
       failureReasons.push(
-        `Duplicate: too similar to existing question_bank entry ${duplicateResult.closestMatch?.id} (distance ${duplicateResult.closestMatch?.distance}).`,
+        `Duplicate: too similar to existing question_bank entry ${match?.id} (distance ${match?.distance})` +
+          (scenario
+            ? `. Write a different situation from this one: "${scenario}"`
+            : '.'),
       );
     }
     logger.log(

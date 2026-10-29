@@ -13,6 +13,17 @@ export function canonicalCategory(role: string): string {
 }
 
 /**
+ * The key that scopes novelty checks: the role and sub-role, with spacing and case normalised so
+ * "Finance>Reconciliation" and "finance > reconciliation" are the same pool.
+ */
+export function roleScopeKey(category: string): string {
+  return canonicalCategory(category)
+    .split('>')
+    .map((part) => part.trim().toLowerCase())
+    .join(' > ');
+}
+
+/**
  * The category for a job. The employer's chosen role is the top level and is never overridden: a
  * sub-role the employer named is used as is, and otherwise the inferred sub-role is kept only when it
  * sits under the same top level. Without a chosen role, the inferred category is used.
