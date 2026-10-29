@@ -49,16 +49,15 @@ export interface AudienceCounts {
 }
 
 /**
- * One point on the chart. Each audience is counted separately, so a visitor who was anonymous on one
- * day and signed in on another appears in both. Monthly totals can therefore be lower than the sum.
+ * One point on the chart. `dau` is the day's active visitors and is null on monthly points, where
+ * `mau` is the month's active visitors. Each audience is counted separately, so a visitor who was
+ * anonymous on one day and signed in on another appears in both.
  */
 export interface VisitorSeriesPoint {
   label: string;
-  anonymous: number;
-  jobSeeker: number;
-  employer: number;
-  /** Distinct visitors over the 30 days ending on the day. Null on monthly points. */
-  mau: number | null;
+  dau: AudienceCounts | null;
+  /** Distinct visitors over the 30 days ending on the day, or over the month on monthly points. */
+  mau: AudienceCounts;
 }
 
 export interface VisitorReport {
@@ -87,6 +86,13 @@ interface LiveActivity {
   sessions: number;
   pageViews: number;
 }
+
+const EMPTY_COUNTS: AudienceCounts = {
+  total: 0,
+  anonymous: 0,
+  jobSeeker: 0,
+  employer: 0,
+};
 
 /** Postgres array literal for bound UUIDs. Drizzle would expand a plain JS array into separate parameters. */
 function pgUuidArray(ids: string[]): string {
@@ -122,7 +128,7 @@ function countsOf(live: LiveActivity): AudienceCounts {
  * Builds the visitor analytics for the admin overview. Today is read live from Redis because the
  * sync has not run for it yet; every earlier day comes from the daily rollup in Postgres.
  *
- * A day or month the rollup has no row for had no visitors, since the sync writes a row for every
+ * A day or month with no synced activity had no visitors, since the sync writes a row for every
  * day that had any.
  */
 @Injectable()
@@ -159,7 +165,7 @@ export class AnalyticsReportService {
       today,
       yesterday,
       live,
-      mau.total,
+      mau,
     );
 
     return {
@@ -217,7 +223,7 @@ export class AnalyticsReportService {
     today: string,
     yesterday: string,
     live: LiveActivity,
-    todayMau: number,
+    todayMau: AudienceCounts,
   ): Promise<VisitorSeriesPoint[]> {
     if (DAILY_POINTS[timeframe] !== undefined) {
       return this.dailySeries(windowStart, today, yesterday, live, todayMau);
@@ -230,39 +236,81 @@ export class AnalyticsReportService {
     today: string,
     yesterday: string,
     live: LiveActivity,
-    todayMau: number,
+    todayMau: AudienceCounts,
   ): Promise<VisitorSeriesPoint[]> {
-    const rows = await this.db
-      .select()
-      .from(dailyVisitorStats)
-      .where(
-        and(
-          gte(dailyVisitorStats.day, windowStart),
-          lte(dailyVisitorStats.day, yesterday),
+    const [rows, rollingByDay] = await Promise.all([
+      this.db
+        .select()
+        .from(dailyVisitorStats)
+        .where(
+          and(
+            gte(dailyVisitorStats.day, windowStart),
+            lte(dailyVisitorStats.day, yesterday),
+          ),
         ),
-      );
+      this.rollingByDay(windowStart, yesterday),
+    ]);
     const byDay = new Map(rows.map((row) => [row.day, row]));
 
     return listDays(windowStart, today).map((day) => {
       if (day === today) {
-        const counts = countsOf(live);
         return {
           label: labelOfDay(day),
-          anonymous: counts.anonymous,
-          jobSeeker: counts.jobSeeker,
-          employer: counts.employer,
+          dau: countsOf(live),
           mau: todayMau,
         };
       }
       const row = byDay.get(day);
       return {
         label: labelOfDay(day),
-        anonymous: row?.anonymousVisitors ?? 0,
-        jobSeeker: row?.jobSeekerVisitors ?? 0,
-        employer: row?.employerVisitors ?? 0,
-        mau: row?.rolling30dVisitors ?? 0,
+        dau: row
+          ? {
+              total: row.visitors,
+              anonymous: row.anonymousVisitors,
+              jobSeeker: row.jobSeekerVisitors,
+              employer: row.employerVisitors,
+            }
+          : EMPTY_COUNTS,
+        mau: rollingByDay.get(day) ?? EMPTY_COUNTS,
       };
     });
+  }
+
+  /** Distinct visitors per audience over the 30 days ending on each day from `from` to `to`. */
+  private async rollingByDay(
+    from: string,
+    to: string,
+  ): Promise<Map<string, AudienceCounts>> {
+    const counts = new Map<string, AudienceCounts>();
+    if (from > to) return counts;
+
+    const { rows } = await this.db.execute<{
+      day: string;
+      total: number;
+      anonymous: number;
+      job_seeker: number;
+      employer: number;
+    }>(sql`
+      SELECT to_char(d.day, 'YYYY-MM-DD') AS day,
+        count(DISTINCT a.visitor_id)::int AS total,
+        count(DISTINCT a.visitor_id) FILTER (WHERE a.audience = ${Audience.ANONYMOUS})::int AS anonymous,
+        count(DISTINCT a.visitor_id) FILTER (WHERE a.audience = ${Audience.JOB_SEEKER})::int AS job_seeker,
+        count(DISTINCT a.visitor_id) FILTER (WHERE a.audience = ${Audience.EMPLOYER})::int AS employer
+      FROM generate_series(${from}::date, ${to}::date, interval '1 day') AS d(day)
+      JOIN visitor_daily_activity a
+        ON a.day BETWEEN d.day::date - ${analyticsConfig.rollingWindowDays - 1}::int AND d.day::date
+      GROUP BY d.day
+    `);
+
+    for (const row of rows) {
+      counts.set(row.day, {
+        total: row.total,
+        anonymous: row.anonymous,
+        jobSeeker: row.job_seeker,
+        employer: row.employer,
+      });
+    }
+    return counts;
   }
 
   private async monthlySeries(
@@ -273,11 +321,13 @@ export class AnalyticsReportService {
   ): Promise<VisitorSeriesPoint[]> {
     const { rows } = await this.db.execute<{
       month: string;
+      total: number;
       anonymous: number;
       job_seeker: number;
       employer: number;
     }>(sql`
       SELECT to_char(day, 'YYYY-MM') AS month,
+        count(DISTINCT visitor_id)::int AS total,
         count(DISTINCT visitor_id) FILTER (WHERE audience = ${Audience.ANONYMOUS})::int AS anonymous,
         count(DISTINCT visitor_id) FILTER (WHERE audience = ${Audience.JOB_SEEKER})::int AS job_seeker,
         count(DISTINCT visitor_id) FILTER (WHERE audience = ${Audience.EMPLOYER})::int AS employer
@@ -296,21 +346,20 @@ export class AnalyticsReportService {
 
     return listMonths(windowStart, today).map((month) => {
       if (month === currentMonth) {
-        return {
-          label: labelOfMonth(month),
-          anonymous: current.anonymous,
-          jobSeeker: current.jobSeeker,
-          employer: current.employer,
-          mau: null,
-        };
+        return { label: labelOfMonth(month), dau: null, mau: current };
       }
       const row = byMonth.get(month);
       return {
         label: labelOfMonth(month),
-        anonymous: row?.anonymous ?? 0,
-        jobSeeker: row?.job_seeker ?? 0,
-        employer: row?.employer ?? 0,
-        mau: null,
+        dau: null,
+        mau: row
+          ? {
+              total: row.total,
+              anonymous: row.anonymous,
+              jobSeeker: row.job_seeker,
+              employer: row.employer,
+            }
+          : EMPTY_COUNTS,
       };
     });
   }
