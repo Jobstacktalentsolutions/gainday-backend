@@ -6,9 +6,16 @@ import { AuthModule } from '../auth/auth.module';
 import { GenerationModule } from '../generation/generation.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CreditsModule } from '../credits/credits.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
-  imports: [AuthModule, GenerationModule, NotificationsModule, CreditsModule],
+  imports: [
+    AuthModule,
+    GenerationModule,
+    NotificationsModule,
+    CreditsModule,
+    AnalyticsModule,
+  ],
   controllers: [AdminController, AdminNotificationsController],
   providers: [AdminService],
   exports: [AdminService],

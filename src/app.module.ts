@@ -20,6 +20,8 @@ import { SupportModule } from './modules/support/support.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { CapabilityPassportModule } from './modules/capability-passport/capability-passport.module';
 import { JobRecommendationsModule } from './modules/job-recommendations/job-recommendations.module';
+import { RedisModule } from './modules/redis/redis.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -57,6 +59,9 @@ import { AppService } from './app.service';
       }),
     }),
 
+    // Shared Redis client for high-frequency writes (visitor analytics)
+    RedisModule,
+
     // Core Business Logic Modules
     AuthModule,
     UsersModule,
@@ -70,6 +75,7 @@ import { AppService } from './app.service';
     SupportModule,
     ReviewsModule,
     JobRecommendationsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

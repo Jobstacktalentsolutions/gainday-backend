@@ -17,3 +17,4 @@ export * from './candidate-notifications.schema';
 export * from './job-recommendations.schema';
 export * from './notification-preferences.schema';
 export * from './experience-reviews.schema';
+export * from './analytics.schema';

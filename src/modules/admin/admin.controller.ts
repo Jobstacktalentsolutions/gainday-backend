@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
+import { AnalyticsReportService } from '../analytics/analytics-report.service';
+import { VisitorAnalyticsQueryDto } from './dto/analytics-query.dto';
 import { SignupBonusSettingsService } from '../credits/signup-bonus-settings.service';
 import { CreditAdminService } from '../credits/credit-admin.service';
 import { UpdateSignupBonusSettingsDto } from './dto/update-signup-bonus-settings.dto';
@@ -43,7 +45,13 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly signupBonusSettingsService: SignupBonusSettingsService,
     private readonly creditAdminService: CreditAdminService,
+    private readonly visitorAnalytics: AnalyticsReportService,
   ) {}
+
+  @Get('analytics/visitors')
+  async getVisitorAnalytics(@Query() query: VisitorAnalyticsQueryDto) {
+    return this.visitorAnalytics.getReport(query.timeframe);
+  }
 
   @Get('settings/signup-bonus')
   async getSignupBonusSettings() {

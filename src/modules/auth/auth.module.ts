@@ -47,6 +47,6 @@ const jwtModuleOptions: JwtModuleAsyncOptions = {
     RolesGuard,
     JwtAuthGuard,
   ],
-  exports: [AuthService, RolesGuard, JwtAuthGuard, PassportModule],
+  exports: [AuthService, RolesGuard, JwtAuthGuard, PassportModule, JwtModule],
 })
 export class AuthModule {}
