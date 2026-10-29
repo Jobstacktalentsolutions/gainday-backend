@@ -19,6 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed-candidate-titles": "ts-node -r tsconfig-paths/register src/db/scripts/seed-candidate-titles.ts",
+    "db:seed-test-candidates": "ts-node -r tsconfig-paths/register src/db/scripts/seed-test-candidates.ts",
+    "db:seed-test-applications": "ts-node -r tsconfig-paths/register src/db/scripts/seed-test-applications.ts",
     "recs:send-test": "ts-node -r tsconfig-paths/register src/modules/job-recommendations/send-test-recommendation.ts",
     "recs:preview": "ts-node -r tsconfig-paths/register src/modules/job-recommendations/preview-matches.ts",
     "roles:evaluate": "ts-node -r tsconfig-paths/register src/modules/generation/roles/evaluation/run-role-evaluation.ts",

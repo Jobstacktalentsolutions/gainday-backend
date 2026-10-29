@@ -15,6 +15,9 @@ export interface EmailPayload {
   bcc?: string[];
 }
 
+/** Synthetic test candidates use this domain. Mail to it is dropped, never sent. */
+const BLOCKED_EMAIL_SUFFIX = '@example.com';
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -87,13 +90,26 @@ export class EmailService {
     }
   }
 
+  /** Drops blocked test addresses. Returns what is left to deliver to. */
+  private deliverableRecipients(to: string | string[]): string[] {
+    return [to]
+      .flat()
+      .filter((email) => !email.toLowerCase().endsWith(BLOCKED_EMAIL_SUFFIX));
+  }
+
   async sendEmail(payload: EmailPayload): Promise<void> {
+    const recipients = this.deliverableRecipients(payload.to);
+    if (recipients.length === 0) {
+      this.logger.log(
+        `Skipped email "${payload.subject}": recipients are blocked test addresses`,
+      );
+      return;
+    }
+
     try {
       const html = await this.renderTemplate(payload.template, payload.context);
 
-      const toList = Array.isArray(payload.to)
-        ? payload.to.map((email) => ({ email }))
-        : [{ email: payload.to }];
+      const toList = recipients.map((email) => ({ email }));
 
       const emailData: Record<string, any> = {
         to: toList,
@@ -125,9 +141,7 @@ export class EmailService {
         },
       });
 
-      this.logger.log(
-        `Email sent successfully to ${Array.isArray(payload.to) ? payload.to.join(', ') : payload.to}`,
-      );
+      this.logger.log(`Email sent successfully to ${recipients.join(', ')}`);
     } catch (error: any) {
       if (error.isAxiosError) {
         const status = error.response?.status;
@@ -147,10 +161,18 @@ export class EmailService {
     template: string,
     context: Record<string, any> = {},
   ): Promise<void> {
+    const deliverable = this.deliverableRecipients(recipients);
+    if (deliverable.length === 0) {
+      this.logger.log(
+        `Skipped batch email "${subject}": recipients are blocked test addresses`,
+      );
+      return;
+    }
+
     try {
       const html = await this.renderTemplate(template, context);
 
-      const toList = recipients.map((email) => ({ email }));
+      const toList = deliverable.map((email) => ({ email }));
 
       const emailData = {
         to: toList,
@@ -170,7 +192,7 @@ export class EmailService {
         },
       });
 
-      this.logger.log(`Batch email sent to ${recipients.length} recipients`);
+      this.logger.log(`Batch email sent to ${deliverable.length} recipients`);
     } catch (error: any) {
       if (error.isAxiosError) {
         const status = error.response?.status;
