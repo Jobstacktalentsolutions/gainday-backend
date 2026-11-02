@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your job is live</title>
+  <%- include('partials/_styles') %>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <%- include('partials/_header', { bannerTitle: 'Your job is live' }) %>
+
+      <div class="content">
+        <p class="intro">
+          <% if (jobTitle) { %>
+          Your job <strong><%= jobTitle %></strong> is now live on the Gainday job board.
+          <% } else { %>
+          Your job is now live on the Gainday job board.
+          <% } %>
+          Candidates can find it and complete your work simulation.
+        </p>
+
+        <div class="cta-wrap">
+          <a href="<%= viewJobUrl %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            View job
+          </a>
+        </div>
+
+        <div class="divider"></div>
+
+        <p class="intro" style="font-size: 13px; color: #6a6a85;">
+          Candidate results appear on the job's submissions page as they complete the simulation.
+        </p>
+      </div>
+
+      <%- include('partials/_footer', { year: year, appUrl: appUrl }) %>
+    </div>
+  </div>
+</body>
+</html>
