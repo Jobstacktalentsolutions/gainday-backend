@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { JOB_DESCRIPTION_TARGET_LENGTH } from '../job-description.constants';
 
 // Structured output for POST /jobs/parse-description — takes a recruiter's raw, unstructured job
 // description text and both (a) extracts the fields the employer job-posting form knows about,
@@ -86,7 +87,7 @@ export const parsedJobDescriptionSchema = z.object({
   formattedDescription: z
     .string()
     .describe(
-      'A cleaned-up, well-structured rewrite of the job description as GitHub-flavored markdown, rendered by a real markdown parser. Use real "## Heading" syntax for section titles (never bold text as a stand-in for a heading), and real "- item" markdown lists (one item per line, never items strung together inline) for any enumerable content like responsibilities or requirements. Preserve all substantive content from the original text (responsibilities, requirements, context); do not invent new claims. This field is always produced, even if other fields above are null.',
+      `A cleaned-up, well-structured rewrite of the job description as GitHub-flavored markdown, rendered by a real markdown parser. Must be under ${JOB_DESCRIPTION_TARGET_LENGTH} characters including markdown: condense wording to fit, but keep all substantive content (responsibilities, requirements, context). Use real "## Heading" syntax for section titles (never bold text as a stand-in for a heading), and real "- item" markdown lists (one item per line, never items strung together inline) for any enumerable content. Do not invent new claims. This field is always produced, even if other fields above are null.`,
     ),
   businessProblem: z
     .string()

@@ -8,6 +8,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
+import { JOB_DESCRIPTION_MAX_LENGTH } from '../job-description.constants';
 
 export class SaveDraftJobDto {
   @IsOptional()
@@ -39,15 +40,16 @@ export class SaveDraftJobDto {
   @IsBoolean()
   isRemoteFriendly?: boolean;
 
+  // null clears a previously saved bound; zero is normalised to null by the service.
   @IsOptional()
   @IsInt()
   @Min(0)
-  salaryFrom?: number;
+  salaryFrom?: number | null;
 
   @IsOptional()
   @IsInt()
   @Min(0)
-  salaryTo?: number;
+  salaryTo?: number | null;
 
   @IsOptional()
   @IsString()
@@ -60,7 +62,9 @@ export class SaveDraftJobDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(5000, { message: 'Keep it under 5000 characters' })
+  @MaxLength(JOB_DESCRIPTION_MAX_LENGTH, {
+    message: `Keep it under ${JOB_DESCRIPTION_MAX_LENGTH} characters`,
+  })
   description?: string;
 
   @IsOptional()

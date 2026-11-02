@@ -389,7 +389,7 @@ export class GenerationService {
         skillLevel: 'Unspecified',
         location: 'N/A',
         employmentType: 'N/A',
-        salaryRange: { min: 0, max: 0, currency: 'USD' },
+        salaryRange: { min: null, max: null, currency: 'GBP' },
         applicationDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         businessProblem: dto.businessProblem,
         status: 'GENERATING',

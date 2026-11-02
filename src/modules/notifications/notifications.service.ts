@@ -48,6 +48,53 @@ export class NotificationsService {
     this.logger.log(`Email verification email enqueued for ${to}`);
   }
 
+  /** Sent on account creation. Accounts work before verification, so this doesn't depend on it. */
+  async sendWelcomeEmail(
+    to: string,
+    fullName: string,
+    role: UserRole,
+  ): Promise<void> {
+    const appUrl = this.configService.getOrThrow<string>('email.appUrl');
+    const isEmployer = role === UserRole.EMPLOYER;
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: 'Welcome to Gainday',
+      template: 'welcome',
+      context: {
+        fullName,
+        isEmployer,
+        ctaUrl: isEmployer
+          ? `${appUrl}/employer/jobs`
+          : `${appUrl}/job-board`,
+        year: new Date().getFullYear(),
+      },
+    });
+
+    this.logger.log(`Welcome email enqueued for ${to}`);
+  }
+
+  /** Sent the first time a job goes live. The button opens the employer's view of the job. */
+  async sendJobLiveEmail(
+    to: string,
+    job: { id: string; title: string | null },
+  ): Promise<void> {
+    const appUrl = this.configService.getOrThrow<string>('email.appUrl');
+
+    await this.emailQueueService.enqueueEmail({
+      to,
+      subject: 'Your job is live on Gainday',
+      template: 'job-live',
+      context: {
+        jobTitle: job.title,
+        viewJobUrl: `${appUrl}/employer/jobs/${job.id}/preview`,
+        year: new Date().getFullYear(),
+      },
+    });
+
+    this.logger.log(`Job live email enqueued for ${to}`);
+  }
+
   async sendPasswordResetEmail(
     to: string,
     token: string,

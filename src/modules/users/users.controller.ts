@@ -15,6 +15,7 @@ import { JobSeekerProfileService } from './job-seeker-profile.service';
 import { AdminProfileService } from './admin-profile.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AllowUnverifiedEmail } from '../auth/decorators/allow-unverified-email.decorator';
 import { UserRole } from '../../db/schema';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { jobSeekerProfileFields } from './job-seeker-profile-fields';
@@ -30,6 +31,7 @@ export class UsersController {
   ) {}
 
   @Get('profile')
+  @AllowUnverifiedEmail()
   async getProfile(@CurrentUser() user: any) {
     return user;
   }

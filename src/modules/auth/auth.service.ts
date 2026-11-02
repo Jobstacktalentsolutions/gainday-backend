@@ -394,6 +394,11 @@ export class AuthService {
       UserRole.EMPLOYER,
       redirectPath,
     );
+    await this.notificationsService.sendWelcomeEmail(
+      email,
+      fullName,
+      UserRole.EMPLOYER,
+    );
 
     return this.login(user);
   }
@@ -443,6 +448,11 @@ export class AuthService {
     await this.notificationsService.sendVerificationEmail(
       email,
       emailVerificationToken,
+      UserRole.JOB_SEEKER,
+    );
+    await this.notificationsService.sendWelcomeEmail(
+      email,
+      fullName,
       UserRole.JOB_SEEKER,
     );
 

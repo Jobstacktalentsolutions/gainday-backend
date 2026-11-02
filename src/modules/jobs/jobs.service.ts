@@ -1,6 +1,7 @@
 import {
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ConflictException,
@@ -17,18 +18,23 @@ import {
   JobStatus,
   UserRole,
 } from '../../db/schema';
+import { NotificationsService } from '../notifications/notifications.service';
 import { JobBoardCacheService } from './job-board/job-board-cache.service';
 import { countPendingTaskReviews } from '../generation/generation-review.util';
 import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
+import { toSalaryBound } from './salary-bound.util';
 
 type JobDetailsInput = CreateJobDto | SaveDraftJobDto;
 
 @Injectable()
 export class JobsService {
+  private readonly logger = new Logger(JobsService.name);
+
   constructor(
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly jobBoardCache: JobBoardCacheService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private toJobValues(dto: JobDetailsInput): Partial<NewJob> {
@@ -51,8 +57,8 @@ export class JobsService {
 
     if (dto.salaryFrom !== undefined || dto.salaryTo !== undefined) {
       const salaryRange: SalaryRange = {
-        min: dto.salaryFrom ?? null,
-        max: dto.salaryTo ?? null,
+        min: toSalaryBound(dto.salaryFrom),
+        max: toSalaryBound(dto.salaryTo),
         currency: 'GBP',
       };
       values.salaryRange = salaryRange;
@@ -117,6 +123,14 @@ export class JobsService {
         'Some tasks are still under admin review. The job can be published once they are resolved.',
       );
     }
+    const existing = await this.db.query.jobs.findFirst({
+      where: eq(jobs.id, jobId),
+      with: { employer: { with: { user: true } } },
+    });
+    if (!existing) {
+      throw new NotFoundException('Job not found');
+    }
+
     const [job] = await this.db
       .update(jobs)
       .set({ status: 'ACTIVE', activatedAt: new Date(), updatedAt: new Date() })
@@ -126,7 +140,21 @@ export class JobsService {
       throw new NotFoundException('Job not found');
     }
     await this.jobBoardCache.invalidateAll();
+
+    // Only the first move to live notifies the employer; re-publishing a live job stays quiet.
+    if (existing.status !== 'ACTIVE') {
+      await this.notifyEmployerJobLive(job, existing.employer.user.email);
+    }
     return job;
+  }
+
+  /** Best-effort: a failed email must not undo a publish that already succeeded. */
+  private async notifyEmployerJobLive(job: Job, employerEmail: string) {
+    try {
+      await this.notificationsService.sendJobLiveEmail(employerEmail, job);
+    } catch (error) {
+      this.logger.error(`Failed to send job live email for job ${job.id}`, error);
+    }
   }
 
   /**

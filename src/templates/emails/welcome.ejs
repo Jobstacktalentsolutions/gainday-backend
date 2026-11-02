@@ -13,50 +13,45 @@
 
       <div class="content">
         <p class="intro">
-          Your account is ready to go. Log in to start creating job simulations, assessing candidates with real-world tasks, and hiring with confidence.
+          Hi <%= fullName %>, your account is ready.
+          <% if (isEmployer) { %>
+          Gainday helps you hire on evidence: candidates complete a work simulation based on your role, and you review their results before deciding who to interview.
+          <% } else { %>
+          Gainday lets you show what you can do: complete a work simulation for a role you are interested in, and receive a scored assessment of your skills.
+          <% } %>
         </p>
 
         <div class="cta-wrap">
-          <a href="<%= typeof dashboardUrl !== 'undefined' && dashboardUrl ? dashboardUrl : (appUrl + '/employer/jobs') %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
-            Access Your Dashboard
+          <a href="<%= ctaUrl %>" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+            <%= isEmployer ? 'Go to your dashboard' : 'Browse open roles' %>
           </a>
         </div>
 
         <div class="divider"></div>
 
-        <h3 style="font-size: 16px; font-weight: 600; color: #1a1a2e; margin-bottom: 16px;">What you can do with Gainday:</h3>
-        
+        <h3 style="font-size: 16px; font-weight: 600; color: #1a1a2e; margin-bottom: 16px;">What you can do on Gainday</h3>
+
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 16px 0;">
+          <% (isEmployer ? [
+            '<strong>Create a job</strong> with a work simulation tailored to the role',
+            '<strong>Review candidate results</strong>, including scores and reasoning for each task',
+            '<strong>Unlock candidate contact details</strong> for the candidates you want to take forward',
+          ] : [
+            '<strong>Browse open roles</strong> from employers on the job board',
+            '<strong>Complete work simulations</strong> that reflect the job itself',
+            '<strong>Receive a scored assessment</strong> of your skills, with feedback on each task',
+          ]).forEach(function (item) { %>
           <tr>
             <td width="24" valign="top" style="padding-bottom: 12px; color: #1817fe; font-weight: 700; font-size: 16px;">&#10003;</td>
-            <td valign="top" style="padding-bottom: 12px; font-size: 14px; color: #3a3a4d;">
-              <strong>Create work simulations</strong> tailored to your specific open roles in minutes
-            </td>
+            <td valign="top" style="padding-bottom: 12px; font-size: 14px; color: #3a3a4d;"><%- item %></td>
           </tr>
-          <tr>
-            <td width="24" valign="top" style="padding-bottom: 12px; color: #1817fe; font-weight: 700; font-size: 16px;">&#10003;</td>
-            <td valign="top" style="padding-bottom: 12px; font-size: 14px; color: #3a3a4d;">
-              <strong>Invite candidates</strong> and evaluate real skills instead of resume keywords
-            </td>
-          </tr>
-          <tr>
-            <td width="24" valign="top" style="padding-bottom: 12px; color: #1817fe; font-weight: 700; font-size: 16px;">&#10003;</td>
-            <td valign="top" style="padding-bottom: 12px; font-size: 14px; color: #3a3a4d;">
-              <strong>Review AI-evaluated capability scores</strong> with detailed reasoning
-            </td>
-          </tr>
-          <tr>
-            <td width="24" valign="top" style="padding-bottom: 12px; color: #1817fe; font-weight: 700; font-size: 16px;">&#10003;</td>
-            <td valign="top" style="padding-bottom: 12px; font-size: 14px; color: #3a3a4d;">
-              <strong>Fast-track top performers</strong> straight to final round interviews
-            </td>
-          </tr>
+          <% }); %>
         </table>
 
         <div class="divider"></div>
 
         <p class="intro" style="font-size: 13px; color: #6a6a85;">
-          Need help getting started? Check our <a href="<%= appUrl %>/help" style="color:#1817fe !important; text-decoration:none;">help center</a> or <a href="mailto:support@gainday.com" style="color:#1817fe !important; text-decoration:none;">contact our team</a>.
+          Questions? Visit our <a href="<%= appUrl %>/help" style="color:#1817fe !important; text-decoration:none;">help center</a> or <a href="mailto:support@gainday.com" style="color:#1817fe !important; text-decoration:none;">contact our team</a>.
         </p>
       </div>
 

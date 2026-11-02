@@ -30,6 +30,7 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { AllowUnverifiedEmail } from './decorators/allow-unverified-email.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -223,6 +224,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @AllowUnverifiedEmail()
   getProfile(@CurrentUser() user: any) {
     return {
       user,

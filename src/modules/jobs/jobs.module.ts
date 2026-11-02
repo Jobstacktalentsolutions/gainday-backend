@@ -5,9 +5,10 @@ import { JobDescriptionParserService } from './job-description-parser.service';
 import { JobBoardCacheService } from './job-board/job-board-cache.service';
 import { JobBoardService } from './job-board/job-board.service';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, NotificationsModule],
   controllers: [JobsController],
   providers: [
     JobsService,

@@ -9,10 +9,17 @@ import {
 } from './schemas/parsed-job-description.schema';
 import { dropUnspecifiedFields } from './drop-unspecified-fields';
 import { roleInferenceInstructions } from '../generation/roles/role-inference';
+import {
+  JOB_DESCRIPTION_MAX_LENGTH,
+  JOB_DESCRIPTION_TARGET_LENGTH,
+} from './job-description.constants';
 
 const logger = new Logger('JobDescriptionParserService');
 
-const PARSE_PROMPT = `You are helping an employer turn a rough, unstructured job description into a
+const PARSE_PROMPT = `HARD LIMIT: formattedDescription must be under ${JOB_DESCRIPTION_TARGET_LENGTH} characters, markdown included.
+Condense wording and merge repeated points to fit; keep every responsibility, requirement and context point.
+
+You are helping an employer turn a rough, unstructured job description into a
 structured job posting. Given the raw text below, extract every field you can determine and rewrite
 the description itself into a clean, well-formatted, candidate-facing job description in
 GitHub-flavored markdown.
@@ -23,9 +30,8 @@ Rules:
 - Normalize enum-shaped fields (skillLevel, employmentType) to exactly one of the allowed values
   described on each field — do not return any other spelling or value. For "role", follow this:
   ${roleInferenceInstructions()}
-- The rewritten description should preserve all substantive content (responsibilities,
-  requirements, context) from the original — it's a cleanup and reformat, not a summary that drops
-  information.
+- The rewritten description is a cleanup and reformat of the original. Keep all substantive content
+  (responsibilities, requirements, context); shorten only the wording, never drop a point.
 - Omit any application instructions, CV/resume submission details, or links/methods on how to apply.
 - Only extract businessProblem if the text explicitly names a specific problem this hire should
   solve — a generic role description with no such problem stated means null.
@@ -64,6 +70,12 @@ export class JobDescriptionParserService {
     logger.log(
       `Parsed job description: title="${result.title ?? 'null'}", role=${result.role ?? 'null'}, businessProblem=${result.businessProblem ? 'present' : 'null'}`,
     );
+
+    if (result.formattedDescription.length > JOB_DESCRIPTION_MAX_LENGTH) {
+      logger.warn(
+        `Model returned a ${result.formattedDescription.length}-char description, over the ${JOB_DESCRIPTION_MAX_LENGTH}-char maximum`,
+      );
+    }
 
     // Strict structured output makes the model fill every field, so an unmentioned field can come
     // back as null or as a placeholder ("null", -1). Those are dropped here so the frontend never
