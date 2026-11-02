@@ -1,11 +1,18 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
-import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { and, count, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
   employerProfiles,
   experienceReviews,
+  jobs,
   jobSeekerProfiles,
+  submissions,
   users,
   UserRole,
 } from '../../db/schema';
@@ -19,38 +26,47 @@ const roundToTwoDecimals = (value: number) => Math.round(value * 100) / 100;
 export class ReviewsService {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDb) {}
 
-  async findMine(userId: string) {
-    const [review] = await this.db
-      .select({
-        id: experienceReviews.id,
-        rating: experienceReviews.rating,
-        comment: experienceReviews.comment,
-        createdAt: experienceReviews.createdAt,
-      })
-      .from(experienceReviews)
-      .where(eq(experienceReviews.userId, userId))
-      .limit(1);
-
-    return { review: review ?? null };
-  }
-
+  /**
+   * Records the rating for one completed assessment. Only the candidate who completed it can rate
+   * it, and each submission takes one rating. The insert-or-nothing keeps that safe against double
+   * submits.
+   */
   async create(userId: string, dto: CreateExperienceReviewDto) {
-    const comment = dto.comment?.trim();
+    const [submission] = await this.db
+      .select({ id: submissions.id })
+      .from(submissions)
+      .innerJoin(jobSeekerProfiles, eq(jobSeekerProfiles.id, submissions.candidateId))
+      .where(
+        and(
+          eq(submissions.id, dto.submissionId),
+          eq(jobSeekerProfiles.userId, userId),
+          isNotNull(submissions.completedAt),
+        ),
+      );
+    if (!submission) {
+      throw new NotFoundException('Completed assessment not found');
+    }
 
-    // Insert-or-nothing keeps the one-review-per-user rule safe against double submits.
+    const comment = dto.comment?.trim();
     const [inserted] = await this.db
       .insert(experienceReviews)
-      .values({ userId, rating: dto.rating, comment: comment || null })
-      .onConflictDoNothing({ target: experienceReviews.userId })
+      .values({
+        userId,
+        submissionId: submission.id,
+        rating: dto.rating,
+        comment: comment || null,
+      })
+      .onConflictDoNothing({ target: experienceReviews.submissionId })
       .returning({
         id: experienceReviews.id,
+        submissionId: experienceReviews.submissionId,
         rating: experienceReviews.rating,
         comment: experienceReviews.comment,
         createdAt: experienceReviews.createdAt,
       });
 
     if (!inserted) {
-      throw new ConflictException('You have already shared your experience');
+      throw new ConflictException('You have already rated this assessment');
     }
     return inserted;
   }
@@ -120,6 +136,10 @@ export class ReviewsService {
         rating: experienceReviews.rating,
         comment: experienceReviews.comment,
         createdAt: experienceReviews.createdAt,
+        reviewerUserId: experienceReviews.userId,
+        submissionId: experienceReviews.submissionId,
+        jobId: jobs.id,
+        jobTitle: jobs.title,
         role: users.role,
         email: users.email,
         candidateName: jobSeekerProfiles.fullName,
@@ -129,6 +149,8 @@ export class ReviewsService {
       .innerJoin(users, eq(users.id, experienceReviews.userId))
       .leftJoin(jobSeekerProfiles, eq(jobSeekerProfiles.userId, experienceReviews.userId))
       .leftJoin(employerProfiles, eq(employerProfiles.userId, experienceReviews.userId))
+      .leftJoin(submissions, eq(submissions.id, experienceReviews.submissionId))
+      .leftJoin(jobs, eq(jobs.id, submissions.jobId))
       .orderBy(desc(experienceReviews.createdAt))
       .limit(limit)
       .offset(offset);
@@ -145,6 +167,10 @@ export class ReviewsService {
         role: row.role,
         email: row.email,
         reviewerName: row.role === UserRole.EMPLOYER ? row.companyName : row.candidateName,
+        reviewerUserId: row.reviewerUserId,
+        submissionId: row.submissionId,
+        jobId: row.jobId,
+        jobTitle: row.jobTitle,
       })),
       pagination: {
         page,

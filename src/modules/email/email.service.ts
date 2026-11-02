@@ -39,6 +39,12 @@ export class EmailService {
       'http://localhost:3000',
     );
 
+    if (/localhost|127\.0\.0\.1/.test(this.appUrl)) {
+      this.logger.warn(
+        `APP_URL is "${this.appUrl}". Email logos and links will not load in real inboxes; set APP_URL to the public site URL.`,
+      );
+    }
+
     if (!this.apiKey) {
       this.logger.warn('Brevo API key not configured');
     }

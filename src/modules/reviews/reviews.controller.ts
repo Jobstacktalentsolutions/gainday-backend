@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -7,17 +7,13 @@ import { UserRole } from '../../db/schema';
 import { ReviewsService } from './reviews.service';
 import { CreateExperienceReviewDto } from './dto/create-experience-review.dto';
 
-// Candidates and employers both rate their experience. Admins have their own endpoints.
+// Candidates rate each assessment they complete, right after it is submitted. Admins have their
+// own read endpoints.
 @Controller('reviews')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.JOB_SEEKER, UserRole.EMPLOYER)
+@Roles(UserRole.JOB_SEEKER)
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
-
-  @Get('me')
-  findMine(@CurrentUser() user: { id: string }) {
-    return this.reviewsService.findMine(user.id);
-  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

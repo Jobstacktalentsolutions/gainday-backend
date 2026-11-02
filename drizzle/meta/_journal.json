@@ -239,6 +239,13 @@
       "when": 1793283650149,
       "tag": "0033_giant_microchip",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793643037629,
+      "tag": "0034_shallow_nicolaos",
+      "breakpoints": true
     }
   ]
 }
