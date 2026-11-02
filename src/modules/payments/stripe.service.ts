@@ -2,6 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
+// How long an unpaid checkout stays payable. Stripe's default is 24h; a pack purchase that's
+// abandoned should be closed out within the hour so its PENDING row doesn't linger.
+const CHECKOUT_SESSION_TTL_SECONDS = 30 * 60;
+
 @Injectable()
 export class StripeService {
   private readonly logger = new Logger(StripeService.name);
@@ -34,6 +38,7 @@ export class StripeService {
     const session = await this.stripe.checkout.sessions.create({
       ui_mode: 'embedded_page',
       mode: 'payment',
+      expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_SESSION_TTL_SECONDS,
       // Embedded Checkout defaults to `redirect_on_completion: 'always'` — without this, Stripe
       // navigates the whole page to a return_url the instant a card payment finishes, even
       // though it completed entirely inside the iframe (this was the original bug: the employer
