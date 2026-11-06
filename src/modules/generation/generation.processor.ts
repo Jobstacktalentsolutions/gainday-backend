@@ -8,10 +8,12 @@ import {
   jobs,
   simulations,
   DEFAULT_SIMULATION_TIME_LIMIT_MINUTES,
+  AdminNotificationSeverity,
 } from '../../db/schema';
 import { GENERATION_QUEUE } from './generation.constants';
 import { GenerationService } from './generation.service';
 import { JobBoardCacheService } from '../jobs/job-board/job-board-cache.service';
+import { AdminNotificationsService } from '../notifications/admin-notifications.service';
 
 @Processor(GENERATION_QUEUE)
 @Injectable()
@@ -22,6 +24,7 @@ export class GenerationProcessor extends WorkerHost {
     @Inject(DRIZZLE) private readonly db: DrizzleDb,
     private readonly generationService: GenerationService,
     private readonly jobBoardCache: JobBoardCacheService,
+    private readonly adminNotificationsService: AdminNotificationsService,
   ) {
     super();
   }
@@ -94,6 +97,23 @@ export class GenerationProcessor extends WorkerHost {
         .update(jobs)
         .set({ status: 'GENERATION_FAILED', updatedAt: new Date() })
         .where(eq(jobs.id, jobId));
+
+      try {
+        await this.adminNotificationsService.create({
+          severity: AdminNotificationSeverity.CRITICAL,
+          type: 'GENERATION_FAILED',
+          title: 'Simulation generation failed',
+          message: `Simulation generation failed for job "${job?.title ?? jobId}": ${(err as Error)?.message ?? 'Unknown error'}`,
+          details: (err as Error)?.stack ?? String(err),
+          metadata: { jobId },
+        });
+      } catch (notifyErr) {
+        this.logger.error(
+          `Failed to record admin notification for generation failure on Job ID ${jobId}:`,
+          notifyErr,
+        );
+      }
+
       throw err;
     }
   }

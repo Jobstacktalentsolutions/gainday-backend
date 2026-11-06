@@ -10,7 +10,7 @@ describe('plannedSimulationSchema', () => {
   ];
   const schema = plannedSimulationSchema(allowedKeys);
 
-  it('validates a plan with 4 unique taskTypes successfully', () => {
+  it('validates a plan with 4 taskTypes successfully', () => {
     const validData = {
       candidates: [
         {
@@ -38,41 +38,6 @@ describe('plannedSimulationSchema', () => {
 
     const parsed = schema.safeParse(validData);
     expect(parsed.success).toBe(true);
-  });
-
-  it('rejects a plan if any taskType is duplicated', () => {
-    const duplicateData = {
-      candidates: [
-        {
-          candidateId: 'cand-1',
-          taskType: 'TYPE_A',
-          briefDescription: 'Tests skill A',
-        },
-        {
-          candidateId: 'cand-2',
-          taskType: 'TYPE_B',
-          briefDescription: 'Tests skill B',
-        },
-        {
-          candidateId: 'cand-3',
-          taskType: 'TYPE_A', // Duplicate of cand-1!
-          briefDescription: 'Tests skill A again',
-        },
-        {
-          candidateId: 'cand-4',
-          taskType: 'TYPE_D',
-          briefDescription: 'Tests skill D',
-        },
-      ],
-    };
-
-    const parsed = schema.safeParse(duplicateData);
-    expect(parsed.success).toBe(false);
-    if (!parsed.success) {
-      expect(parsed.error.errors[0].message).toContain(
-        'unique taskType',
-      );
-    }
   });
 
   it('rejects a plan if an unallowed taskType is provided', () => {

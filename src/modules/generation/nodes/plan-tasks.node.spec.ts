@@ -78,4 +78,56 @@ describe('planTasksNode', () => {
     const types = result.candidatePool?.map((c) => c.taskType);
     expect(new Set(types).size).toBe(4);
   });
+
+  it('deduplicates and fills from unused role types if model ever returns duplicate taskTypes', async () => {
+    const duplicateCandidates = [
+      { candidateId: 'cand-1', taskType: 'TYPE_A', briefDescription: 'A' },
+      { candidateId: 'cand-2', taskType: 'TYPE_A', briefDescription: 'A duplicate' },
+      { candidateId: 'cand-3', taskType: 'TYPE_B', briefDescription: 'B' },
+      { candidateId: 'cand-4', taskType: 'TYPE_B', briefDescription: 'B duplicate' },
+    ];
+
+    const mockInvoke = jest.fn().mockResolvedValue({
+      candidates: duplicateCandidates,
+    });
+    const mockModel = {
+      withStructuredOutput: jest.fn().mockReturnValue({
+        pipe: jest.fn().mockReturnValue({
+          invoke: mockInvoke,
+        }),
+        invoke: mockInvoke,
+      }),
+    } as unknown as BaseChatModel;
+
+    const mockCtx = {
+      generationModel: mockModel,
+      config: { selectedTaskCount: 4 },
+    } as unknown as GenerationContext;
+
+    const mockState = {
+      jobId: 'job-456',
+      category: 'Sales',
+      intent: 'Outreach and qualification',
+      problem: null,
+      roleModule: {
+        allowedTaskPatternTypes: [
+          { key: 'TYPE_A', description: 'Type A' },
+          { key: 'TYPE_B', description: 'Type B' },
+          { key: 'TYPE_C', description: 'Type C' },
+          { key: 'TYPE_D', description: 'Type D' },
+        ],
+      },
+    } as unknown as GenerationState;
+
+    const node = planTasksNode(mockCtx);
+    const result = await node(mockState);
+
+    expect(result.candidatePool).toHaveLength(4);
+    const types = result.candidatePool?.map((c) => c.taskType);
+    expect(new Set(types).size).toBe(4);
+    expect(types).toContain('TYPE_A');
+    expect(types).toContain('TYPE_B');
+    expect(types).toContain('TYPE_C');
+    expect(types).toContain('TYPE_D');
+  });
 });

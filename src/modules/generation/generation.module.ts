@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { JobsModule } from '../jobs/jobs.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { GENERATION_QUEUE } from './generation.constants';
 import { GenerationService } from './generation.service';
 import { GenerationProcessor } from './generation.processor';
@@ -9,7 +10,11 @@ import { GenerationTestController } from './generation-test.controller';
 import { RoleRegistry } from './roles/role-registry';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: GENERATION_QUEUE }), JobsModule],
+  imports: [
+    BullModule.registerQueue({ name: GENERATION_QUEUE }),
+    JobsModule,
+    NotificationsModule,
+  ],
   controllers: [GenerationTestController],
   providers: [
     GenerationService,

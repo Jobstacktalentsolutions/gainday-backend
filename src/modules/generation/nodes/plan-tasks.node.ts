@@ -61,14 +61,39 @@ export function planTasksNode(ctx: GenerationContext) {
       ),
     ]);
 
-    const candidatePool: TaskCandidateRecord[] = result.candidates
-      .slice(0, targetCount)
-      .map((c) => ({
-        candidateId: c.candidateId,
-        taskType: c.taskType,
-        briefDescription: c.briefDescription,
-        selected: true,
-      }));
+    const seenTypes = new Set<string>();
+    const uniqueCandidates: TaskCandidateRecord[] = [];
+    for (const c of result.candidates) {
+      if (!seenTypes.has(c.taskType)) {
+        seenTypes.add(c.taskType);
+        uniqueCandidates.push({
+          candidateId: c.candidateId,
+          taskType: c.taskType,
+          briefDescription: c.briefDescription,
+          selected: true,
+        });
+      }
+    }
+
+    // If any duplicate was filtered out and we have fewer than targetCount,
+    // fill the gap using unused allowed task types for this role.
+    if (uniqueCandidates.length < targetCount) {
+      const unusedTypes = state.roleModule.allowedTaskPatternTypes.filter(
+        (t) => !seenTypes.has(t.key),
+      );
+      for (const t of unusedTypes) {
+        if (uniqueCandidates.length >= targetCount) break;
+        seenTypes.add(t.key);
+        uniqueCandidates.push({
+          candidateId: `cand-${uniqueCandidates.length + 1}`,
+          taskType: t.key,
+          briefDescription: `Practical on-the-job exercise testing ${t.description.toLowerCase()}`,
+          selected: true,
+        });
+      }
+    }
+
+    const candidatePool = uniqueCandidates.slice(0, targetCount);
 
     logger.log(
       `Planned ${candidatePool.length} tasks: ${candidatePool.map((c) => `${c.candidateId}[${c.taskType}]`).join(', ')}`,
