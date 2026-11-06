@@ -1,51 +1,32 @@
-import { Pronouns } from '../../db/schema';
-
-interface PronounForms {
+interface PointerForms {
   subject: string;
   object: string;
   possessive: string;
   reflexive: string;
-  /** he/she take third-person-singular verbs ("is", "has"); singular they keeps "are", "have". */
-  singularVerbs: boolean;
 }
 
-const PRONOUN_FORMS: Record<Pronouns, PronounForms> = {
-  HE_HIM: {
-    subject: 'he',
-    object: 'him',
-    possessive: 'his',
-    reflexive: 'himself',
-    singularVerbs: true,
-  },
-  SHE_HER: {
-    subject: 'she',
-    object: 'her',
-    possessive: 'her',
-    reflexive: 'herself',
-    singularVerbs: true,
-  },
-  THEY_THEM: {
-    subject: 'they',
-    object: 'them',
-    possessive: 'their',
-    reflexive: 'themself',
-    singularVerbs: false,
-  },
+const FORMS: PointerForms = {
+  subject: 'this candidate',
+  object: 'this candidate',
+  possessive: "this candidate's",
+  reflexive: 'themself',
 };
 
 const APOS = `['’]`;
 
-// "you <verb>" phrases whose verb changes for he/she; `{s}` is the subject pronoun. Checked
-// before the plain pronoun replacements so the verb isn't left agreeing with "you".
-const VERB_PHRASES: { pattern: RegExp; singular: string; plural: string }[] = [
-  { pattern: /\byou are\b/gi, singular: '{s} is', plural: '{s} are' },
-  { pattern: new RegExp(`\\byou${APOS}re\\b`, 'gi'), singular: '{s} is', plural: "{s}'re" },
-  { pattern: /\byou were\b/gi, singular: '{s} was', plural: '{s} were' },
-  { pattern: /\byou have\b/gi, singular: '{s} has', plural: '{s} have' },
-  { pattern: new RegExp(`\\byou${APOS}ve\\b`, 'gi'), singular: '{s} has', plural: "{s}'ve" },
-  { pattern: /\byou do not\b/gi, singular: '{s} does not', plural: '{s} do not' },
-  { pattern: new RegExp(`\\byou don${APOS}t\\b`, 'gi'), singular: "{s} doesn't", plural: "{s} don't" },
-  { pattern: /\byou do\b/gi, singular: '{s} does', plural: '{s} do' },
+// "you <verb>" phrases whose verb changes to singular ("is", "has", "does", etc.). Checked
+// before plain replacements so the verb agrees with "this candidate".
+const VERB_PHRASES: { pattern: RegExp; singular: string }[] = [
+  { pattern: /\byou are\b/gi, singular: '{s} is' },
+  { pattern: new RegExp(`\\byou${APOS}re\\b`, 'gi'), singular: '{s} is' },
+  { pattern: /\byou were\b/gi, singular: '{s} was' },
+  { pattern: /\byou have\b/gi, singular: '{s} has' },
+  { pattern: new RegExp(`\\byou${APOS}ve\\b`, 'gi'), singular: '{s} has' },
+  { pattern: /\byou do not\b/gi, singular: '{s} does not' },
+  { pattern: new RegExp(`\\byou don${APOS}t\\b`, 'gi'), singular: "{s} doesn't" },
+  { pattern: /\byou do\b/gi, singular: '{s} does' },
+  { pattern: new RegExp(`\\byou${APOS}ll\\b`, 'gi'), singular: '{s} will' },
+  { pattern: new RegExp(`\\byou${APOS}d\\b`, 'gi'), singular: '{s} would' },
 ];
 
 // Words after which a lowercase "you" is still the subject ("...and you chose..."), rather than
@@ -60,29 +41,21 @@ const matchCase = (source: string, replacement: string) =>
 
 /**
  * The grader writes each task summary to the candidate ("You..."); employers read the same text
- * about the candidate, so "you" is swapped for the candidate's pronouns. A plain string
- * replacement (no model call), so unusual phrasing can still slip through. Without pronouns on
- * file (a profile not yet completed, or a deleted account) the neutral singular "they" is used.
+ * about the candidate, so "you" is swapped for a general pointer ("This candidate").
  */
-export function rewriteSecondPersonForEmployer(
-  text: string,
-  pronouns: Pronouns | null,
-): string {
-  const forms = PRONOUN_FORMS[pronouns ?? Pronouns.THEY_THEM];
-
+export function rewriteSecondPersonForEmployer(text: string): string {
   let result = text;
-  for (const { pattern, singular, plural } of VERB_PHRASES) {
-    const template = forms.singularVerbs ? singular : plural;
+  for (const { pattern, singular } of VERB_PHRASES) {
     result = result.replace(pattern, (match) =>
-      matchCase(match, template.replace('{s}', forms.subject)),
+      matchCase(match, singular.replace('{s}', FORMS.subject)),
     );
   }
 
   return result
-    .replace(SUBJECT_LEADERS, (_match, leader: string) => `${leader}${forms.subject}`)
-    .replace(/\byourself\b/gi, (match) => matchCase(match, forms.reflexive))
-    .replace(/\byour\b/gi, (match) => matchCase(match, forms.possessive))
-    .replace(/\bYou\b/g, forms.subject.charAt(0).toUpperCase() + forms.subject.slice(1))
-    .replace(/\byou(?=['’](ll|d|ve|re|m)\b)/g, forms.subject)
-    .replace(/\byou\b/g, forms.object);
+    .replace(SUBJECT_LEADERS, (_match, leader: string) => `${leader}${FORMS.subject}`)
+    .replace(/\byourself\b/gi, (match) => matchCase(match, FORMS.reflexive))
+    .replace(/\byour\b/gi, (match) => matchCase(match, FORMS.possessive))
+    .replace(/\bYou\b/g, FORMS.subject.charAt(0).toUpperCase() + FORMS.subject.slice(1))
+    .replace(/\byou(?=['’](ll|d|ve|re|m)\b)/g, FORMS.subject)
+    .replace(/\byou\b/g, FORMS.object);
 }

@@ -52,7 +52,6 @@ export class UsersController {
         ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
         ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber || null } : {}),
         ...(dto.gender !== undefined ? { gender: dto.gender } : {}),
-        ...(dto.pronouns !== undefined ? { pronouns: dto.pronouns } : {}),
         ...(dto.brief !== undefined ? { brief: dto.brief.trim() || null } : {}),
         ...(dto.title !== undefined ? { title: this.requiredTitle(dto.title) } : {}),
       });

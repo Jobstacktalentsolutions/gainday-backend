@@ -16,7 +16,6 @@ import { inArray } from 'drizzle-orm';
 import { createDb, createDbPool } from '../client';
 import {
   jobSeekerProfiles,
-  Pronouns,
   users,
   UserRole,
 } from '../schema';
@@ -24,7 +23,6 @@ import {
 interface TestCandidate {
   title: string;
   fullName: string;
-  pronouns: Pronouns;
   brief: string;
 }
 
@@ -32,109 +30,91 @@ const TEST_CANDIDATES: TestCandidate[] = [
   {
     title: 'Frontend Developer',
     fullName: 'Priya Raman',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Builds React and TypeScript interfaces for B2B dashboards, with a focus on accessibility.',
   },
   {
     title: 'Software Engineer',
     fullName: 'Daniel Okafor',
-    pronouns: Pronouns.HE_HIM,
     brief: 'Backend engineer with five years on Node.js and PostgreSQL services, mostly API design.',
   },
   {
     title: 'Full Stack Developer',
     fullName: 'Mei Lin',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Ships features end to end in Next.js and Django for early-stage SaaS teams.',
   },
   {
     title: 'Data Analyst',
     fullName: 'Tomás Rivera',
-    pronouns: Pronouns.HE_HIM,
     brief: 'Builds SQL reporting and Power BI dashboards for retail operations and pricing.',
   },
   {
     title: 'Data Scientist',
     fullName: 'Amara Osei',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Works on churn prediction and forecasting models in Python, with experiment design.',
   },
   {
     title: 'Product Manager',
     fullName: 'Ben Carter',
-    pronouns: Pronouns.HE_HIM,
     brief: 'Owns the roadmap for a consumer mobile app, from discovery through launch metrics.',
   },
   {
     title: 'Product Owner',
     fullName: 'Leila Haddad',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Manages the backlog for an agile payments team and writes clear acceptance criteria.',
   },
   {
     title: 'Registered Nurse',
     fullName: 'Grace Mensah',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Experienced in acute medical wards, medication safety and patient handover.',
   },
   {
     title: 'Staff Nurse',
     fullName: 'Oliver Brooks',
-    pronouns: Pronouns.HE_HIM,
     brief: 'Works nights on a surgical ward, leading small teams and supporting new starters.',
   },
   {
     title: 'Management Accountant',
     fullName: 'Hannah Schmidt',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Prepares monthly management accounts, variance analysis and budget forecasts.',
   },
   {
     title: 'Accounts Clerk',
     fullName: 'Kwame Asante',
-    pronouns: Pronouns.HE_HIM,
     brief: 'Handles accounts payable, bank reconciliations and month-end journals.',
   },
   {
     title: 'Digital Marketing Manager',
     fullName: 'Sofia Lindqvist',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Runs paid search and social campaigns, with a focus on conversion and budget.',
   },
   {
     title: 'SEO Specialist',
     fullName: 'Jordan Blake',
-    pronouns: Pronouns.THEY_THEM,
     brief: 'Improves organic search traffic through technical audits and content strategy.',
   },
   {
     title: 'Content Marketer',
     fullName: 'Chloe Martin',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Writes blog, email and case-study content for B2B software brands.',
   },
   {
     title: 'Sales Executive',
     fullName: 'Marcus Johnson',
-    pronouns: Pronouns.HE_HIM,
     brief: 'Closes mid-market deals through outbound prospecting and consultative demos.',
   },
   {
     title: 'Customer Success Manager',
     fullName: 'Aisha Khan',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Keeps enterprise accounts renewing through onboarding, QBRs and expansion planning.',
   },
   {
     title: 'HR Coordinator',
     fullName: 'Ethan Park',
-    pronouns: Pronouns.HE_HIM,
     brief: 'Coordinates recruitment logistics, onboarding paperwork and employee records.',
   },
   {
     title: 'Operations Manager',
     fullName: 'Nadia Petrova',
-    pronouns: Pronouns.SHE_HER,
     brief: 'Oversees day-to-day operations for a logistics warehouse, including staffing and KPIs.',
   },
 ];
@@ -193,7 +173,6 @@ async function main(): Promise<void> {
           userId: user.id,
           fullName: candidate.fullName,
           title: candidate.title,
-          pronouns: candidate.pronouns,
           brief: candidate.brief,
           isProfileComplete: true,
         });

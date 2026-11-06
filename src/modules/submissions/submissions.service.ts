@@ -292,7 +292,6 @@ export class SubmissionsService {
         ),
         row.answers,
         row.taskScores,
-        row.candidate ? row.candidate.pronouns : null,
       ),
       integrityEvents: summarizeIntegrityEvents(row.antiCheatFlags),
       // Only ever populated once unlocked, so the pay-to-unlock rule is enforced here on the
@@ -373,13 +372,13 @@ export class SubmissionsService {
       : null;
   }
 
-  // Gender, pronouns and job title are shown to employers even while the candidate is locked;
+  // Gender and job title are shown to employers even while the candidate is locked;
   // the brief stays behind the unlock with the rest of the identifying details. Null once the
   // candidate's account has been deleted.
   private toEmployerCandidateProfile(
     candidate: Pick<
       JobSeekerProfile,
-      'gender' | 'pronouns' | 'title' | 'brief'
+      'gender' | 'title' | 'brief'
     > | null,
     isUnlocked: boolean,
   ) {
@@ -388,7 +387,6 @@ export class SubmissionsService {
     }
     return {
       gender: candidate.gender,
-      pronouns: candidate.pronouns,
       title: candidate.title,
       brief: isUnlocked ? candidate.brief : null,
     };
@@ -399,7 +397,7 @@ export class SubmissionsService {
       Parameters<typeof resolveCandidateContact>[0] & {
         candidate: Pick<
           JobSeekerProfile,
-          'gender' | 'pronouns' | 'title' | 'brief'
+          'gender' | 'title' | 'brief'
         > | null;
       },
     isUnlocked: boolean,

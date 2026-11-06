@@ -22,6 +22,7 @@ export interface GenerationProgress {
 /** Cumulative percent reached once each pre-loop node completes. */
 const PREAMBLE_END_PERCENT = {
   extraction: 10,
+  planTasks: 30,
   overgenerate: 20,
   rankSelect: 30,
 };
@@ -46,6 +47,7 @@ const isSlotNode = (node: string): node is SlotNode => node in SLOT_FRACTION;
 
 const PREAMBLE_NEXT_STAGE: Record<PreambleNode, GenerationStage> = {
   extraction: 'overgenerate',
+  planTasks: 'taskGeneration',
   overgenerate: 'rankSelect',
   rankSelect: 'taskGeneration',
 };
@@ -83,7 +85,7 @@ export class GenerationProgressTracker {
   }
 
   private slotBase(): number {
-    return PREAMBLE_END_PERCENT.rankSelect + this.slotIndex * this.slotShare;
+    return PREAMBLE_END_PERCENT.planTasks + this.slotIndex * this.slotShare;
   }
 
   private onSlotNodeCompleted(

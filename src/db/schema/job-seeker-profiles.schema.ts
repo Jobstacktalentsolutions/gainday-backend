@@ -48,11 +48,6 @@ export interface PassportNarrative {
 }
 
 export const genderEnum = pgEnum('gender', ['MALE', 'FEMALE', 'NON_BINARY']);
-export const pronounsEnum = pgEnum('pronouns', [
-  'HE_HIM',
-  'SHE_HER',
-  'THEY_THEM',
-]);
 
 export const Gender = {
   MALE: 'MALE',
@@ -60,13 +55,6 @@ export const Gender = {
   NON_BINARY: 'NON_BINARY',
 } as const;
 export type Gender = (typeof Gender)[keyof typeof Gender];
-
-export const Pronouns = {
-  HE_HIM: 'HE_HIM',
-  SHE_HER: 'SHE_HER',
-  THEY_THEM: 'THEY_THEM',
-} as const;
-export type Pronouns = (typeof Pronouns)[keyof typeof Pronouns];
 
 export const jobSeekerProfiles = pgTable('job_seeker_profiles', {
   ...baseColumns,
@@ -79,10 +67,9 @@ export const jobSeekerProfiles = pgTable('job_seeker_profiles', {
   /** The role the candidate is looking for, e.g. "Product Manager". Drives job recommendations —
    *  see src/modules/job-recommendations/. Null until the candidate sets it. */
   title: varchar('title', { length: 255 }),
-  // All optional at the DB level; the app requires `pronouns` before a candidate can apply, and
+  // Gender is optional; the app requires `title` before a candidate can apply, and
   // `isProfileComplete` records that it has been filled (see JobSeekerProfileService.update).
   gender: genderEnum('gender').$type<Gender>(),
-  pronouns: pronounsEnum('pronouns').$type<Pronouns>(),
   brief: text('brief'),
   isProfileComplete: boolean('is_profile_complete').notNull().default(false),
   capabilityScores: jsonb('capability_scores').$type<CapabilityScores>(),

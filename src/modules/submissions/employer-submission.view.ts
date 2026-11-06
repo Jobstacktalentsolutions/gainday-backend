@@ -4,7 +4,6 @@ import type {
   AntiCheatEvent,
   CandidateAnswer,
   CategoryScores,
-  Pronouns,
   SimulationTask,
   SubmissionStatus,
   TaskGradingResult,
@@ -139,7 +138,6 @@ export function buildEmployerTaskResults(
   >[],
   answers: CandidateAnswer[],
   taskScores: TaskGradingResult[] | null,
-  pronouns: Pronouns | null,
 ) {
   const resultByTaskId = new Map(
     (taskScores ?? []).map((result) => [result.taskId, result]),
@@ -166,7 +164,7 @@ export function buildEmployerTaskResults(
         : null,
       score: result ? taskScorePercent(result) : null,
       evidence: result
-        ? rewriteSecondPersonForEmployer(result.summary, pronouns)
+        ? rewriteSecondPersonForEmployer(result.summary)
         : null,
       checklist: result ? (result.checklist ?? null) : null,
       gateTriggered: result ? (result.gateTriggered ?? null) : null,

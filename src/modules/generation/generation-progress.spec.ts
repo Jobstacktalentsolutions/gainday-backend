@@ -20,6 +20,30 @@ describe('GenerationProgressTracker', () => {
     });
   });
 
+  it('handles planTasks preamble cleanly and reaches finalising', () => {
+    const tracker = new GenerationProgressTracker(2);
+    const percents: number[] = [tracker.start().percent];
+
+    const steps: [string, Partial<GenerationState>][] = [
+      ['extraction', {}],
+      ['planTasks', {}],
+      ['taskGeneration', {}],
+      ['critic', passed],
+      ['persist', {}],
+      ['taskGeneration', {}],
+      ['critic', passed],
+      ['persist', {}],
+    ];
+    for (const [node, update] of steps) {
+      const event = tracker.onNodeCompleted(node, update);
+      if (event) percents.push(event.percent);
+    }
+
+    expect(percents).toEqual([...percents].sort((a, b) => a - b));
+    expect(percents[percents.length - 1]).toBe(95);
+    expect(tracker.onNodeCompleted('persist', {})?.stage).toBe('finalising');
+  });
+
   it('reaches finalising at 95 after the last slot and never goes backwards', () => {
     const tracker = new GenerationProgressTracker(2);
     const percents: number[] = [tracker.start().percent];

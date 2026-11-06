@@ -7,7 +7,7 @@ import {
   MaxLength,
   ValidateIf,
 } from 'class-validator';
-import { Gender, Pronouns } from '../../../db/schema';
+import { Gender } from '../../../db/schema';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -27,15 +27,10 @@ export class UpdateProfileDto {
   @IsPhoneNumber()
   phoneNumber?: string;
 
-  // Candidate-only fields. `null` clears gender (it's optional); pronouns can't be cleared once
-  // set, since they're required to apply.
+  // Candidate-only fields. `null` clears gender (it's optional).
   @IsOptional()
   @IsIn(Object.values(Gender))
   gender?: Gender | null;
-
-  @IsOptional()
-  @IsIn(Object.values(Pronouns))
-  pronouns?: Pronouns;
 
   @IsOptional()
   @IsString()

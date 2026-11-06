@@ -51,16 +51,14 @@ async function main(): Promise<void> {
     const untitled = await db
       .select({
         id: jobSeekerProfiles.id,
-        pronouns: jobSeekerProfiles.pronouns,
-      })
+        })
       .from(jobSeekerProfiles)
       .where(isNull(jobSeekerProfiles.title));
 
     const plan = untitled.map((profile) => ({
       id: profile.id,
       title: pickRandom(TITLES),
-      pronouns: profile.pronouns,
-    }));
+      }));
 
     console.log(`Target: ${new URL(process.env.DATABASE_URL).host}`);
     console.log(`${plan.length} candidate(s) without a title`);
@@ -73,13 +71,13 @@ async function main(): Promise<void> {
       return;
     }
 
-    for (const { id, title, pronouns } of plan) {
+    for (const { id, title } of plan) {
       await db
         .update(jobSeekerProfiles)
         .set({
           title,
-          // Same rule as JobSeekerProfileService.update: complete once pronouns and title are set.
-          isProfileComplete: pronouns !== null,
+          // Same rule as JobSeekerProfileService.update: complete once title is set.
+          isProfileComplete: true,
           updatedAt: new Date(),
         })
         .where(eq(jobSeekerProfiles.id, id));
