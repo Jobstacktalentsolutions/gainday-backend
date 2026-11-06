@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   UnauthorizedException,
+  ForbiddenException,
   BadRequestException,
   HttpCode,
   HttpStatus,
@@ -28,7 +29,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { EMAIL_NOT_VERIFIED_CODE, JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AllowUnverifiedEmail } from './decorators/allow-unverified-email.decorator';
 
@@ -103,12 +104,29 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    if (
+      (user.role === UserRole.EMPLOYER || user.role === UserRole.JOB_SEEKER) &&
+      !user.isEmailVerified
+    ) {
+      throw new ForbiddenException({
+        statusCode: HttpStatus.FORBIDDEN,
+        code: EMAIL_NOT_VERIFIED_CODE,
+        message: 'Please verify your email address to continue.',
+        emailVerified: false,
+        isEmailVerified: false,
+        email: user.email,
+        role: user.role,
+      });
+    }
+
     const result = await this.authService.login(user);
 
     this.setAuthCookie(res, result.access_token);
     return {
       ...result,
-      isEmailVerified: user.isEmailVerified,
+      isEmailVerified: true,
+      emailVerified: true,
     };
   }
 
@@ -122,6 +140,7 @@ export class AuthController {
     return {
       ...result,
       isEmailVerified: false,
+      emailVerified: false,
     };
   }
 
@@ -132,7 +151,11 @@ export class AuthController {
   ) {
     const result = await this.authService.registerEmployer(signupDto);
     this.setAuthCookie(res, result.access_token);
-    return result;
+    return {
+      ...result,
+      isEmailVerified: false,
+      emailVerified: false,
+    };
   }
 
   @Post('register/candidate')
@@ -145,6 +168,7 @@ export class AuthController {
     return {
       ...result,
       isEmailVerified: false,
+      emailVerified: false,
     };
   }
 

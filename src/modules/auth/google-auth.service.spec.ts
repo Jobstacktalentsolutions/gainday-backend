@@ -65,6 +65,7 @@ describe('GoogleAuthService.signIn', () => {
       access_token: 'jwt',
       user: { id: 'user-1', role: 'JOB_SEEKER' },
       isEmailVerified: true,
+      emailVerified: true,
     });
   });
 

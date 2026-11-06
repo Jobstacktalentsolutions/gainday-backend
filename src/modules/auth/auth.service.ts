@@ -336,6 +336,8 @@ export class AuthService {
         adminRole,
         isSuperAdmin,
         mustChangePassword: user.mustChangePassword ?? false,
+        isEmailVerified: Boolean(user.isEmailVerified),
+        emailVerified: Boolean(user.isEmailVerified),
         ...jobSeekerProfileFields(profile),
       },
     };

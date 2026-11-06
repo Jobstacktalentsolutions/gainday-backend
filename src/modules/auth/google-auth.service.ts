@@ -49,7 +49,7 @@ export class GoogleAuthService {
       await this.usersService.linkGoogleAccount(user.id, identity.googleId);
     }
 
-    const result = await this.authService.login(user);
-    return { ...result, isEmailVerified: true };
+    const result = await this.authService.login({ ...user, isEmailVerified: true });
+    return { ...result, isEmailVerified: true, emailVerified: true };
   }
 }
