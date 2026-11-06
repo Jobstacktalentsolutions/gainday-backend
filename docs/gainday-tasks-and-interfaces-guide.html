@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gainday Simulation Interfaces & Grading Guide</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --navy: #0f172a;
+            --slate: #334155;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --bg-light: #f8fafc;
+            --success: #059669;
+            --success-light: #ecfdf5;
+            --danger: #dc2626;
+            --danger-light: #fef2f2;
+            --warning: #d97706;
+            --warning-light: #fffbeb;
+            --purple: #7c3aed;
+            --purple-light: #f5f3ff;
+            --cyan: #0284c7;
+            --cyan-light: #f0f9ff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--slate);
+            background: #f1f5f9;
+            line-height: 1.5;
+            padding: 40px 20px;
+        }
+
+        .container { max-width: 1060px; margin: 0 auto; }
+
+        /* Header */
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            padding: 40px 35px;
+            border-radius: 18px;
+            margin-bottom: 30px;
+            position: relative;
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+        }
+
+        .hero-badge {
+            background: rgba(255, 255, 255, 0.12);
+            color: #93c5fd;
+            font-size: 0.8em;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .hero h1 { font-size: 2.3em; font-weight: 800; margin-bottom: 8px; color: #fff; }
+        .hero p { color: #94a3b8; font-size: 1.08em; max-width: 760px; }
+
+        .print-btn {
+            position: absolute;
+            top: 35px;
+            right: 35px;
+            background: #ffffff;
+            color: var(--navy);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.88em;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        .print-btn:hover { background: #f8fafc; transform: translateY(-1px); }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        h2 { font-size: 1.5em; color: var(--navy); margin-bottom: 6px; font-weight: 700; }
+        .subtitle { color: var(--muted); font-size: 0.95em; margin-bottom: 20px; }
+
+        /* Serial Role List */
+        .role-block {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+        }
+
+        .role-block h3 {
+            font-size: 1.05em;
+            color: var(--navy);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .serial-list { font-size: 0.92em; color: var(--slate); line-height: 1.6; }
+        .bullet-dot { color: var(--primary); font-weight: bold; margin: 0 6px; }
+
+        .note-callout {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary);
+            padding: 14px 18px;
+            font-size: 0.9em;
+            color: #1e40af;
+            border-radius: 0 8px 8px 0;
+            margin-top: 18px;
+            line-height: 1.5;
+        }
+
+        /* Interface Card */
+        .interface-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 35px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
+        }
+
+        .interface-header {
+            background: #ffffff;
+            padding: 18px 25px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .interface-header h3 { font-size: 1.25em; color: var(--navy); font-weight: 700; }
+
+        .badge-code {
+            font-size: 0.8em;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            color: var(--navy);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            border: 1px solid #cbd5e1;
+        }
+
+        .interface-content { padding: 25px; }
+
+        .task-tags-row {
+            margin-bottom: 16px;
+            font-size: 0.9em;
+            color: var(--slate);
+        }
+
+        .task-tags-row strong { color: var(--navy); }
+
+        /* Real UI Mockup Frame */
+        .ui-mockup-frame {
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px -4px rgba(0,0,0,0.06);
+            margin: 16px 0 22px;
+        }
+
+        .browser-bar {
+            background: #f1f5f9;
+            padding: 10px 16px;
+            border-bottom: 1px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .circle-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+        .circle-red { background: #ef4444; }
+        .circle-yellow { background: #f59e0b; }
+        .circle-green { background: #10b981; }
+        .browser-title { margin-left: 10px; color: #475569; font-size: 0.82em; font-weight: 600; }
+
+        .mockup-inner { padding: 20px; background: #ffffff; }
+
+        /* UI Components */
+        .tab-bar {
+            display: flex;
+            gap: 6px;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 14px;
+        }
+
+        .tab-item {
+            padding: 8px 16px;
+            font-size: 0.88em;
+            font-weight: 600;
+            color: #64748b;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            cursor: default;
+        }
+
+        .tab-item.active {
+            background: #ffffff;
+            color: var(--primary);
+            border-color: #cbd5e1;
+            border-bottom: 2px solid #ffffff;
+            margin-bottom: -2px;
+        }
+
+        .dossier-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 0.88em;
+            color: var(--slate);
+            margin-bottom: 16px;
+        }
+
+        .input-label {
+            font-size: 0.82em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .textarea-box {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 0.9em;
+            color: #1e293b;
+            min-height: 80px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+            line-height: 1.5;
+        }
+
+        /* Staged Chat Styling */
+        .chat-split-view {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr;
+            gap: 16px;
+        }
+
+        .chat-pane {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 14px;
+            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-msg {
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.86em;
+            max-width: 85%;
+            line-height: 1.4;
+        }
+
+        .chat-customer {
+            background: #ffffff;
+            color: var(--slate);
+            border: 1px solid #e2e8f0;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+
+        .chat-agent {
+            background: var(--primary);
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78em;
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            background: #059669;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .chat-input-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .chat-input {
+            flex: 1;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.85em;
+            background: #ffffff;
+        }
+
+        .chat-send-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+        /* Financial Table & Chart Mockup */
+        .chart-visual-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82em;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+
+        .chart-legend { display: flex; gap: 14px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.82em; }
+        .legend-color-rev { width: 12px; height: 12px; background: #2563eb; border-radius: 2px; }
+        .legend-color-cogs { width: 12px; height: 12px; background: #94a3b8; border-radius: 2px; }
+
+        .svg-bars {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 90px;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 4px;
+        }
+
+        .bar-group { display: flex; gap: 6px; align-items: flex-end; text-align: center; }
+        .bar-rev { width: 28px; background: #2563eb; border-radius: 3px 3px 0 0; }
+        .bar-cogs { width: 28px; background: #94a3b8; border-radius: 3px 3px 0 0; }
+        .bar-label { font-size: 0.78em; color: var(--muted); margin-top: 4px; font-weight: 600; }
+
+        .ui-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.86em;
+            margin: 12px 0;
+        }
+
+        .ui-table th, .ui-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        .ui-table th { background: #f8fafc; color: var(--navy); font-weight: 600; }
+
+        .calc-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            font-size: 0.88em;
+            font-weight: 600;
+        }
+
+        .calc-input {
+            width: 75px;
+            padding: 4px 8px;
+            border: 1px solid #2563eb;
+            border-radius: 4px;
+            font-weight: 700;
+            color: #1e3a8a;
+            background: #ffffff;
+            text-align: center;
+        }
+
+        .pill-tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.78em;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .pill-high { background: #fee2e2; color: #991b1b; }
+        .pill-med { background: #fef3c7; color: #92400e; }
+        .pill-low { background: #f1f5f9; color: #475569; }
+
+        /* Rich Text Toolbar */
+        .rich-toolbar {
+            display: flex;
+            gap: 8px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            padding: 6px 10px;
+        }
+
+        .tool-btn {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #475569;
+        }
+
+        .rich-editor-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 0 0 6px 6px;
+            padding: 14px;
+            font-size: 0.9em;
+            background: #ffffff;
+            min-height: 100px;
+            line-height: 1.5;
+        }
+
+        /* 2-Column Grading Breakdown */
+        .grading-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .grading-col h4 {
+            font-size: 0.82em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .col-obj h4 { color: #0284c7; }
+        .col-open h4 { color: #7c3aed; }
+
+        .grading-col p { font-size: 0.88em; color: var(--slate); line-height: 1.5; }
+
+        @media (max-width: 768px) {
+            .chat-split-view { grid-template-columns: 1fr; }
+            .grading-panel { grid-template-columns: 1fr; }
+        }
+
+        @media print {
+            body { padding: 0; background: #fff; }
+            .hero { padding: 25px; margin-bottom: 20px; }
+            .print-btn { display: none; }
+            .card, .interface-card { page-break-inside: avoid; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <header class="hero">
+        <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <span class="hero-badge">Gainday Client Technical Documentation</span>
+        <h1>Simulation Interfaces & Grading Guide</h1>
+        <p>A visual reference illustrating candidate workspaces, task types, dynamic role determination, and how every submission is accurately graded.</p>
+    </header>
+
+    <!-- SECTION 1: SERIAL DYNAMIC SUB-ROLES -->
+    <section class="card">
+        <h2>1. Role & Sub-Role Determination</h2>
+        <p class="subtitle">Sub-roles in Gainday are <strong>not fixed categories</strong>. They are flexible sub-domains dynamically inferred from the job description's responsibilities, tools, and outputs.</p>
+
+        <div class="role-block">
+            <h3>Customer Service (Sample Observed Sub-Roles)</h3>
+            <div class="serial-list">
+                Tier 1 Support (Email & Chat) <span class="bullet-dot">&bull;</span> Complaints & Escalations <span class="bullet-dot">&bull;</span> Technical Support <span class="bullet-dot">&bull;</span> Contact Centre <span class="bullet-dot">&bull;</span> Support Lead & QA <span class="bullet-dot">&bull;</span> Retention
+            </div>
+        </div>
+
+        <div class="role-block">
+            <h3>Finance (Sample Observed Sub-Roles)</h3>
+            <div class="serial-list">
+                Reconciliation <span class="bullet-dot">&bull;</span> Financial Reporting <span class="bullet-dot">&bull;</span> Accounts Payable / Receivable <span class="bullet-dot">&bull;</span> Budgeting & Forecasting (FP&A) <span class="bullet-dot">&bull;</span> Audit & Treasury <span class="bullet-dot">&bull;</span> Private Equity
+            </div>
+        </div>
+
+        <div class="role-block">
+            <h3>Sales (Sample Observed Sub-Roles)</h3>
+            <div class="serial-list">
+                SDR / BDR (Outbound Prospecting) <span class="bullet-dot">&bull;</span> Account Executive (Closing & Negotiations) <span class="bullet-dot">&bull;</span> Enterprise / Account Management <span class="bullet-dot">&bull;</span> Sales Operations / Inbound
+            </div>
+        </div>
+
+        <div class="role-block">
+            <h3>Cross-Functional / Generic Roles</h3>
+            <div class="serial-list">
+                Any domain outside the above (e.g., Logistics, Operations, People/HR, Product). The system extracts the posting's own 2–4 word domain name.
+            </div>
+        </div>
+
+        <div class="note-callout">
+            <strong>How Determination Works:</strong> The AI classifier evaluates actual day-to-day tools and deliverables (e.g. Zendesk, Excel financial modeling, Salesforce pipeline) rather than relying on job titles. The employer's top-level role choice is respected, while the dynamic sub-role refines candidate task selection and scopes anti-repetition checks.
+        </div>
+    </section>
+
+    <!-- SECTION 2: 7 VISUAL INTERFACES & GRADING -->
+    <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 1.6em; color: var(--navy);">2. Candidate Interfaces & Grading Mechanics</h2>
+        <p style="color: var(--muted); font-size: 0.95em;">What the candidate sees on their screen and how their response is verified:</p>
+    </div>
+
+    <!-- 1. CASE_FILE_TEXT_AREA -->
+    <div class="interface-card">
+        <div class="interface-header">
+            <h3>1. Case File & Text Area</h3>
+            <span class="badge-code">CASE_FILE_TEXT_AREA</span>
+        </div>
+        <div class="interface-content">
+            <div class="task-tags-row">
+                <strong>Task Types Covered:</strong> Policy-Bound Ticket Reply, De-Escalation & Boundaries, Compliance Gates, Diagnostic Questions, Escalation Handoff, Ticket Triage.
+            </div>
+
+            <!-- VISUAL MOCKUP -->
+            <div class="ui-mockup-frame">
+                <div class="browser-bar">
+                    <span class="circle-dot circle-red"></span><span class="circle-dot circle-yellow"></span><span class="circle-dot circle-green"></span>
+                    <span class="browser-title">Candidate Workspace — Policy-Bound Support Case</span>
+                </div>
+                <div class="mockup-inner">
+                    <div class="tab-bar">
+                        <div class="tab-item">Customer Record</div>
+                        <div class="tab-item active">★ Ticket #4920 (Active)</div>
+                        <div class="tab-item">Policy Guidelines</div>
+                    </div>
+                    <div class="dossier-box">
+                        <strong>Customer:</strong> Mark Jenkins &bull; <strong>Plan:</strong> Growth ($149/mo) &bull; <strong>Time:</strong> Today, 09:14 AM<br>
+                        <em>"I was away on sick leave and couldn't request a refund within your 30-day window (it's day 38 now). I demand an exception and a full cash refund to my credit card!"</em>
+                    </div>
+                    <div class="input-label">Your Customer Reply (Required: 6–10 sentences):</div>
+                    <div class="textarea-box">
+                        Dear Mark, thank you for reaching out and I hope you are feeling better. While our system cannot process cash refunds outside the 30-day window, I am authorized to immediately issue a full $149 store credit to your account balance with no expiration date...
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRADING -->
+            <div class="grading-panel">
+                <div class="grading-col col-obj">
+                    <h4>⚙️ Objective Machine Grading</h4>
+                    <p>When paired with selection tools (Diagnostic Questions, Ticket Triage), candidate choices are checked against pre-computed keys (e.g. correct 2 diagnostic questions picked; unambiguous first-priority ticket).</p>
+                </div>
+                <div class="grading-col col-open">
+                    <h4>📝 Open-Ended Rubric Grading</h4>
+                    <p>Scored across 4 criteria (Judgment, Written Communication, Problem Solving, Domain Awareness) against 5-point anchored rubrics. <strong>Hard Safety Gate:</strong> Violating policy or making unauthorized refund commitments triggers an auto-fail cap.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. STAGED_CHAT -->
+    <div class="interface-card">
+        <div class="interface-header">
+            <h3>2. Staged Chat (Interactive Turn-by-Turn)</h3>
+            <span class="badge-code">STAGED_CHAT</span>
+        </div>
+        <div class="interface-content">
+            <div class="task-tags-row">
+                <strong>Task Types Covered:</strong> Frontline Helpdesk, Live Chat Support, De-escalation Conversations.
+            </div>
+
+            <!-- VISUAL MOCKUP -->
+            <div class="ui-mockup-frame">
+                <div class="browser-bar">
+                    <span class="circle-dot circle-red"></span><span class="circle-dot circle-yellow"></span><span class="circle-dot circle-green"></span>
+                    <span class="browser-title">Live Chat Simulation — Turn 2 of 3</span>
+                </div>
+                <div class="mockup-inner">
+                    <div class="chat-split-view">
+                        <div class="dossier-box" style="margin: 0;">
+                            <strong>Customer Dossier:</strong><br>
+                            Account: FastShip VIP<br>
+                            Tracking: #FS-99120<br>
+                            Carrier Photo: Gate dropoff at 8:15 AM.<br><br>
+                            <strong>Policy Rule:</strong> Claims require driver GPS re-check before approving redelivery.
+                        </div>
+                        <div class="chat-pane">
+                            <div class="chat-msg chat-customer">
+                                "My package says delivered, but nothing is outside! I need this delivery today for a presentation!"
+                            </div>
+                            <div class="chat-msg chat-agent">
+                                "I completely understand the urgency! Let me pull up the carrier GPS scan and driver photo for your building right away."
+                            </div>
+                            <div class="typing-indicator">
+                                <span class="typing-dot"></span> Customer is typing...
+                            </div>
+                            <div class="chat-input-bar">
+                                <input type="text" class="chat-input" placeholder="Type your response... (Word limit: 15–40 words)">
+                                <button class="chat-send-btn">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRADING -->
+            <div class="grading-panel">
+                <div class="grading-col col-obj">
+                    <h4>⚙️ Objective Machine Checks</h4>
+                    <p>Automatically enforces turn completion (3–4 scripted turns), word count boundaries per message (15–40 words), and timing limits.</p>
+                </div>
+                <div class="grading-col col-open">
+                    <h4>📝 Open-Ended Transcript Grading</h4>
+                    <p>The entire conversation transcript is evaluated holistically by an anchored AI judge for conversational pacing, customer de-escalation, tone, and policy adherence.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TABLE_VIEW_WITH_CHART -->
+    <div class="interface-card">
+        <div class="interface-header">
+            <h3>3. Table View with Chart</h3>
+            <span class="badge-code">TABLE_VIEW_WITH_CHART</span>
+        </div>
+        <div class="interface-content">
+            <div class="task-tags-row">
+                <strong>Task Types Covered:</strong> Margin Statement Analysis, Revenue Trends, Revenue & Units Combos, Variance Waterfall Bridges.
+            </div>
+
+            <!-- VISUAL MOCKUP -->
+            <div class="ui-mockup-frame">
+                <div class="browser-bar">
+                    <span class="circle-dot circle-red"></span><span class="circle-dot circle-yellow"></span><span class="circle-dot circle-green"></span>
+                    <span class="browser-title">Financial Performance — Statement Analysis</span>
+                </div>
+                <div class="mockup-inner">
+                    <div class="chart-visual-box">
+                        <div class="chart-header">
+                            <span>Visual Performance Chart</span>
+                            <div class="chart-legend">
+                                <div class="legend-item"><span class="legend-color-rev"></span> Revenue ($M)</div>
+                                <div class="legend-item"><span class="legend-color-cogs"></span> Cost of Sales ($M)</div>
+                            </div>
+                        </div>
+                        <div class="svg-bars">
+                            <div class="bar-group">
+                                <div><div class="bar-rev" style="height: 50px;"></div><div class="bar-cogs" style="height: 30px;"></div></div>
+                                <div class="bar-label">FY23</div>
+                            </div>
+                            <div class="bar-group">
+                                <div><div class="bar-rev" style="height: 75px;"></div><div class="bar-cogs" style="height: 52px;"></div></div>
+                                <div class="bar-label">FY24</div>
+                            </div>
+                            <div class="bar-group">
+                                <div><div class="bar-rev" style="height: 65px;"></div><div class="bar-cogs" style="height: 48px;"></div></div>
+                                <div class="bar-label">FY25</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="ui-table">
+                        <thead>
+                            <tr><th>Line Item (USD)</th><th>FY23</th><th>FY24</th><th>FY25</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Revenue</td><td>$60,000,000</td><td>$85,000,000</td><td>$72,000,000</td></tr>
+                            <tr><td>Cost of Sales</td><td>$36,000,000</td><td>$59,500,000</td><td>$54,000,000</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="calc-row">
+                        <span>Enter Gross Margins:</span>
+                        FY23: <input class="calc-input" value="40.0">%
+                        FY24: <input class="calc-input" value="30.0">%
+                        FY25: <input class="calc-input" value="25.0">%
+                    </div>
+
+                    <div class="input-label">Executive Commentary to CFO:</div>
+                    <div class="textarea-box" style="min-height: 50px;">
+                        Gross margin contracted from 40% to 25% over the three-year period. While FY24 saw top-line expansion, COGS grew disproportionately by 65%, driven by raw material inflation...
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRADING -->
+            <div class="grading-panel">
+                <div class="grading-col col-obj">
+                    <h4>⚙️ Objective Math Grading (100% Deterministic)</h4>
+                    <p>All figures and formula results are computed in code templates. Candidate numeric answers are verified against exact keys with strict tolerances (±0.1% or ±1 unit). Zero LLM math error.</p>
+                </div>
+                <div class="grading-col col-open">
+                    <h4>📝 Open-Ended Commentary Grading</h4>
+                    <p>The written executive commentary is graded on the candidate's ability to interpret financial drivers and communicate key strategic risks to senior leadership.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. TABLE_VIEW_RESPONSE_PANEL -->
+    <div class="interface-card">
+        <div class="interface-header">
+            <h3>4. Table View & Response Panel</h3>
+            <span class="badge-code">TABLE_VIEW_RESPONSE_PANEL</span>
+        </div>
+        <div class="interface-content">
+            <div class="task-tags-row">
+                <strong>Task Types Covered:</strong> Bank Reconciliations, Capex vs Opex Journal Entries, Budget Variances, CRM Lead Prioritization.
+            </div>
+
+            <!-- VISUAL MOCKUP -->
+            <div class="ui-mockup-frame">
+                <div class="browser-bar">
+                    <span class="circle-dot circle-red"></span><span class="circle-dot circle-yellow"></span><span class="circle-dot circle-green"></span>
+                    <span class="browser-title">Lead Prioritization & Pipeline Triage</span>
+                </div>
+                <div class="mockup-inner">
+                    <table class="ui-table">
+                        <thead>
+                            <tr><th>Prospect</th><th>Deal Value</th><th>Deal Stage</th><th>Days Stalled</th><th>Your Priority Bucket</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Acme Health</td><td>$120,000</td><td>Contract Proposal</td><td>3 days</td>
+                                <td><span class="pill-tag pill-high">High Priority ▼</span></td>
+                            </tr>
+                            <tr>
+                                <td>Apex Logistics</td><td>$15,000</td><td>Early Lead</td><td>45 days</td>
+                                <td><span class="pill-tag pill-low">Low Priority ▼</span></td>
+                            </tr>
+                            <tr>
+                                <td>Globex Tech</td><td>$85,000</td><td>Final Decision</td><td>2 days</td>
+                                <td><span class="pill-tag pill-high">High Priority ▼</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="input-label">Written Justification for Top Picks:</div>
+                    <div class="textarea-box">
+                        Acme Health and Globex Tech represent $205K in late-stage pipeline nearing quarter close. Focusing immediate outbound effort here protects deal momentum before deadlines...
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRADING -->
+            <div class="grading-panel">
+                <div class="grading-col col-obj">
+                    <h4>⚙️ Objective Verification</h4>
+                    <p>Bank reconciliations and double-entry journals are graded against code-derived accounting keys with partial credit per balanced line. Budget variances are checked cell-by-cell against tolerances.</p>
+                </div>
+                <div class="grading-col col-open">
+                    <h4>📝 Open-Ended Rubric Grading</h4>
+                    <p>Evaluates the candidate's written reasoning regarding ambiguous edge-case accounting treatments or commercial lead prioritization logic.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. RICH_TEXT_COMPOSER -->
+    <div class="interface-card">
+        <div class="interface-header">
+            <h3>5. Rich Text Composer</h3>
+            <span class="badge-code">RICH_TEXT_COMPOSER</span>
+        </div>
+        <div class="interface-content">
+            <div class="task-tags-row">
+                <strong>Task Types Covered:</strong> Cold Outreach Prospecting Emails, Strategic Account Plans, Cross-Functional Executive Memos.
+            </div>
+
+            <!-- VISUAL MOCKUP -->
+            <div class="ui-mockup-frame">
+                <div class="browser-bar">
+                    <span class="circle-dot circle-red"></span><span class="circle-dot circle-yellow"></span><span class="circle-dot circle-green"></span>
+                    <span class="browser-title">Deliverable Editor — Cold Outreach Email</span>
+                </div>
+                <div class="mockup-inner">
+                    <div class="rich-toolbar">
+                        <span class="tool-btn">B</span>
+                        <span class="tool-btn">I</span>
+                        <span class="tool-btn">≡ List</span>
+                        <span class="tool-btn">H2</span>
+                    </div>
+                    <div class="rich-editor-box">
+                        <strong>Subject: Fixing junior analyst ramp time at FinTech Global</strong><br><br>
+                        Hi Sarah,<br><br>
+                        Noticed FinTech Global onboarded 30+ analysts last quarter. Most controllers find that manual spreadsheet training delays productive modeling by over 90 days.<br><br>
+                        Are you open to a brief 10-minute call this Thursday to see how simulated assessment modules accelerate ramp time?
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRADING -->
+            <div class="grading-panel">
+                <div class="grading-col col-obj">
+                    <h4>⚙️ Objective Structural Checks</h4>
+                    <p>Automated verification of deliverable components: clear subject line, single explicit Call-to-Action (CTA), and professional formatting.</p>
+                </div>
+                <div class="grading-col col-open">
+                    <h4>📝 Open-Ended Rubric Grading</h4>
+                    <p>Scored against 5-point anchor ladders on hook quality, relevance to buyer pain points, absence of generic spam language, and executive tone.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. TEXT_AREA -->
+    <div class="interface-card">
+        <div class="interface-header">
+            <h3>6. Text Area & Scenario Context</h3>
+            <span class="badge-code">TEXT_AREA</span>
+        </div>
+        <div class="interface-content">
+            <div class="task-tags-row">
+                <strong>Task Types Covered:</strong> Objection Handling, Negotiation Dilemmas, Stakeholder Pushback, Inbox Workload Prioritization.
+            </div>
+
+            <!-- VISUAL MOCKUP -->
+            <div class="ui-mockup-frame">
+                <div class="browser-bar">
+                    <span class="circle-dot circle-red"></span><span class="circle-dot circle-yellow"></span><span class="circle-dot circle-green"></span>
+                    <span class="browser-title">Situational Judgment — Price Objection</span>
+                </div>
+                <div class="mockup-inner">
+                    <div class="dossier-box">
+                        <strong>Prospect Objection:</strong><br>
+                        <em>"Vendor B quoted us 30% below your rate and offered free onboarding. If you can't match their discount by end of day, we're signing with them."</em>
+                    </div>
+                    <div class="input-label">Your Response to the Prospect:</div>
+                    <div class="textarea-box">
+                        "I understand cost predictability is critical, Mark. Before we discuss discounting, it's worth reviewing why Vendor B excludes live compliance audits—that single gap typically adds 20 hours of manual legal work each month..."
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRADING -->
+            <div class="grading-panel">
+                <div class="grading-col col-obj">
+                    <h4>⚙️ Objective Component (When Paired)</h4>
+                    <p>When paired with the Priority Ranking widget for Inbox Prioritization, candidates sequence items in a drag-and-drop list. Ranking order and justification are graded together.</p>
+                </div>
+                <div class="grading-col col-open">
+                    <h4>📝 Open-Ended Rubric Grading</h4>
+                    <p>Graded on reframing objections without defensive posture, protecting contract value, and guiding the conversation toward mutually beneficial next steps.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. CSV_DATA_PANEL -->
+    <div class="interface-card">
+        <div class="interface-header">
+            <h3>7. CSV Data Panel</h3>
+            <span class="badge-code">CSV_DATA_PANEL</span>
+        </div>
+        <div class="interface-content">
+            <div class="task-tags-row">
+                <strong>Task Types Covered:</strong> Operational Exception Logs, Raw Datasets, Cross-Functional Analytics.
+            </div>
+
+            <!-- VISUAL MOCKUP -->
+            <div class="ui-mockup-frame">
+                <div class="browser-bar">
+                    <span class="circle-dot circle-red"></span><span class="circle-dot circle-yellow"></span><span class="circle-dot circle-green"></span>
+                    <span class="browser-title">Operational Data Analysis — Dispatch Log</span>
+                </div>
+                <div class="mockup-inner">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 0.82em; color: #64748b;">Displaying 24 dataset records</span>
+                        <span style="background: #059669; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.78em; font-weight: 600;">📥 Download CSV for Excel</span>
+                    </div>
+                    <table class="ui-table">
+                        <thead>
+                            <tr><th>Incident ID</th><th>Warehouse Hub</th><th>Delay (Hrs)</th><th>Root Cause Category</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>INC-901</td><td>Chicago Central</td><td>4.2</td><td>Barcode Scanner Failure</td></tr>
+                            <tr><td>INC-904</td><td>Dallas North</td><td>0.5</td><td>Weather Hold</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="input-label" style="margin-top: 10px;">Operational Analysis & Findings:</div>
+                    <div class="textarea-box">
+                        Chicago Central accounted for 68% of total delay hours in Q3. The primary bottleneck is barcode scanner hardware failures during weekend shifts...
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRADING -->
+            <div class="grading-panel">
+                <div class="grading-col col-obj">
+                    <h4>⚙️ Objective Verification</h4>
+                    <p>Automated validation ensures CSV formatting, headers, and data integrity parse cleanly into both the in-browser grid and downloadable spreadsheet.</p>
+                </div>
+                <div class="grading-col col-open">
+                    <h4>📝 Open-Ended Rubric Grading</h4>
+                    <p>Evaluates whether the candidate accurately extracts quantitative figures from the data, diagnoses underlying patterns, and writes clear operational recommendations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

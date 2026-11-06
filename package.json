@@ -29,6 +29,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "ts-node -r tsconfig-paths/register src/db/migrate.ts",
     "db:seed-admin": "ts-node -r tsconfig-paths/register src/db/scripts/seed-admin.ts",
+    "db:delete-accounts": "ts-node -r tsconfig-paths/register src/db/scripts/delete-accounts.ts",
     "db:seed-draft-jobs": "ts-node -r tsconfig-paths/register src/db/scripts/seed-draft-jobs.ts",
     "db:studio": "drizzle-kit studio"
   },
