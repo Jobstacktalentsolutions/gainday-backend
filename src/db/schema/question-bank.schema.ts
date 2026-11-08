@@ -55,6 +55,8 @@ export interface TaskRubric {
 export interface QuestionBankTaskContent {
   taskType: string;
   title: string;
+  /** Expected completion time in minutes allocated to this task within the simulation budget. */
+  expectedDurationMinutes?: number;
   rubric?: TaskRubric;
   /** Never sent to candidates and never copied into the simulation task (e.g. a staged chat script). */
   serverOnly?: Record<string, unknown>;

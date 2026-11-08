@@ -34,6 +34,7 @@ const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Reply to a customer whose request depends on applying a refund policy, with an authorised alternative where the policy allows one.',
     interfaceType: InterfaceType.CASE_FILE_TEXT_AREA,
     spec: refundPolicyReplySpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },
   {
     key: CustomerServiceTaskType.DE_ESCALATION_REPLY,
@@ -43,6 +44,7 @@ const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Reply to an angry or abusive customer who threatens a review, a chargeback or a safety risk, without mirroring their tone.',
     interfaceType: InterfaceType.CASE_FILE_TEXT_AREA,
     spec: deEscalationReplySpec,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 6 },
   },
   {
     key: CustomerServiceTaskType.IMPROPER_REQUEST_REPLY,
@@ -52,6 +54,7 @@ const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Decline a request that must not be granted without the required step, and offer the legitimate path.',
     interfaceType: InterfaceType.CASE_FILE_TEXT_AREA,
     spec: improperRequestReplySpec,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 6 },
   },
   {
     key: CustomerServiceTaskType.DIAGNOSTIC_QUESTIONS,
@@ -62,6 +65,7 @@ const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Choose the two questions that best narrow a vague report, then write the message that asks the customer for those details.',
     interfaceType: InterfaceType.CASE_FILE_TEXT_AREA,
     spec: diagnosticQuestionsSpec,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 7 },
   },
   {
     key: CustomerServiceTaskType.ESCALATION_HANDOFF,
@@ -71,6 +75,7 @@ const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Write a handoff to the receiving team that contains the required facts, the deadline and a clear ask.',
     interfaceType: InterfaceType.CASE_FILE_TEXT_AREA,
     spec: escalationHandoffSpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },
   {
     key: CustomerServiceTaskType.TICKET_TRIAGE,
@@ -81,6 +86,7 @@ const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Apply the triage guideline to a queue: choose the ticket to work first, assign an action to each other ticket, and justify the first pick.',
     interfaceType: InterfaceType.CASE_FILE_TEXT_AREA,
     spec: ticketTriageSpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
   },
   {
     key: CustomerServiceTaskType.STAGED_CHAT_SUPPORT,
@@ -89,6 +95,7 @@ const customerServiceTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'A scripted multi-turn conversation with a fixed customer: the candidate replies turn by turn, and the whole transcript is graded afterwards.',
     interfaceType: InterfaceType.STAGED_CHAT,
     spec: stagedChatSpec,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 8 },
   },
 ];
 

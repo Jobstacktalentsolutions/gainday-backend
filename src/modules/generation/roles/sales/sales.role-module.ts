@@ -34,6 +34,7 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Candidate is given a target company/persona profile and product context, and writes a ' +
       'cold outreach email pitching the product.',
     interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 7 },
   },
   {
     key: SalesTaskType.OBJECTION_HANDLING_WRITTEN,
@@ -43,6 +44,7 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'A specific objection (price, competitor, timing, skepticism) is presented as a message ' +
       'from a persona; candidate drafts a written reply.',
     interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 150, defaultDurationMinutes: 6 },
   },
   {
     key: SalesTaskType.PIPELINE_PRIORITIZATION,
@@ -57,6 +59,7 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'an excluded pure-ranking mechanic). Keep it to roughly 6-8 leads, and ask the candidate to ' +
       'justify only their highest-priority picks so the answer fits a short written response.',
     interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
   },
   {
     key: SalesTaskType.CLOSING_NEGOTIATION_SITUATIONAL,
@@ -66,6 +69,7 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'A hypothetical mid-negotiation situation (e.g. a late discount request, a prospect who ' +
       'goes quiet) is described as narrative context; candidate describes how they would respond.',
     interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 7 },
   },
   {
     key: SalesTaskType.ACCOUNT_PLANNING,
@@ -75,6 +79,7 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Candidate is given information about a named target account and asked to produce a plan: ' +
       'stakeholders, approach sequencing, and strategy. Most senior/AE-oriented category.',
     interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
+    realities: { maxStimulusWords: 300, defaultDurationMinutes: 10 },
   },
   {
     key: SalesTaskType.INBOX_PRIORITIZATION,
@@ -87,6 +92,7 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'enough signal (deadlines, revenue at risk, stakeholder seniority) that some orderings are ' +
       'clearly better than others — the written reasoning is what gets graded, not the order alone.',
     interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },
 ];
 

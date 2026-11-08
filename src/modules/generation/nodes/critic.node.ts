@@ -130,9 +130,27 @@ export function criticNode(ctx: GenerationContext) {
       }
     }
 
+    // Stimulus reading length ceiling: check against the task pattern type's realities
+    const patternDef = state.roleModule.allowedTaskPatternTypes.find(
+      (p) => p.key === candidate.taskType,
+    );
+    const maxStimulusWords = patternDef?.realities?.maxStimulusWords;
+    let stimulusWithinLimit = true;
+    if (maxStimulusWords && candidate.taskContent.scenarioDescription) {
+      const trimmedScenario = candidate.taskContent.scenarioDescription.trim();
+      const scenarioWords = trimmedScenario === '' ? 0 : trimmedScenario.split(/\s+/).length;
+      if (scenarioWords > Math.round(maxStimulusWords * 1.25)) {
+        stimulusWithinLimit = false;
+        failureReasons.push(
+          `Scenario description is too long (${scenarioWords} words, ceiling is ${maxStimulusWords} words). Condense the scenario to essential facts and stimulus.`,
+        );
+      }
+    }
+
     const criticResult: CriticResult = {
       passed:
         payloadValid &&
+        stimulusWithinLimit &&
         tips.length === 0 &&
         !duplicateResult.isDuplicate &&
         relevanceResult.relevant &&

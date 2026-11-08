@@ -105,6 +105,7 @@ export class SimulationsService {
       const taskContent: QuestionBankTaskContent = {
         taskType: task.taskType,
         title: task.title,
+        expectedDurationMinutes: task.expectedDurationMinutes,
         scenarioDescription: task.scenarioDescription,
         questionPrompt: task.questionPrompt,
         objectiveComponent: task.objectiveComponent,

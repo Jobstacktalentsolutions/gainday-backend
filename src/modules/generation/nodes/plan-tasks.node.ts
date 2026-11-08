@@ -12,45 +12,58 @@ import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-outpu
 
 const logger = new Logger('GenerationPipeline:planTasks');
 
-const PLAN_TASKS_PROMPT = `Generate a simulation plan of exactly 4 diverse on-the-job tasks for this role, using general and industry-specific knowledge. Favour tasks that need role-specific expertise rather than general office skills.
+export function buildPlanTasksPrompt(
+  targetCount: number,
+  allowedTypesCount: number,
+): string {
+  const isConstrained = allowedTypesCount < targetCount;
 
-Select task types that best measure the specific skills needed for this job, maximizing:
-- alignmentWithIntent: directly tests the stated Intent and required competencies.
-- alignmentWithCategory: natural fit for the stated Category and seniority.
-- problemIncorporationPotential: meaningfully incorporates the stated business Problem (if provided).
+  const constraintRules = isConstrained
+    ? `CONSTRAINTS:
+1. Only ${allowedTypesCount} task types exist for this role, but exactly ${targetCount} tasks are required.
+2. You MUST use every available task type at least once.
+3. For remaining slots, duplicate the task type(s) most crucial to this job. Give each duplicate a distinct scenario and briefDescription.
+4. Each candidateId must be unique ("cand-1", "cand-2", ...).
+5. Do not invent new task types.`
+    : `CONSTRAINTS:
+1. Every task must have a UNIQUE taskType from the allowed list (no duplicates).
+2. Each candidateId must be unique ("cand-1", "cand-2", ...).
+3. Do not invent new task types.`;
 
-CRITICAL CONSTRAINTS:
-1. Every task in this 4-task simulation MUST have a UNIQUE taskType selected from the allowed types listed below. No two tasks may share the same taskType.
-2. Select 4 distinct task types that together form a comprehensive, varied assessment.
-3. Each candidateId must be distinct (e.g. "cand-1", "cand-2", "cand-3", "cand-4").
-4. Do not invent new types; only select from the allowed types listed below.`;
+  return `Plan exactly ${targetCount} realistic on-the-job simulation tasks for this role.
+Prioritize role-specific expertise aligned with the stated Category, Intent, and Problem.
+
+${constraintRules}`;
+}
 
 export function planTasksNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
     const targetCount = ctx.config.selectedTaskCount;
-    logger.log(
-      `Planning ${targetCount} unique simulation tasks for job ${state.jobId} (category="${state.category}")`,
-    );
-
-    const allowedTypeKeys = state.roleModule.allowedTaskPatternTypes.map(
-      (t) => t.key,
-    );
+    const allowedTypes = state.roleModule.allowedTaskPatternTypes;
+    const allowedTypeKeys = allowedTypes.map((t) => t.key);
     if (allowedTypeKeys.length === 0) {
       throw new RoleModuleNotConfiguredError(state.category);
     }
+
+    const isConstrained = allowedTypeKeys.length < targetCount;
+    logger.log(
+      `Planning ${targetCount} simulation tasks for job ${state.jobId} (category="${state.category}", availableTypes=${allowedTypeKeys.length}, constrained=${isConstrained})`,
+    );
 
     const schema = plannedSimulationSchema(
       allowedTypeKeys as [string, ...string[]],
     );
     const model = withGeminiSafeStructuredOutput(ctx.generationModel, schema);
 
-    const allowedTypesDescription = state.roleModule.allowedTaskPatternTypes
+    const allowedTypesDescription = allowedTypes
       .map((t) => `- ${t.key}: ${t.description}`)
       .join('\n');
 
+    const prompt = buildPlanTasksPrompt(targetCount, allowedTypeKeys.length);
+
     const result = await model.invoke([
       new SystemMessage(
-        `${PLAN_TASKS_PROMPT}\n\nAllowed task types:\n${allowedTypesDescription}\n\nGenerate exactly ${targetCount} candidate tasks with unique taskTypes.`,
+        `${prompt}\n\nAllowed task types:\n${allowedTypesDescription}`,
       ),
       new HumanMessage(
         JSON.stringify({
@@ -61,39 +74,109 @@ export function planTasksNode(ctx: GenerationContext) {
       ),
     ]);
 
-    const seenTypes = new Set<string>();
-    const uniqueCandidates: TaskCandidateRecord[] = [];
-    for (const c of result.candidates) {
-      if (!seenTypes.has(c.taskType)) {
+    let candidatePool: TaskCandidateRecord[] = [];
+
+    if (!isConstrained) {
+      // Standard Case (N >= K): Strictly unique task types
+      const seenTypes = new Set<string>();
+      const candidateList: TaskCandidateRecord[] = [];
+
+      for (const c of result.candidates) {
+        if (!seenTypes.has(c.taskType)) {
+          seenTypes.add(c.taskType);
+          candidateList.push({
+            candidateId: c.candidateId,
+            taskType: c.taskType,
+            briefDescription: c.briefDescription,
+            selected: true,
+          });
+        }
+      }
+
+      // If any duplicates were filtered out, fill with unused allowed types
+      if (candidateList.length < targetCount) {
+        const unusedTypes = allowedTypes.filter((t) => !seenTypes.has(t.key));
+        for (const t of unusedTypes) {
+          if (candidateList.length >= targetCount) break;
+          seenTypes.add(t.key);
+          candidateList.push({
+            candidateId: `cand-${candidateList.length + 1}`,
+            taskType: t.key,
+            briefDescription: `Practical on-the-job exercise testing ${t.description.toLowerCase()}`,
+            selected: true,
+          });
+        }
+      }
+
+      candidatePool = candidateList.slice(0, targetCount).map((c, i) => ({
+        ...c,
+        candidateId: `cand-${i + 1}`,
+      }));
+    } else {
+      // Constrained Case (N < K): Use every available type at least once, duplicate crucial types
+      const seenTypes = new Set<string>();
+      const candidateList: TaskCandidateRecord[] = [];
+
+      for (const c of result.candidates) {
         seenTypes.add(c.taskType);
-        uniqueCandidates.push({
+        candidateList.push({
           candidateId: c.candidateId,
           taskType: c.taskType,
           briefDescription: c.briefDescription,
           selected: true,
         });
       }
-    }
 
-    // If any duplicate was filtered out and we have fewer than targetCount,
-    // fill the gap using unused allowed task types for this role.
-    if (uniqueCandidates.length < targetCount) {
-      const unusedTypes = state.roleModule.allowedTaskPatternTypes.filter(
-        (t) => !seenTypes.has(t.key),
-      );
-      for (const t of unusedTypes) {
-        if (uniqueCandidates.length >= targetCount) break;
-        seenTypes.add(t.key);
-        uniqueCandidates.push({
-          candidateId: `cand-${uniqueCandidates.length + 1}`,
-          taskType: t.key,
-          briefDescription: `Practical on-the-job exercise testing ${t.description.toLowerCase()}`,
+      // Guarantee every allowed type is included at least once
+      const missingTypes = allowedTypes.filter((t) => !seenTypes.has(t.key));
+      for (const missing of missingTypes) {
+        // If candidate list already meets or exceeds targetCount, replace a duplicate entry
+        const typeCounts = new Map<string, number>();
+        for (const c of candidateList) {
+          typeCounts.set(c.taskType, (typeCounts.get(c.taskType) ?? 0) + 1);
+        }
+
+        let duplicateIdx = -1;
+        for (let i = candidateList.length - 1; i >= 0; i--) {
+          if ((typeCounts.get(candidateList[i].taskType) ?? 0) > 1) {
+            duplicateIdx = i;
+            break;
+          }
+        }
+
+        const injected: TaskCandidateRecord = {
+          candidateId: `cand-injected-${missing.key}`,
+          taskType: missing.key,
+          briefDescription: `Practical on-the-job exercise testing ${missing.description.toLowerCase()}`,
+          selected: true,
+        };
+
+        if (candidateList.length >= targetCount && duplicateIdx !== -1) {
+          candidateList[duplicateIdx] = injected;
+        } else {
+          candidateList.push(injected);
+        }
+        seenTypes.add(missing.key);
+      }
+
+      // If still fewer than targetCount, repeat the primary allowed types
+      let fillIdx = 0;
+      while (candidateList.length < targetCount) {
+        const fallbackType = allowedTypes[fillIdx % allowedTypes.length];
+        candidateList.push({
+          candidateId: `cand-fill-${candidateList.length + 1}`,
+          taskType: fallbackType.key,
+          briefDescription: `Focused scenario testing ${fallbackType.description.toLowerCase()}`,
           selected: true,
         });
+        fillIdx++;
       }
-    }
 
-    const candidatePool = uniqueCandidates.slice(0, targetCount);
+      candidatePool = candidateList.slice(0, targetCount).map((c, i) => ({
+        ...c,
+        candidateId: `cand-${i + 1}`,
+      }));
+    }
 
     logger.log(
       `Planned ${candidatePool.length} tasks: ${candidatePool.map((c) => `${c.candidateId}[${c.taskType}]`).join(', ')}`,

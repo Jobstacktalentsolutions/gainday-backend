@@ -1,5 +1,7 @@
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import {
+  RelevanceCheckResult,
   RoleModule,
   TaskPatternTypeDefinition,
 } from '../role-module.interface';
@@ -8,10 +10,10 @@ import { relevanceCheckSchema } from '../../schemas/critic-result.schema';
 import { withGeminiSafeStructuredOutput } from '../../../ai/gemini-structured-output.util';
 
 /**
- * Fallback module for any Category that doesn't resolve to a purpose-built role module
- * (see RoleRegistry.resolve). We cannot hand-author a bespoke taxonomy, extraction framing, or
- * presentation layer for every domain a client might post a job in — that's the whole reason
- * role modules exist as isolated, per-role config rather than one shared prompt (doc Section 2).
+ * Universal fallback module used when an employer enters a job title/category we have no
+ * purpose-built role module for (e.g. Legal Counsel, Data Scientist, Marketing Ops, Product
+ * Manager, Nurse, Graphic Designer, Executive Assistant, etc. — any unmodeled profession).
+ *
  * So this module trades content precision for coverage: it never throws, it only ever produces
  * write-in-your-own-words tasks (Text Area / Rich Text Composer — interfaces we already support
  * and can render/grade generically), optionally reading a small CSV data set (the CSV data panel), and instead of hardcoded per-domain guidance strings, its
@@ -46,6 +48,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'Justify, in writing, a decision or course of action already made in the scenario.',
     interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },
   {
     key: GenericTaskType.DRAFTED_COMMUNICATION,
@@ -53,6 +56,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     openEndedComponentType: 'DRAFTED_COMMUNICATION',
     description: 'Draft a message, summary, or deliverable to a stakeholder.',
     interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },
   {
     key: GenericTaskType.INTERPRETATION_ANALYSIS,
@@ -61,6 +65,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'Interpret or analyze a situation described in the scenario, in writing. There is no data set here; if the task needs one, it is a DATA_INTERPRETATION task.',
     interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 300, defaultDurationMinutes: 8 },
   },
   {
     key: GenericTaskType.DATA_INTERPRETATION,
@@ -69,6 +74,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'A small data set (a log, a report extract, a set of measurements) is given as CSV, shown to the candidate as a table; the candidate interprets it in writing. Only for roles whose real work involves reading data like this.',
     interfaceType: InterfaceType.CSV_DATA_PANEL,
+    realities: { maxStimulusWords: 300, defaultDurationMinutes: 9 },
   },
   {
     key: GenericTaskType.STAKEHOLDER_PUSHBACK_RESPONSE,
@@ -77,6 +83,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'Respond, in writing, to a stakeholder raising pushback or an objection.',
     interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 6 },
   },
 ];
 
@@ -134,7 +141,7 @@ export const GenericRoleModule: RoleModule = {
         new HumanMessage(JSON.stringify({ extraction, task })),
       ]);
 
-      return result;
+      return result as RelevanceCheckResult;
     },
   },
 };

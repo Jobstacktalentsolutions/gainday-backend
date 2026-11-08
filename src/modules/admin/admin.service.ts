@@ -993,6 +993,7 @@ export class AdminService {
         taskType: editedTaskContent.taskType,
         category: reviewItem.category,
         title: editedTaskContent.title,
+        expectedDurationMinutes: editedTaskContent.expectedDurationMinutes,
         scenarioDescription: editedTaskContent.scenarioDescription,
         questionPrompt: editedTaskContent.questionPrompt,
         objectiveComponent: editedTaskContent.objectiveComponent,

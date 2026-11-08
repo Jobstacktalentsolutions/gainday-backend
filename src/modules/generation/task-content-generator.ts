@@ -10,6 +10,7 @@ import {
 import {
   RoleModule,
   TaskPatternTypeDefinition,
+  TaskPatternRealities,
   TaskSpecTemplate,
 } from './roles/role-module.interface';
 import { taskSpecSchema } from './schemas/task-spec.schema';
@@ -29,6 +30,16 @@ ${REQUIREMENT_VS_TIP_RULE}`;
 
 const MARKDOWN_RULES = `Free-text fields are GitHub-flavored Markdown. Use lists, bold or italics only to present the
 material itself (emails, line items, data), never HTML, and never to list what the answer should contain.`;
+
+export const TIMING_AND_LIMITS_RULE = (realities?: TaskPatternRealities) => {
+  const maxStimulus = realities?.maxStimulusWords ?? 250;
+  const defaultDuration = realities?.defaultDurationMinutes ?? 8;
+  return `Simulation Timing & Realities:
+- The full simulation has 4 tasks budgeted for at most 30 minutes total (aim for 25-30 mins overall).
+- For this task, set expectedDurationMinutes based on depth (~${defaultDuration} mins guideline, range 3-15).
+- Keep scenarioDescription concise: strictly facts, situation and stimulus; hard ceiling of ${maxStimulus} words.
+- Calibrate candidate response length: in interfacePayload, set wordLimit: { min, max } realistic for the allocated time (or null if purely objective).`;
+};
 
 const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simulation task,
 matching the given candidate's taskType. Produce a scenario and the task components appropriate
@@ -131,7 +142,7 @@ export async function generateTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${TASK_GENERATION_PROMPT_BASE}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${TASK_GENERATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you generate must match that render mode.${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
@@ -154,6 +165,10 @@ export async function generateTaskContent(
   return {
     taskType: result.taskType,
     title: result.title,
+    expectedDurationMinutes:
+      result.expectedDurationMinutes ??
+      patternTypeDef.realities?.defaultDurationMinutes ??
+      8,
     scenarioDescription: result.scenarioDescription,
     questionPrompt: result.questionPrompt,
     objectiveComponent:
@@ -234,7 +249,7 @@ async function generateSpecTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${basePrompt}\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
+      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -254,6 +269,10 @@ async function generateSpecTaskContent(
   return {
     taskType: patternTypeDef.key,
     title: result.title,
+    expectedDurationMinutes:
+      result.expectedDurationMinutes ??
+      patternTypeDef.realities?.defaultDurationMinutes ??
+      8,
     scenarioDescription: result.scenarioDescription,
     questionPrompt: result.questionPrompt,
     objectiveComponent: derived.objectiveComponent,
@@ -405,7 +424,7 @@ export async function modifyTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${TASK_MODIFICATION_PROMPT_BASE}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you return must still match that render mode.`,
     ),
     new HumanMessage(
@@ -425,6 +444,11 @@ export async function modifyTaskContent(
   return {
     taskType: existingTask.taskType,
     title: result.title,
+    expectedDurationMinutes:
+      result.expectedDurationMinutes ??
+      existingTask.expectedDurationMinutes ??
+      patternTypeDef.realities?.defaultDurationMinutes ??
+      8,
     scenarioDescription: result.scenarioDescription,
     questionPrompt: result.questionPrompt,
     objectiveComponent:

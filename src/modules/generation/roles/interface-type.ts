@@ -25,6 +25,25 @@ export enum InterfaceType {
   STAGED_CHAT = 'STAGED_CHAT',
 }
 
+export const wordLimitSchema = z
+  .object({
+    min: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe('Minimum words candidate should write.'),
+    max: z
+      .number()
+      .int()
+      .positive()
+      .describe('Maximum words candidate should write.'),
+  })
+  .nullable()
+  .optional()
+  .describe(
+    'Candidate written response limit calibrated to task depth and allocated time, or null if strictly objective.',
+  );
+
 // z.literal() compiles to JSON-Schema `const`, which Gemini's schema parser rejects
 // ("Unknown name 'const'... Cannot find field"). z.enum([x]) with one value compiles to
 // `enum: [x]`, which Gemini does support and which still only accepts that one value.
@@ -35,15 +54,13 @@ const richTextComposerSchema = z.object({
   // compiles to an `anyOf`/`not` shape neither Gemini nor Groq's schema validators accept —
   // plain .nullable() compiles to a clean `type: [X, "null"]` both providers handle.
   placeholder: z.string().nullable(),
+  wordLimit: wordLimitSchema,
 });
 
 const textAreaSchema = z.object({
   interfaceType: z.enum([InterfaceType.TEXT_AREA]),
-  // Required + nullable, not .optional(): structured-output models commonly emit an explicit
-  // `null` for an unfilled field rather than omitting the key, and z.optional().nullable()
-  // compiles to an `anyOf`/`not` shape neither Gemini nor Groq's schema validators accept —
-  // plain .nullable() compiles to a clean `type: [X, "null"]` both providers handle.
   placeholder: z.string().nullable(),
+  wordLimit: wordLimitSchema,
 });
 
 const tableViewResponsePanelSchema = z.object({
@@ -52,11 +69,8 @@ const tableViewResponsePanelSchema = z.object({
     columns: z.array(z.string()).min(1),
     rows: z.array(z.array(z.string())).min(1),
   }),
-  // Required + nullable, not .optional(): structured-output models commonly emit an explicit
-  // `null` for an unfilled field rather than omitting the key, and z.optional().nullable()
-  // compiles to an `anyOf`/`not` shape neither Gemini nor Groq's schema validators accept —
-  // plain .nullable() compiles to a clean `type: [X, "null"]` both providers handle.
   placeholder: z.string().nullable(),
+  wordLimit: wordLimitSchema,
 });
 
 // The same candidate experience as TABLE_VIEW_RESPONSE_PANEL (a data table to work from, then a
@@ -71,8 +85,8 @@ const csvDataPanelSchema = z.object({
     .describe(
       'The data set as CSV: one header row naming every column, then data rows, comma-separated, with any field that contains a comma wrapped in double quotes. At most 25 data rows.',
     ),
-  // Required + nullable — see richTextComposerSchema above.
   placeholder: z.string().nullable(),
+  wordLimit: wordLimitSchema,
 });
 
 // A data table with a chart drawn from the same numbers (finance doc Section 5): the chart series
@@ -117,6 +131,7 @@ const tableViewWithChartSchema = z.object({
   }),
   chart: chartSchema,
   placeholder: z.string().nullable(),
+  wordLimit: wordLimitSchema,
 });
 
 // Customer service (customer service doc Section 4): read-only reference tabs the candidate works

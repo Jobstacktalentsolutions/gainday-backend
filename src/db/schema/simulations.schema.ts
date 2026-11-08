@@ -42,6 +42,8 @@ export interface SimulationTask {
   taskType: string; // role-module-defined key (see src/modules/generation/roles)
   category: string;
   title: string;
+  /** Expected completion time in minutes allocated to this task within the simulation budget. */
+  expectedDurationMinutes?: number;
   /** Markdown — see {@link MarkdownString}. */
   scenarioDescription: MarkdownString;
   /** Markdown — see {@link MarkdownString}. */

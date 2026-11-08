@@ -10,6 +10,14 @@ export const taskSpecSchema = (
 ) =>
   z.object({
     title: z.string(),
+    expectedDurationMinutes: z
+      .number()
+      .int()
+      .min(2)
+      .max(15)
+      .describe(
+        'Expected completion time in minutes for this task. The overall simulation has 4 tasks totaling at most 30 minutes (aim for 25-30 mins total).',
+      ),
     scenarioDescription: z.string().describe('GitHub-flavored Markdown. States no figures.'),
     questionPrompt: z
       .string()

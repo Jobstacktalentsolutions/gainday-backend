@@ -44,6 +44,23 @@ function fixNullableTypes(node: unknown): unknown {
     }
   }
 
+  if (Array.isArray(obj.anyOf)) {
+    const nonNull = obj.anyOf.filter(
+      (item) =>
+        !(
+          typeof item === 'object' &&
+          item !== null &&
+          (item as Record<string, unknown>).type === 'null'
+        ),
+    );
+    if (nonNull.length === 1 && obj.anyOf.length > nonNull.length) {
+      const target = nonNull[0] as Record<string, unknown>;
+      delete obj.anyOf;
+      Object.assign(obj, target);
+      obj.nullable = true;
+    }
+  }
+
   for (const key of Object.keys(obj)) {
     obj[key] = fixNullableTypes(obj[key]);
   }
@@ -55,10 +72,10 @@ function fixNullableTypes(node: unknown): unknown {
  *  and letting the error propagate. Provider-agnostic — this covers two related failure
  *  classes that are worth an immediate retry rather than a fixed config problem: (1) the
  *  provider itself reporting its output failed JSON/schema validation (smaller/faster models
- *  occasionally break strict-mode JSON on deeply nested objects), and (2) our own post-parse
- *  Zod validation catching a content-level miss (e.g. .refine() rejecting the wrong number of
- *  anchors) that a well-formed-JSON response can still have. Neither is something LangChain's
- *  own retry (network/rate-limit errors only) covers. */
+ *  occasionally break strict-mode JSON on deeply nested objects even with `strict: true` set)
+ *  or our own post-parse Zod `.refine()` rejects a well-formed-but-semantically-wrong response
+ *  (e.g. the wrong number of anchors). Neither is something LangChain's own retry
+ *  (network/rate-limit errors only) covers. */
 const MALFORMED_OUTPUT_RETRIES = 2;
 
 /** True for an error indicating the model's output failed JSON/schema validation — either at

@@ -13,6 +13,14 @@ export const taskGenerationSchema = (
   return z.object({
     taskType: z.enum(allowedTypeKeys),
     title: z.string(),
+    expectedDurationMinutes: z
+      .number()
+      .int()
+      .min(2)
+      .max(15)
+      .describe(
+        'Expected completion time in minutes for this task. The overall simulation has 4 tasks totaling at most 30 minutes (aim for 25-30 mins total).',
+      ),
     scenarioDescription: z.string().describe('GitHub-flavored Markdown.'),
     // The one place the no-tips rule is repeated outside the prompt: field descriptions travel
     // with the schema the model fills in, and this is the field where it gets broken.

@@ -38,6 +38,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Classify each reconciling item as a bank-side or ledger-side adjustment, compute the adjusted cash balance, and justify the entries that need posting.',
     interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
     spec: reconciliationSpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
   },
   {
     key: FinanceTaskType.JOURNAL_ENTRY_CLASSIFICATION,
@@ -48,6 +49,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Post a journal entry for each clear-cut transaction, and justify in writing the treatment of one debatable transaction.',
     interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
     spec: journalEntrySpec,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 7 },
   },
   {
     key: FinanceTaskType.BUDGET_VARIANCE,
@@ -58,6 +60,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Compute the variance and variance percentage for each budget line, then explain the drivers to a non-finance leader.',
     interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
     spec: varianceSpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
   },
   {
     key: FinanceTaskType.FORECAST_UPDATE,
@@ -68,6 +71,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Compute the revised operating result after a price, volume or one-off change, then explain its effect for the decision-maker.',
     interfaceType: InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
     spec: forecastSpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
   },
   {
     key: FinanceTaskType.STATEMENT_ANALYSIS,
@@ -78,6 +82,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Compute gross and operating margins across periods from a chart and table, then flag what to raise with the CFO.',
     interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
     spec: statementAnalysisSpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
   },
   {
     key: FinanceTaskType.LINE_TREND,
@@ -88,6 +93,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Read a revenue trend from a line chart, compute the change across the whole period, and explain what is driving it.',
     interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
     spec: lineTrendSpec,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 6 },
   },
   {
     key: FinanceTaskType.REVENUE_UNITS_COMBO,
@@ -98,6 +104,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Read revenue bars and units sold on a second axis, compute revenue per unit for each period, and explain the pricing or volume effect.',
     interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
     spec: revenueUnitsComboSpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
   },
   {
     key: FinanceTaskType.VARIANCE_BRIDGE,
@@ -108,6 +115,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
       'Read a budget-to-actual bridge, compute the variance the named drivers do not explain, and say what to investigate.',
     interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
     spec: varianceBridgeSpec,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
   },
   {
     key: FinanceTaskType.STAKEHOLDER_PUSHBACK_RESPONSE,
@@ -116,6 +124,7 @@ const financeTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'Reply in writing to a stakeholder who challenges a finance decision, without quoting figures.',
     interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 200, defaultDurationMinutes: 6 },
   },
 ];
 

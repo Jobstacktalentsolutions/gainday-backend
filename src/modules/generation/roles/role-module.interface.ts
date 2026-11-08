@@ -50,6 +50,13 @@ export interface TaskSpecTemplate {
   materialize(data: unknown): MaterializedTaskData;
 }
 
+export interface TaskPatternRealities {
+  /** Maximum stimulus reading word count for this task type. Prevents storybooks. */
+  maxStimulusWords: number;
+  /** Baseline duration guideline in minutes for this task type within the overall simulation budget. */
+  defaultDurationMinutes: number;
+}
+
 export interface TaskPatternTypeDefinition {
   key: string;
   label: string;
@@ -60,6 +67,8 @@ export interface TaskPatternTypeDefinition {
   interfaceType: InterfaceType;
   /** Set for tasks whose figures must be computed rather than generated (see TaskSpecTemplate). */
   spec?: TaskSpecTemplate;
+  /** Timing guideline and reading stimulus bounds for this task pattern type. */
+  realities: TaskPatternRealities;
 }
 
 export interface ExtractionResult {
