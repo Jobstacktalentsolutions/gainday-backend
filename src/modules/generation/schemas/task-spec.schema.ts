@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { wordLimitSchema } from '../roles/interface-type';
 
 /**
  * Structured-output schema for a spec-backed task (see TaskSpecTemplate). The model writes the
@@ -18,11 +19,12 @@ export const taskSpecSchema = (
       .describe(
         'Expected completion time in minutes for this task. The overall simulation has 4 tasks totaling at most 30 minutes (aim for 25-30 mins total).',
       ),
+    wordLimit: wordLimitSchema,
     scenarioDescription: z.string().describe('GitHub-flavored Markdown. States no figures.'),
     questionPrompt: z
       .string()
       .describe(
-        'GitHub-flavored Markdown. The deliverable, its recipient, format or length, and any content the work must include. No tips.',
+        'GitHub-flavored Markdown. The requirements of the deliverable only. Never state word counts, limits, or length rules in the prompt text; the platform interface displays and enforces the word limit widget automatically. No tips.',
       ),
     businessProblemDerived: z.boolean(),
     data: dataSchema.describe(

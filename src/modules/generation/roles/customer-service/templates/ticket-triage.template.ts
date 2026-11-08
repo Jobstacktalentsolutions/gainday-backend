@@ -75,8 +75,7 @@ export const ticketTriageSpec = defineTaskSpec(dataSchema, (data) => {
           ),
         },
         { label: 'Triage guideline', content: guideline },
-      ],
-      { min: 30, max: 90 },
+      ]
     ),
     objectiveComponent: {
       items: data.tickets.map((ticket) => ticket.id),

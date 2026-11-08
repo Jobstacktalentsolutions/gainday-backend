@@ -79,8 +79,7 @@ export const diagnosticQuestionsSpec = defineTaskSpec(dataSchema, (data) => {
           label: 'Ticket',
           content: `**${data.customerName}:**\n\n${data.symptomReport}`,
         },
-      ],
-      { min: 30, max: 110 },
+      ]
     ),
     objectiveComponent: {
       options: data.questions.map((question) => question.text),

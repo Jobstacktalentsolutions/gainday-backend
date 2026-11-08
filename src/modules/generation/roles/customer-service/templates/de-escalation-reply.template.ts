@@ -58,8 +58,7 @@ export const deEscalationReplySpec = defineTaskSpec(dataSchema, (data) => {
             'Threats of a chargeback, a safety risk or legal action go to the specialist team.',
           ].join('\n\n'),
         },
-      ],
-      { min: 30, max: 120 },
+      ]
     ),
     rubric: {
       checklist,

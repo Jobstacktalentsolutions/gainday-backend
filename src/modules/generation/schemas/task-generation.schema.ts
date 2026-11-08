@@ -27,7 +27,7 @@ export const taskGenerationSchema = (
     questionPrompt: z
       .string()
       .describe(
-        'GitHub-flavored Markdown. The requirements of the deliverable only. No tips: approach advice, example tactics, tone, or what a good answer does.',
+        'GitHub-flavored Markdown. The requirements of the deliverable only. Never state word counts, limits, or length rules in the prompt text; the platform interface displays and enforces the word limit widget automatically. No tips: approach advice, example tactics, tone, or what a good answer does.',
       ),
     businessProblemDerived: z.boolean(),
     objectiveComponent: objectiveComponentSchema

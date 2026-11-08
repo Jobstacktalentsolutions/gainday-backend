@@ -39,11 +39,11 @@ export function factTable(
 
 export function caseFilePayload(
   tabs: { label: string; content: string }[],
-  wordLimit: { min: number; max: number },
+  wordLimit?: { min: number; max: number } | null,
 ): MaterializedTaskData['interfacePayload'] {
   return {
     caseFile: { tabs },
-    wordLimit,
+    ...(wordLimit ? { wordLimit } : {}),
     placeholder: null,
   };
 }

@@ -52,8 +52,7 @@ export const escalationHandoffSpec = defineTaskSpec(dataSchema, (data) => {
             ['Deadline', formatDate(data.deadline)],
           ]),
         },
-      ],
-      { min: 40, max: 110 },
+      ]
     ),
     rubric: {
       checklist: [

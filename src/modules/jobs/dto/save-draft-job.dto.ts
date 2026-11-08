@@ -8,6 +8,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
+import { IsAfterToday } from './is-after-today.validator';
 import { JOB_DESCRIPTION_MAX_LENGTH } from '../job-description.constants';
 
 export class SaveDraftJobDto {
@@ -34,6 +35,7 @@ export class SaveDraftJobDto {
 
   @IsOptional()
   @IsISO8601()
+  @IsAfterToday({ message: 'Deadline must be greater than current day' })
   applicationDeadline?: string;
 
   @IsOptional()

@@ -1,3 +1,15 @@
+export function stripTextWordLimits(text: string | null | undefined): string {
+  if (!text) return text ?? '';
+  return text
+    .replace(/,\s*(?:and\s+)?(?:keep|limit|keeping|limiting)\b[^.]*?\b\d+\s*words\b/gi, '')
+    .replace(/\s+and\s+(?:keep|limit)\b[^.]*?\b\d+\s*words\.?/gi, '.')
+    .replace(/(?:^|\s)(?:limit|keep)\b[^.]*?\b\d+\s*words\.?/gi, '')
+    .replace(/\s*\([^)]*?\b\d+\s*words[^)]*?\)/gi, '')
+    .replace(/\s*\.\s*\./g, '.')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
@@ -169,8 +181,8 @@ export async function generateTaskContent(
       result.expectedDurationMinutes ??
       patternTypeDef.realities?.defaultDurationMinutes ??
       8,
-    scenarioDescription: result.scenarioDescription,
-    questionPrompt: result.questionPrompt,
+    scenarioDescription: stripTextWordLimits(result.scenarioDescription),
+    questionPrompt: stripTextWordLimits(result.questionPrompt),
     objectiveComponent:
       (result.objectiveComponent as Record<string, unknown> | null) ??
       undefined,
@@ -266,6 +278,11 @@ async function generateSpecTaskContent(
   const businessProblemDerived =
     problem === null ? false : result.businessProblemDerived;
 
+  const wordLimit =
+    (result as { wordLimit?: { min: number; max: number } | null }).wordLimit ??
+    (derived.interfacePayload as Record<string, unknown>)?.wordLimit ??
+    undefined;
+
   return {
     taskType: patternTypeDef.key,
     title: result.title,
@@ -273,15 +290,19 @@ async function generateSpecTaskContent(
       result.expectedDurationMinutes ??
       patternTypeDef.realities?.defaultDurationMinutes ??
       8,
-    scenarioDescription: result.scenarioDescription,
-    questionPrompt: result.questionPrompt,
+    scenarioDescription: stripTextWordLimits(result.scenarioDescription),
+    questionPrompt: stripTextWordLimits(result.questionPrompt),
     objectiveComponent: derived.objectiveComponent,
     openEndedComponent: result.openEndedComponent
       ? result.openEndedComponent
       : undefined,
     businessProblemDerived,
     interfaceType: patternTypeDef.interfaceType,
-    interfacePayload: { interfaceType: patternTypeDef.interfaceType, ...derived.interfacePayload },
+    interfacePayload: {
+      interfaceType: patternTypeDef.interfaceType,
+      ...derived.interfacePayload,
+      ...(wordLimit ? { wordLimit } : {}),
+    },
     rubric: derived.rubric,
     serverOnly: derived.serverOnly,
   };
@@ -449,8 +470,8 @@ export async function modifyTaskContent(
       existingTask.expectedDurationMinutes ??
       patternTypeDef.realities?.defaultDurationMinutes ??
       8,
-    scenarioDescription: result.scenarioDescription,
-    questionPrompt: result.questionPrompt,
+    scenarioDescription: stripTextWordLimits(result.scenarioDescription),
+    questionPrompt: stripTextWordLimits(result.questionPrompt),
     objectiveComponent:
       (result.objectiveComponent as Record<string, unknown> | null) ??
       undefined,

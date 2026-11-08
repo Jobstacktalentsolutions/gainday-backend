@@ -58,8 +58,7 @@ export const refundPolicyReplySpec = defineTaskSpec(dataSchema, (data) => {
           content: `**${data.customerName}, ${formatDate(data.requestDate)}:**\n\n${data.customerMessage}`,
         },
         { label: 'Policy', content: policy },
-      ],
-      { min: 40, max: 150 },
+      ]
     ),
     rubric: outsideWindow
       ? {

@@ -52,7 +52,19 @@ export class JobsService {
     };
 
     if (dto.applicationDeadline !== undefined) {
-      values.applicationDeadline = new Date(dto.applicationDeadline);
+      if (dto.applicationDeadline === null || dto.applicationDeadline === '') {
+        values.applicationDeadline = null;
+      } else {
+        const deadline = new Date(dto.applicationDeadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (isNaN(deadline.getTime()) || deadline.getTime() <= today.getTime()) {
+          throw new BadRequestException(
+            'Deadline must be greater than current day',
+          );
+        }
+        values.applicationDeadline = deadline;
+      }
     }
 
     if (dto.salaryFrom !== undefined || dto.salaryTo !== undefined) {
