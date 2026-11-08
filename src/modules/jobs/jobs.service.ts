@@ -7,7 +7,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
@@ -215,11 +215,18 @@ export class JobsService {
     return job ?? null;
   }
 
-  async findByEmployer(employerId: string): Promise<Job[]> {
+  async findByEmployer(employerId: string, search?: string): Promise<Job[]> {
+    const conditions = [eq(jobs.employerId, employerId)];
+
+    if (search && search.trim()) {
+      const s = `%${search.trim()}%`;
+      conditions.push(or(ilike(jobs.title, s), ilike(jobs.role, s), ilike(jobs.location, s))!);
+    }
+
     return this.db
       .select()
       .from(jobs)
-      .where(eq(jobs.employerId, employerId))
+      .where(and(...conditions))
       .orderBy(desc(jobs.updatedAt));
   }
 

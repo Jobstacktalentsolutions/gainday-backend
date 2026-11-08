@@ -27,6 +27,7 @@ import { UserRole } from '../../db/schema';
 import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
 import { ParseJobDescriptionDto } from './dto/parse-job-description.dto';
+import { FindEmployerJobsDto } from './dto/find-employer-jobs.dto';
 
 @Controller('jobs')
 export class JobsController {
@@ -65,8 +66,8 @@ export class JobsController {
   @Get('mine')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER)
-  async getMyJobs(@CurrentUser() user: any) {
-    return this.jobsService.findByEmployer(user.profileId);
+  async getMyJobs(@CurrentUser() user: any, @Query() query: FindEmployerJobsDto) {
+    return this.jobsService.findByEmployer(user.profileId, query?.search);
   }
 
   @Get(':id')
