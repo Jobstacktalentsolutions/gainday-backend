@@ -7,7 +7,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { and, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, ilike, or, sql } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
@@ -17,12 +17,14 @@ import {
   SalaryRange,
   JobStatus,
   UserRole,
+  submissions,
 } from '../../db/schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { JobBoardCacheService } from './job-board/job-board-cache.service';
 import { countPendingTaskReviews } from '../generation/generation-review.util';
 import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
+import { FindEmployerJobsDto } from './dto/find-employer-jobs.dto';
 import { toSalaryBound } from './salary-bound.util';
 
 type JobDetailsInput = CreateJobDto | SaveDraftJobDto;
@@ -215,19 +217,80 @@ export class JobsService {
     return job ?? null;
   }
 
-  async findByEmployer(employerId: string, search?: string): Promise<Job[]> {
+  async findByEmployer(
+    employerId: string,
+    dto?: FindEmployerJobsDto,
+  ): Promise<{
+    items: (Job & { submissionsCount: number })[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      totalAll: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  }> {
+    const page = Math.max(1, Number(dto?.page) || 1);
+    const limit = Math.max(1, Math.min(50, Number(dto?.limit) || 9));
+    const offset = (page - 1) * limit;
+
     const conditions = [eq(jobs.employerId, employerId)];
 
-    if (search && search.trim()) {
-      const s = `%${search.trim()}%`;
+    if (dto?.search && dto.search.trim()) {
+      const s = `%${dto.search.trim()}%`;
       conditions.push(or(ilike(jobs.title, s), ilike(jobs.role, s), ilike(jobs.location, s))!);
     }
 
-    return this.db
-      .select()
+    if (dto?.status && dto.status !== 'all') {
+      conditions.push(eq(jobs.status, dto.status as JobStatus));
+    }
+
+    const whereClause = and(...conditions);
+
+    const [{ count }] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
       .from(jobs)
-      .where(and(...conditions))
-      .orderBy(desc(jobs.updatedAt));
+      .where(whereClause);
+
+    const total = Number(count) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    let totalAll = total;
+    if (conditions.length > 1) {
+      const [{ countAll }] = await this.db
+        .select({ countAll: sql<number>`count(*)::int` })
+        .from(jobs)
+        .where(eq(jobs.employerId, employerId));
+      totalAll = Number(countAll) || 0;
+    }
+
+    const rows = await this.db
+      .select({
+        ...getTableColumns(jobs),
+        submissionsCount: sql<number>`count(distinct ${submissions.id})::int`,
+      })
+      .from(jobs)
+      .leftJoin(submissions, eq(submissions.jobId, jobs.id))
+      .where(whereClause)
+      .groupBy(jobs.id)
+      .orderBy(desc(jobs.updatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      items: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        totalAll,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
   }
 
   async deleteJob(

@@ -84,6 +84,7 @@ export function criticNode(ctx: GenerationContext) {
       category: state.category,
       intent: state.intent,
       problem: state.problem,
+      skillLevel: state.skillLevel ?? null,
     });
     if (!relevanceResult.relevant) {
       failureReasons.push(...relevanceResult.reasons);
@@ -98,6 +99,7 @@ export function criticNode(ctx: GenerationContext) {
             category: state.category,
             intent: state.intent,
             problem: state.problem,
+            skillLevel: state.skillLevel ?? null,
           },
           ctx.criticModel,
         );

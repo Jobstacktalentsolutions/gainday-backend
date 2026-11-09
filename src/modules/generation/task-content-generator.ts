@@ -14,7 +14,7 @@ import {
   TaskSpecTemplate,
 } from './roles/role-module.interface';
 import { taskSpecSchema } from './schemas/task-spec.schema';
-import { REQUIREMENT_VS_TIP_RULE } from './task-text-rules';
+import { REQUIREMENT_VS_TIP_RULE, getSeniorityGuidance } from './task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 
 /**
@@ -41,15 +41,20 @@ export const TIMING_AND_LIMITS_RULE = (realities?: TaskPatternRealities) => {
 - Calibrate candidate response length: in interfacePayload, set wordLimit: { min, max } realistic for the allocated time (or null if purely objective).`;
 };
 
-const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simulation task,
-matching the given candidate's taskType. Produce a scenario and the task components appropriate
-to that taskType. The task must need knowledge, judgment, or conventions specific to the role's
-domain: someone with only general common sense should not be able to answer it well.
-Calibrate scenario complexity, nuances, trade-offs, and data detail to the stated skillLevel (Junior: structured, foundational, guided ambiguity; Mid level: realistic operational complexity, multi-stakeholder considerations; Senior level: high strategic ambiguity, executive tradeoffs, complex systemic judgment).
-
-${CANDIDATE_FACING_TEXT_RULES}
-
-${MARKDOWN_RULES}`;
+export function buildTaskGenerationPromptBase(skillLevel?: string | null): string {
+  return [
+    "Generate the full content for one job-simulation task,",
+    "matching the given candidate's taskType. Produce a scenario and the task components appropriate",
+    "to that taskType. The task must need knowledge, judgment, or conventions specific to the role's",
+    "domain: someone with only general common sense should not be able to answer it well.",
+    "",
+    getSeniorityGuidance(skillLevel),
+    "",
+    CANDIDATE_FACING_TEXT_RULES,
+    "",
+    MARKDOWN_RULES,
+  ].join("\n");
+}
 
 export interface GenerateTaskContentParams {
   model: BaseChatModel;
@@ -146,7 +151,7 @@ export async function generateTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${TASK_GENERATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you generate must match that render mode.${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
@@ -188,14 +193,20 @@ export async function generateTaskContent(
   };
 }
 
-const SPEC_TASK_PROMPT_BASE = `Generate one job-simulation task. Put every figure the candidate needs into
-\`data\` as raw inputs: the system derives every total, balance, variance, margin and answer from them,
-and draws the data table. In scenarioDescription and questionPrompt, state no number at all — the
-table shows every figure.
-
-${CANDIDATE_FACING_TEXT_RULES}
-
-${MARKDOWN_RULES}`;
+export function buildSpecTaskPromptBase(skillLevel?: string | null): string {
+  return [
+    "Generate one job-simulation task. Put every figure the candidate needs into",
+    "`data` as raw inputs: the system derives every total, balance, variance, margin and answer from them,",
+    "and draws the data table. In scenarioDescription and questionPrompt, state no number at all — the",
+    "table shows every figure.",
+    "",
+    getSeniorityGuidance(skillLevel),
+    "",
+    CANDIDATE_FACING_TEXT_RULES,
+    "",
+    MARKDOWN_RULES,
+  ].join("\n");
+}
 
 const SPEC_TASK_MODIFICATION_PROMPT_BASE = `You are given an existing task and an employer's requested change.
 Return the whole task with the change applied. Keep the data inputs and text the change does not touch.
@@ -248,8 +259,8 @@ async function generateSpecTaskContent(
   const structuredModel = withGeminiSafeStructuredOutput(model, schema);
 
   const basePrompt = existingTask
-    ? SPEC_TASK_MODIFICATION_PROMPT_BASE
-    : SPEC_TASK_PROMPT_BASE;
+    ? [SPEC_TASK_MODIFICATION_PROMPT_BASE, "", getSeniorityGuidance(skillLevel)].join("\n")
+    : buildSpecTaskPromptBase(skillLevel);
   const guidanceClause = guidance
     ? `\n\nThe employer's direction for this task: ${guidance}`
     : '';

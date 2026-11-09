@@ -65,7 +65,8 @@ export class GenerationProcessor extends WorkerHost {
           set: { tasks: result.finalizedTasks, updatedAt: new Date() },
         });
 
-      const hasIncompleteSlots = result.adminReviewItemsPersisted > 0;
+      // Tasks are retained in the simulation draft even when flagged for AI oversight.
+      const hasIncompleteSlots = result.finalizedTasks.length === 0;
 
       // A job with task slots awaiting admin review stays a draft until they are resolved, so it
       // never goes live with missing tasks.

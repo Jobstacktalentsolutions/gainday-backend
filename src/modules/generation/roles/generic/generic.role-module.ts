@@ -131,12 +131,12 @@ export const GenericRoleModule: RoleModule = {
         new SystemMessage(
           `This task was generated for a domain ("${extraction.category}") with no pre-built ` +
             `assessment template, so it carries a higher risk of generic filler content that could ` +
-            `apply to almost any job. Judge strictly: would someone with NO real background in ` +
-            `"${extraction.category}" plausibly write a competent-sounding answer to this anyway, ` +
-            `just from general common sense? If yes, relevant=false — the task doesn't actually ` +
-            `require domain expertise and needs to be regenerated with a more domain-specific angle. ` +
-            `If it genuinely requires knowledge or judgment specific to "${extraction.category}" to ` +
-            `answer well, relevant=true. List your reasons either way.`,
+            `apply to almost any job.\n\n` +
+            getSeniorityCriticGuidance(extraction.skillLevel) +
+            `\n\nJudge with calibration to the target Seniority / Skill Level above: would someone with NO background ` +
+            `in "${extraction.category}" plausibly write a competent answer anyway, just from general common sense? ` +
+            `If yes, relevant=false. If it genuinely requires knowledge, fundamentals, or judgment specific to ` +
+            `"${extraction.category}" at this seniority level, relevant=true. List your reasons either way.`,
         ),
         new HumanMessage(JSON.stringify({ extraction, task })),
       ]);

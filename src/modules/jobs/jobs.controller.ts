@@ -67,7 +67,7 @@ export class JobsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.EMPLOYER)
   async getMyJobs(@CurrentUser() user: any, @Query() query: FindEmployerJobsDto) {
-    return this.jobsService.findByEmployer(user.profileId, query?.search);
+    return this.jobsService.findByEmployer(user.profileId, query);
   }
 
   @Get(':id')

@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { GenerationContext } from '../graph/generation-context';
 import {
+  FinalizedTask,
   GenerationState,
   GenerationStateUpdate,
 } from '../state/generation-state';
@@ -8,14 +9,17 @@ import {
   FailedGenerationAttempt,
   generationReviewItems,
 } from '../../../db/schema/generation-review.schema';
+import { questionBank } from '../../../db/schema/question-bank.schema';
+import { embedTaskContent } from '../utils/embedding.util';
 
 const logger = new Logger('GenerationPipeline:adminReviewFlag');
 
 /**
  * Cap-exhaustion fallback (doc Section 7.2/7.3): records the failed slot for admin review
- * rather than dropping it silently or force-passing an unvalidated task. Persists the
- * generation_review_items row here, not after the graph, so a later failure in the run
- * cannot lose it.
+ * while still persisting the generated task draft so the job simulation retains all tasks
+ * (avoiding user confusion with missing slots). Persists both the generation_review_items
+ * row and question_bank entry here so AI oversight can review/edit while the simulation
+ * remains complete.
  */
 export function adminReviewFlagNode(ctx: GenerationContext) {
   return async (state: GenerationState): Promise<GenerationStateUpdate> => {
@@ -47,9 +51,51 @@ export function adminReviewFlagNode(ctx: GenerationContext) {
       .values({ jobId: state.jobId, ...item });
 
     logger.warn(
-      `Slot ${state.currentSlotIndex}: exhausted retry attempts, flagging for admin review (last failure: ${critic.failureReasons.join('; ')})`,
+      'Slot ' + state.currentSlotIndex + ': exhausted retry attempts, flagging for admin review (last failure: ' + critic.failureReasons.join('; ') + ')',
     );
 
-    return { adminReviewItems: [item] };
+    const finalizedTasks: FinalizedTask[] = [];
+
+    if (draft.taskContent) {
+      try {
+        let embedding = critic.embedding;
+        if (!embedding) {
+          embedding = await embedTaskContent(ctx.embeddings, draft.taskContent);
+        }
+
+        const [inserted] = await ctx.db
+          .insert(questionBank)
+          .values({
+            category: state.category,
+            intent: state.intent,
+            taskType: draft.taskType,
+            taskContent: draft.taskContent,
+            sourceJobId: state.jobId,
+            embedding,
+          })
+          .returning({ id: questionBank.id });
+
+        finalizedTasks.push({
+          candidateId: draft.candidateId,
+          questionBankId: inserted.id,
+          taskType: draft.taskType,
+          taskContent: draft.taskContent,
+        });
+
+        logger.log(
+          'Slot ' + state.currentSlotIndex + ': retained ' + draft.taskContent.title + ' in simulation with question_bank id ' + inserted.id + ' while flagged for admin review',
+        );
+      } catch (err) {
+        logger.error(
+          'Slot ' + state.currentSlotIndex + ': failed to persist task to question_bank during admin review flagging:',
+          err,
+        );
+      }
+    }
+
+    return {
+      adminReviewItems: [item],
+      ...(finalizedTasks.length > 0 ? { finalizedTasks } : {}),
+    };
   };
 }

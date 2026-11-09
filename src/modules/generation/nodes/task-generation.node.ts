@@ -10,6 +10,7 @@ import { generateTaskContent } from '../task-content-generator';
 import { TaskSpecError } from '../roles/role-module.interface';
 import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 import { taskCandidateSchema } from '../schemas/task-candidate.schema';
+import { getSeniorityGuidance } from '../task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
 import { z } from 'zod';
 
@@ -53,7 +54,7 @@ async function generateReplacementCandidate(
   const result = await model.invoke([
     new SystemMessage(
       `Generate a single replacement candidate task for this role to replace a rejected candidate. Favour role-specific expertise.
-The task must be highly aligned with the stated Category and Intent, incorporate the business Problem if provided, and calibrate difficulty to the stated Skill Level (Junior, Mid level, or Senior level).
+The task must be highly aligned with the stated Category and Intent, and incorporate the business Problem if provided.\n${getSeniorityGuidance(state.skillLevel)}
 Allowed task types (do not invent new types):
 ${eligibleTypesDescription}`,
     ),
