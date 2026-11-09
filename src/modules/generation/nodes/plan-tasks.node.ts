@@ -31,7 +31,7 @@ export function buildPlanTasksPrompt(
 3. Do not invent new task types.`;
 
   return `Plan exactly ${targetCount} realistic on-the-job simulation tasks for this role.
-Prioritize role-specific expertise aligned with the stated Category, Intent, and Problem.
+Prioritize role-specific expertise aligned with the stated Category, Intent, Problem, and Seniority / Skill Level (calibrate complexity, scope of responsibility, and expected depth according to whether this is Junior, Mid level, or Senior level).
 
 ${constraintRules}`;
 }
@@ -70,6 +70,7 @@ export function planTasksNode(ctx: GenerationContext) {
           category: state.category,
           intent: state.intent,
           problem: state.problem,
+          skillLevel: state.skillLevel ?? null,
         }),
       ),
     ]);

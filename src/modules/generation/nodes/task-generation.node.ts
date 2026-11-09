@@ -53,7 +53,7 @@ async function generateReplacementCandidate(
   const result = await model.invoke([
     new SystemMessage(
       `Generate a single replacement candidate task for this role to replace a rejected candidate. Favour role-specific expertise.
-The task must be highly aligned with the stated Category and Intent, and incorporate the business Problem if provided.
+The task must be highly aligned with the stated Category and Intent, incorporate the business Problem if provided, and calibrate difficulty to the stated Skill Level (Junior, Mid level, or Senior level).
 Allowed task types (do not invent new types):
 ${eligibleTypesDescription}`,
     ),
@@ -62,6 +62,7 @@ ${eligibleTypesDescription}`,
         category: state.category,
         intent: state.intent,
         problem: state.problem,
+        skillLevel: state.skillLevel ?? null,
         candidateId,
       }),
     ),

@@ -22,10 +22,10 @@ export const parsedJobDescriptionSchema = z.object({
         'into a fixed list. Null only if genuinely undeterminable.',
     ),
   skillLevel: z
-    .enum(['Entry level', 'Mid level', 'Senior level'])
+    .enum(['Junior', 'Mid level', 'Senior level'])
     .nullable()
     .describe(
-      'Seniority level implied by the posting (years of experience, title seniority, scope of responsibility). Must be exactly one of "Entry level", "Mid level", or "Senior level". Null if not determinable.',
+      'Seniority level implied by the posting (years of experience, title seniority, scope of responsibility). Must be normalized to exactly one of "Junior", "Mid level", or "Senior level". Null if not determinable.',
     ),
   skillCategory: z
     .string()

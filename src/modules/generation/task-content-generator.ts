@@ -45,6 +45,7 @@ const TASK_GENERATION_PROMPT_BASE = `Generate the full content for one job-simul
 matching the given candidate's taskType. Produce a scenario and the task components appropriate
 to that taskType. The task must need knowledge, judgment, or conventions specific to the role's
 domain: someone with only general common sense should not be able to answer it well.
+Calibrate scenario complexity, nuances, trade-offs, and data detail to the stated skillLevel (Junior: structured, foundational, guided ambiguity; Mid level: realistic operational complexity, multi-stakeholder considerations; Senior level: high strategic ambiguity, executive tradeoffs, complex systemic judgment).
 
 ${CANDIDATE_FACING_TEXT_RULES}
 
@@ -56,6 +57,7 @@ export interface GenerateTaskContentParams {
   category: string;
   intent: string;
   problem: string | null;
+  skillLevel?: string | null;
   taskType: string;
   briefDescription: string;
   /** Employer-supplied direction for a single-task regeneration — takes priority over default
@@ -87,6 +89,7 @@ export async function generateTaskContent(
     category,
     intent,
     problem,
+    skillLevel,
     taskType,
     briefDescription,
     guidance,
@@ -113,6 +116,7 @@ export async function generateTaskContent(
       category,
       intent,
       problem,
+      skillLevel,
       briefDescription,
       guidance,
       revisionNotes,
@@ -150,6 +154,7 @@ export async function generateTaskContent(
         category,
         intent,
         problem,
+        skillLevel: skillLevel ?? null,
         candidate: {
           taskType,
           briefDescription,
@@ -206,6 +211,7 @@ interface GenerateSpecTaskContentParams {
   category: string;
   intent: string;
   problem: string | null;
+  skillLevel?: string | null;
   briefDescription: string;
   guidance?: string;
   /** Set when editing an existing task: the model returns that task with the guidance applied. */
@@ -228,6 +234,7 @@ async function generateSpecTaskContent(
     category,
     intent,
     problem,
+    skillLevel,
     briefDescription,
     guidance,
     existingTask,
@@ -315,6 +322,7 @@ export interface ReviseTaskContentParams {
   category: string;
   intent: string;
   problem: string | null;
+  skillLevel?: string | null;
   /** The rejected draft. The revision starts from it, so the rest of the task is kept. */
   existingTask: QuestionBankTaskContent;
   /** The critic's reasons for rejecting it, in its own words. */
@@ -327,7 +335,7 @@ export interface ReviseTaskContentParams {
  * own repair: figure and spec checks are deterministic, and the critic reruns on the result.
  */
 export async function reviseTaskContent(params: ReviseTaskContentParams): Promise<QuestionBankTaskContent> {
-  const { model, roleModule, category, intent, problem, existingTask, revisionNotes } = params;
+  const { model, roleModule, category, intent, problem, skillLevel, existingTask, revisionNotes } = params;
 
   const patternTypeDef = roleModule.allowedTaskPatternTypes.find((t) => t.key === existingTask.taskType);
   if (!patternTypeDef) {
@@ -344,6 +352,7 @@ export async function reviseTaskContent(params: ReviseTaskContentParams): Promis
       intent,
       problem,
       briefDescription: existingTask.title,
+      skillLevel,
       existingTask,
       revisionNotes,
     });
@@ -354,6 +363,7 @@ export async function reviseTaskContent(params: ReviseTaskContentParams): Promis
     category,
     intent,
     problem,
+    skillLevel,
     existingTask,
     guidance: `Fix these problems and change nothing else: ${revisionNotes.join(' ')}`,
   });
@@ -365,6 +375,7 @@ export interface ModifyTaskContentParams {
   category: string;
   intent: string;
   problem: string | null;
+  skillLevel?: string | null;
   existingTask: QuestionBankTaskContent;
   /** The employer's requested change — required for this path (see GenerationService.regenerateTask,
    *  which only calls this when both guidance AND an existing task are present). */

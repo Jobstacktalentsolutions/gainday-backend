@@ -140,6 +140,7 @@ export class GenerationService {
       requiredSkills: job.requiredSkills,
       businessProblemRaw: job.businessProblem || undefined,
       declaredRole: job.role === null ? undefined : job.role,
+      skillLevel: job.skillLevel === null ? undefined : job.skillLevel,
     };
 
     const tracker = new GenerationProgressTracker(config.selectedTaskCount);
@@ -256,6 +257,10 @@ export class GenerationService {
       .select()
       .from(jobExtractions)
       .where(eq(jobExtractions.jobId, jobId));
+    const [jobRecord] = await this.db
+      .select({ skillLevel: jobs.skillLevel })
+      .from(jobs)
+      .where(eq(jobs.id, jobId));
 
     if (!extraction) {
       throw new Error(
@@ -296,6 +301,7 @@ export class GenerationService {
           category: extraction.category,
           intent: extraction.intent,
           problem: extraction.problem,
+          skillLevel: jobRecord?.skillLevel ?? null,
           taskType: patternTypeDef.key,
           briefDescription: patternTypeDef.description,
           guidance,

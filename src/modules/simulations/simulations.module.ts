@@ -6,6 +6,7 @@ import { AuthModule } from '../auth/auth.module';
 import { GenerationModule } from '../generation/generation.module';
 
 @Module({
+
   imports: [JobsModule, AuthModule, GenerationModule],
   controllers: [SimulationsController],
   providers: [SimulationsService],

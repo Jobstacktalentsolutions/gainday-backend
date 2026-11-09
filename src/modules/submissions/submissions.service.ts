@@ -688,8 +688,12 @@ export class SubmissionsService {
     );
     const capabilityHistory = capabilityHistories.get(submission.id) ?? [];
 
-    const { problemSolving, judgmentExecution, writtenCommunication } =
-      toCategoryScores(categoryScores);
+    const {
+      problemSolving,
+      judgmentExecution,
+      writtenCommunication,
+      commercialDomainAwareness,
+    } = toCategoryScores(categoryScores);
 
     return {
       id: submission.id,
@@ -708,12 +712,10 @@ export class SubmissionsService {
         employmentType: submission.job.employmentType,
       },
       metrics: [
-        {
-          label: 'PROBLEM SOLVING & JUDGEMENT',
-          score: Math.round((problemSolving + judgmentExecution) / 2),
-        },
-        { label: 'EXECUTION', score: judgmentExecution },
+        { label: 'PROBLEM SOLVING', score: problemSolving },
+        { label: 'JUDGEMENT & EXECUTION', score: judgmentExecution },
         { label: 'WRITTEN COMMUNICATION', score: writtenCommunication },
+        { label: 'DOMAIN EXPERTISE', score: commercialDomainAwareness },
       ],
       // Null when there is no history, e.g. a disqualified submission.
       cumulativeCapabilityScore: capabilityHistory.at(-1) ?? null,

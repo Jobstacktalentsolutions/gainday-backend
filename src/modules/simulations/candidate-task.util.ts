@@ -94,17 +94,21 @@ export function sanitizeTaskForCandidate(
 ): CandidateSimulationTask {
   // The rubric holds the gate and checklist the answer is graded on, so it never reaches the candidate.
   const { objectiveComponent, rubric: _rubric, ...rest } = task;
-  const componentType = resolvePatternType(
-    task,
-    roleRegistry,
-  )?.objectiveComponentType;
+  const patternTypeDef = resolvePatternType(task, roleRegistry);
+  const componentType = patternTypeDef?.objectiveComponentType;
+
+  const defaultDuration =
+    patternTypeDef?.realities?.defaultDurationMinutes ?? 8;
+  const expectedDurationMinutes =
+    task.expectedDurationMinutes ?? defaultDuration;
 
   if (objectiveComponent == null || !componentType) {
-    return { ...rest, objectiveComponent: null };
+    return { ...rest, expectedDurationMinutes, objectiveComponent: null };
   }
 
   return {
     ...rest,
+    expectedDurationMinutes,
     objectiveComponent: {
       ...CANDIDATE_VIEW[componentType](objectiveComponent),
       componentType,

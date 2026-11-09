@@ -53,6 +53,7 @@ stated, return null for problem. Never invent or infer a problem that is not pre
           jobDescription: state.jobDescription,
           requiredSkills: state.requiredSkills,
           businessProblemRaw: state.businessProblemRaw ?? null,
+          skillLevel: state.skillLevel ?? null,
         }),
       ),
     ]);
