@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'util';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Embeddings } from '@langchain/core/embeddings';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -10,6 +10,7 @@ import {
   SimulationTask,
   questionBank,
   QuestionBankTaskContent,
+  generationReviewItems,
 } from '../../db/schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
 import { embedTaskContent } from '../generation/utils/embedding.util';
@@ -28,7 +29,31 @@ export class SimulationsService {
       .select()
       .from(simulations)
       .where(eq(simulations.jobId, jobId));
-    return simulation ?? null;
+    if (!simulation) return null;
+
+    if (simulation.tasks && Array.isArray(simulation.tasks)) {
+      const pendingReviews = await this.db
+        .select({ slotIndex: generationReviewItems.slotIndex })
+        .from(generationReviewItems)
+        .where(
+          and(
+            eq(generationReviewItems.jobId, jobId),
+            eq(generationReviewItems.status, 'PENDING'),
+          ),
+        );
+
+      if (pendingReviews.length > 0) {
+        const pendingSlots = new Set(pendingReviews.map((r) => r.slotIndex));
+        simulation.tasks = simulation.tasks.map((task, index) => {
+          if (pendingSlots.has(index) || task.inReview) {
+            return { ...task, inReview: true };
+          }
+          return task;
+        });
+      }
+    }
+
+    return simulation;
   }
 
   async findById(id: string): Promise<Simulation | null> {

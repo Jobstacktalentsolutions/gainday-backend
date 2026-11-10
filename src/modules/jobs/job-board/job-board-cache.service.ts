@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
+import { REDIS } from '../../redis/redis.constants';
 
 const VERSION_KEY = 'job-board:version';
 const RANKING_TTL_SECONDS = 3 * 60 * 60;
@@ -11,21 +11,10 @@ const RANKING_TTL_SECONDS = 3 * 60 * 60;
  * Redis is an optimisation only: if it is unavailable the board is ranked from scratch.
  */
 @Injectable()
-export class JobBoardCacheService implements OnModuleDestroy {
+export class JobBoardCacheService {
   private readonly logger = new Logger(JobBoardCacheService.name);
-  private readonly redis: Redis;
 
-  constructor(configService: ConfigService) {
-    this.redis = new Redis({
-      host: configService.get<string>('redis.host'),
-      port: configService.get<number>('redis.port'),
-      username: configService.get<string>('redis.username'),
-      password: configService.get<string>('redis.password'),
-      lazyConnect: true,
-      // Fail fast when Redis is down, so the board is not held up waiting for the cache.
-      enableOfflineQueue: false,
-    });
-  }
+  constructor(@Inject(REDIS) private readonly redis: Redis) {}
 
   async getRanking(viewerKey: string): Promise<string[] | null> {
     try {
@@ -61,14 +50,10 @@ export class JobBoardCacheService implements OnModuleDestroy {
     try {
       await this.redis.incr(VERSION_KEY);
     } catch (err) {
-      this.logger.error(
+      this.logger.warn(
         `Job board cache could not be invalidated, rankings may be stale for up to 3 hours: ${(err as Error).message}`,
       );
     }
-  }
-
-  onModuleDestroy(): void {
-    this.redis.disconnect();
   }
 
   private rankingKey(version: string | null, viewerKey: string): string {

@@ -19,6 +19,7 @@ export interface FinalizedTask extends Omit<TaskDraft, 'taskContent'> {
    *  known once persist.node.ts has actually inserted the row, hence the separate TaskDraft
    *  type for currentTaskDraft (pre-persist, no id yet). */
   questionBankId: string;
+  inReview?: boolean;
 }
 
 export interface CriticResult {

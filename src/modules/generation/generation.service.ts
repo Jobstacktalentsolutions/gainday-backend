@@ -215,6 +215,7 @@ export class GenerationService {
         businessProblemDerived: task.taskContent.businessProblemDerived,
         interfaceType: task.taskContent.interfaceType,
         interfacePayload: task.taskContent.interfacePayload,
+        inReview: task.inReview ?? false,
       }),
     );
     const finalizedTasks = mappedTasks.filter(hasRequiredTaskFields);

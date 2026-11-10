@@ -58,6 +58,8 @@ export interface SimulationTask {
   /** Data conforming to INTERFACE_SCHEMAS[interfaceType] — the concrete render contract for
    *  the frontend (never just a tag string with an unvalidated shape). */
   interfacePayload: Record<string, unknown>;
+  /** Set to true when the task failed critic checks and was retained for AI oversight / admin review. */
+  inReview?: boolean;
 }
 
 export const simulations = pgTable('simulations', {

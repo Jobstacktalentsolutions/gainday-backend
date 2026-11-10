@@ -18,6 +18,7 @@ import {
   JobStatus,
   UserRole,
   submissions,
+  generationReviewItems,
 } from '../../db/schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { JobBoardCacheService } from './job-board/job-board-cache.service';
@@ -214,7 +215,31 @@ export class JobsService {
       where: eq(jobs.id, id),
       with: { simulation: true },
     });
-    return job ?? null;
+    if (!job) return null;
+
+    if (job.simulation?.tasks && Array.isArray(job.simulation.tasks)) {
+      const pendingReviews = await this.db
+        .select({ slotIndex: generationReviewItems.slotIndex })
+        .from(generationReviewItems)
+        .where(
+          and(
+            eq(generationReviewItems.jobId, id),
+            eq(generationReviewItems.status, 'PENDING'),
+          ),
+        );
+
+      if (pendingReviews.length > 0) {
+        const pendingSlots = new Set(pendingReviews.map((r) => r.slotIndex));
+        job.simulation.tasks = job.simulation.tasks.map((task, index) => {
+          if (pendingSlots.has(index) || task.inReview) {
+            return { ...task, inReview: true };
+          }
+          return task;
+        });
+      }
+    }
+
+    return job;
   }
 
   async findByEmployer(

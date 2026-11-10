@@ -80,6 +80,7 @@ export function adminReviewFlagNode(ctx: GenerationContext) {
           questionBankId: inserted.id,
           taskType: draft.taskType,
           taskContent: draft.taskContent,
+          inReview: true,
         });
 
         logger.log(

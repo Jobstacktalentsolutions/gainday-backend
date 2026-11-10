@@ -1001,10 +1001,28 @@ export class AdminService {
         businessProblemDerived: editedTaskContent.businessProblemDerived,
         interfaceType: editedTaskContent.interfaceType,
         interfacePayload: editedTaskContent.interfacePayload,
+        inReview: false,
       };
+
+      const updatedTasks = [...simulation.tasks];
+      if (
+        reviewItem.slotIndex !== null &&
+        reviewItem.slotIndex !== undefined &&
+        reviewItem.slotIndex < updatedTasks.length
+      ) {
+        updatedTasks[reviewItem.slotIndex] = newTask;
+      } else {
+        const inReviewIndex = updatedTasks.findIndex((t) => t.inReview);
+        if (inReviewIndex !== -1) {
+          updatedTasks[inReviewIndex] = newTask;
+        } else {
+          updatedTasks.push(newTask);
+        }
+      }
+
       await this.db
         .update(simulations)
-        .set({ tasks: [...simulation.tasks, newTask], updatedAt: new Date() })
+        .set({ tasks: updatedTasks, updatedAt: new Date() })
         .where(eq(simulations.id, simulation.id));
     }
 
