@@ -2,9 +2,8 @@
  * The line between what a task says and advice on doing it well. The generator writes to it and the
  * critic checks against it, so both read one definition and cannot drift.
  */
-export const REQUIREMENT_VS_TIP_RULE = `A requirement says what the work is: the actions the candidate must perform, the deliverable, its recipient, format, deadline, or content it must include. Never state word counts, limits, or length rules in candidate-facing text — the platform interface displays and enforces the response limit automatically.
-A tip advises how to do well: the approach or order of work, example tactics, how to write or what tone to use, or what a strong answer does or is judged on.`;
-
+export const REQUIREMENT_VS_TIP_RULE = `A requirement states the work to deliver (actions, format, recipient, content). Never state word counts or length rules in candidate-facing text — the platform UI handles that automatically.
+A tip advises how to succeed (strategy, order of work, recommended tone, tactics, or evaluation criteria).`;
 
 export function getSeniorityGuidance(skillLevel?: string | null): string {
   switch (skillLevel) {
@@ -13,7 +12,7 @@ export function getSeniorityGuidance(skillLevel?: string | null): string {
         'Target Seniority: JUNIOR / ENTRY LEVEL.',
         '- Scope & Focus: Emphasize foundational domain literacy, standard operational procedures, and core domain metrics/tools.',
         '- Task Structure: Ground in concrete artifacts, explicit guidance, and structured workflows rather than open-ended strategic ambiguity.',
-        '- Difficulty Calibration: Do not demand executive-level trade-offs or high-level organizational politics. A strong junior candidate demonstrates accurate procedural execution, sound fundamentals, and clear communication.',
+        '- Difficulty Calibration: Do not demand executive-level trade-offs or complex organizational politics. Candidate should demonstrate accurate procedural execution and sound fundamentals.',
       ].join('\n');
 
     case 'Senior level':
@@ -21,7 +20,7 @@ export function getSeniorityGuidance(skillLevel?: string | null): string {
         'Target Seniority: SENIOR / LEAD LEVEL.',
         '- Scope & Focus: Emphasize high strategic ambiguity, systemic trade-offs, architecture/policy decisions, and multi-stakeholder negotiation.',
         '- Task Structure: Open-ended problem statements, conflicting constraints, and executive-facing deliverables.',
-        '- Difficulty Calibration: Must require nuanced domain judgment and domain experience that cannot be solved with general business common sense.',
+        '- Difficulty Calibration: Must require nuanced domain judgment that cannot be solved with general business common sense.',
       ].join('\n');
 
     case 'Mid level':

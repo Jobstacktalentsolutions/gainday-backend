@@ -22,10 +22,9 @@ import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.u
  * two cannot drift. Requirements of the work are allowed; tips on how to do well are not. What a
  * strong, mid and weak answer looks like is decided later, when the grading anchors are generated.
  */
-const CANDIDATE_FACING_TEXT_RULES = `The candidate reads the title, scenarioDescription, questionPrompt and any interfacePayload
-text. It may state requirements of the work, never tips.
-- scenarioDescription: the situation, the facts, and the stimulus (the other person's message, or the data).
-- questionPrompt: the requirements of the deliverable.
+const CANDIDATE_FACING_TEXT_RULES = `Candidate-facing fields (scenarioDescription, questionPrompt, interfacePayload):
+- scenarioDescription: strictly the situation, facts, and stimulus.
+- questionPrompt: deliverables and requirements only.
 ${REQUIREMENT_VS_TIP_RULE}`;
 
 const MARKDOWN_RULES = `Free-text fields are GitHub-flavored Markdown. Use lists, bold or italics only to present the
@@ -34,11 +33,10 @@ material itself (emails, line items, data), never HTML, and never to list what t
 export const TIMING_AND_LIMITS_RULE = (realities?: TaskPatternRealities) => {
   const maxStimulus = realities?.maxStimulusWords ?? 250;
   const defaultDuration = realities?.defaultDurationMinutes ?? 8;
-  return `Simulation Timing & Realities:
-- The full simulation has 4 tasks budgeted for at most 30 minutes total (aim for 25-30 mins overall).
-- For this task, set expectedDurationMinutes based on depth (~${defaultDuration} mins guideline, range 3-15).
-- Keep scenarioDescription concise: strictly facts, situation and stimulus; hard ceiling of ${maxStimulus} words.
-- Calibrate candidate response length: in interfacePayload, set wordLimit: { min, max } realistic for the allocated time (or null if purely objective).`;
+  return `Simulation Timing & Limits:
+- Set expectedDurationMinutes based on depth (guideline: ~${defaultDuration} mins, allowed range: 3-15).
+- Keep scenarioDescription concise: strictly facts, situation, and stimulus (hard ceiling: ${maxStimulus} words).
+- In interfacePayload, set wordLimit: { min, max } realistic for the allocated time (or null if purely objective).`;
 };
 
 export function buildTaskGenerationPromptBase(skillLevel?: string | null): string {

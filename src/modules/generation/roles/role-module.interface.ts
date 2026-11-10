@@ -75,6 +75,7 @@ export interface ExtractionResult {
   category: string;
   intent: string;
   problem: string | null;
+  skillLevel?: string | null;
 }
 
 export interface GeneratedTaskCandidate {

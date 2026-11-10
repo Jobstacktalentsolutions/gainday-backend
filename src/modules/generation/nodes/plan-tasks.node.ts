@@ -16,6 +16,7 @@ const logger = new Logger('GenerationPipeline:planTasks');
 export function buildPlanTasksPrompt(
   targetCount: number,
   allowedTypesCount: number,
+  skillLevel?: string | null,
 ): string {
   const isConstrained = allowedTypesCount < targetCount;
 
@@ -28,13 +29,20 @@ export function buildPlanTasksPrompt(
 5. Do not invent new task types.`
     : `CONSTRAINTS:
 1. Every task must have a UNIQUE taskType from the allowed list (no duplicates).
+2. Gear towards selecting taskTypes that are inline with the Job.
 2. Each candidateId must be unique ("cand-1", "cand-2", ...).
 3. Do not invent new task types.`;
 
-  return `Plan exactly ${targetCount} realistic on-the-job simulation tasks for this role.
-Prioritize role-specific expertise aligned with the stated Category, Intent, Problem, and Seniority / Skill Level (calibrate complexity, scope of responsibility, and expected depth according to whether this is Junior, Mid level, or Senior level).
+  const seniorityGuidance = getSeniorityGuidance(skillLevel);
 
-${constraintRules}`;
+  return [
+    `Plan exactly ${targetCount} realistic on-the-job simulation tasks for this role.`,
+    'Prioritize role-specific expertise aligned with the stated Category, Intent, and Problem.',
+    '',
+    seniorityGuidance,
+    '',
+    constraintRules,
+  ].join('\n');
 }
 
 export function planTasksNode(ctx: GenerationContext) {

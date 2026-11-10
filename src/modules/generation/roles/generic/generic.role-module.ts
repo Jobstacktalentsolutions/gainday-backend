@@ -1,3 +1,4 @@
+import { getSeniorityCriticGuidance } from '../../task-text-rules';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import {
@@ -129,14 +130,9 @@ export const GenericRoleModule: RoleModule = {
 
       const result = await model.invoke([
         new SystemMessage(
-          `This task was generated for a domain ("${extraction.category}") with no pre-built ` +
-            `assessment template, so it carries a higher risk of generic filler content that could ` +
-            `apply to almost any job.\n\n` +
+          `This task is for domain "${extraction.category}" (no pre-built template; guard against generic filler).\n\n` +
             getSeniorityCriticGuidance(extraction.skillLevel) +
-            `\n\nJudge with calibration to the target Seniority / Skill Level above: would someone with NO background ` +
-            `in "${extraction.category}" plausibly write a competent answer anyway, just from general common sense? ` +
-            `If yes, relevant=false. If it genuinely requires knowledge, fundamentals, or judgment specific to ` +
-            `"${extraction.category}" at this seniority level, relevant=true. List your reasons either way.`,
+            `\n\nJudge strictly against the target seniority above: would someone with NO background in "${extraction.category}" write a competent answer using only general common sense? If yes, relevant=false. If it requires domain knowledge, fundamentals, or judgment specific to "${extraction.category}", relevant=true.`,
         ),
         new HumanMessage(JSON.stringify({ extraction, task })),
       ]);
