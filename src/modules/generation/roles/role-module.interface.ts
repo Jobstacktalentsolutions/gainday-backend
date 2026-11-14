@@ -4,6 +4,14 @@ import { QuestionBankTaskContent, TaskRubric } from '../../../db/schema/question
 import { InterfaceType } from './interface-type';
 import { RoleCategory } from './role-category.enum';
 
+export const INTERACTION = {
+  CLASSIFICATION: 'CLASSIFICATION',
+  PRIORITY_RANKING: 'PRIORITY_RANKING',
+  PROCEDURAL_SEQUENCING: 'PROCEDURAL_SEQUENCING',
+  SINGLE_BEST_ACTION: 'SINGLE_BEST_ACTION',
+  MULTI_SELECT_UNDER_CONSTRAINT: 'MULTI_SELECT_UNDER_CONSTRAINT',
+} as const;
+
 export type ObjectiveComponentType =
   | 'NUMERIC_INPUT'
   | 'CLASSIFICATION'
@@ -67,6 +75,10 @@ export interface TaskPatternTypeDefinition {
   interfaceType: InterfaceType;
   /** Optional render modes the model may select for this task pattern. */
   allowedInterfaceTypes?: [InterfaceType, ...InterfaceType[]];
+  /** Check interaction relationships at generation and save. */
+  validateInteraction?: boolean;
+  /** Use written-response grading where an automatically generated key is not authoritative. */
+  gradeInteractionWithModel?: boolean;
   /** Set for tasks whose figures must be computed rather than generated (see TaskSpecTemplate). */
   spec?: TaskSpecTemplate;
   /** Timing guideline and reading stimulus bounds for this task pattern type. */

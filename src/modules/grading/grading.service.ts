@@ -206,9 +206,11 @@ export class GradingService {
     objectiveResponse: unknown,
   ): ObjectiveGradeResult | null {
     if (!task.objectiveComponent) return null;
-    const componentType = this.taskRoleRegistry
+    const pattern = this.taskRoleRegistry
       .resolve(task.category)
-      .allowedTaskPatternTypes.find((t) => t.key === task.taskType)?.objectiveComponentType;
+      .allowedTaskPatternTypes.find((t) => t.key === task.taskType);
+    if (pattern?.gradeInteractionWithModel) return null;
+    const componentType = pattern?.objectiveComponentType;
     if (!componentType) return null;
     return gradeObjective(componentType, task.objectiveComponent, objectiveResponse);
   }

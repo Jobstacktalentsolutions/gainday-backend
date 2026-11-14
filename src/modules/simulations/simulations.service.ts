@@ -71,10 +71,8 @@ export class SimulationsService {
     } catch {
       return false;
     }
-    return (
-      roleModule.allowedTaskPatternTypes.find((t) => t.key === task.taskType)?.spec !==
-      undefined
-    );
+    const pattern = roleModule.allowedTaskPatternTypes.find((t) => t.key === task.taskType);
+    return pattern?.spec !== undefined;
   }
 
   /**

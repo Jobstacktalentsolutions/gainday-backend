@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import { taskGenerationSchema } from './schemas/task-generation.schema';
-import { INTERFACE_SCHEMAS } from './roles/interface-type';
+import { presentationCapability } from './roles/presentation-capabilities';
+import { validateInteraction, validateInteractionPresentation } from './roles/interaction-validation';
 import {
   OBJECTIVE_COMPONENT_SCHEMAS,
   OPEN_ENDED_COMPONENT_SCHEMAS,
@@ -132,12 +133,13 @@ export async function generateTaskContent(
         z.object({ interfaceType: z.enum(patternTypeDef.allowedInterfaceTypes) }),
       ).invoke([
         new SystemMessage(
-          'Choose the best interface for this task. TEXT_AREA is for a short written answer; RICH_TEXT_COMPOSER for a drafted document; TABLE_VIEW_RESPONSE_PANEL or CSV_DATA_PANEL for tabular evidence; CASE_FILE_TEXT_AREA for multiple reference documents or tabs. Choose based on the work, not variety.',
+          `Choose the best interface for this task based on the work, not variety: ${patternTypeDef.allowedInterfaceTypes.map((type) => `${type}: ${presentationCapability(type).description}`).join('; ')}.`,
         ),
         new HumanMessage(JSON.stringify({ category, intent, problem, taskType, briefDescription, guidance })),
       ])).interfaceType
     : patternTypeDef.interfaceType;
-  const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
+  const presentation = presentationCapability(interfaceType);
+  const interfacePayloadSchema = presentation.inputSchema;
   const objectiveComponentSchema = patternTypeDef.objectiveComponentType
     ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
     : null;
@@ -161,7 +163,9 @@ export async function generateTaskContent(
   const result = await structuredModel.invoke([
     new SystemMessage(
       `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
-        `interfacePayload you generate must match that render mode.${guidanceClause}${revisionClause(revisionNotes)}`,
+        `interfacePayload you generate must match that render mode.` +
+        (presentation.guidance ? ` ${presentation.guidance}` : '') +
+        `${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -181,8 +185,16 @@ export async function generateTaskContent(
   const businessProblemDerived =
     problem === null ? false : result.businessProblemDerived;
 
+  const interfacePayload = presentation.materialize
+    ? presentation.materialize(result.interfacePayload)
+    : result.interfacePayload as Record<string, unknown>;
+  if (patternTypeDef.validateInteraction) {
+    validateInteraction(patternTypeDef.objectiveComponentType, result.objectiveComponent);
+    validateInteractionPresentation(patternTypeDef.objectiveComponentType, result.objectiveComponent, interfaceType, interfacePayload);
+  }
+
   return {
-    taskType: result.taskType,
+    taskType,
     title: result.title,
     expectedDurationMinutes:
       result.expectedDurationMinutes ??
@@ -198,7 +210,7 @@ export async function generateTaskContent(
       undefined,
     businessProblemDerived,
     interfaceType,
-    interfacePayload: result.interfacePayload as Record<string, unknown>,
+    interfacePayload,
   };
 }
 
@@ -444,7 +456,8 @@ export async function modifyTaskContent(
     });
   }
   const interfaceType = existingTask.interfaceType;
-  const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
+  const presentation = presentationCapability(interfaceType);
+  const interfacePayloadSchema = presentation.inputSchema;
   const objectiveComponentSchema = patternTypeDef.objectiveComponentType
     ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
     : null;
@@ -465,7 +478,8 @@ export async function modifyTaskContent(
   const result = await structuredModel.invoke([
     new SystemMessage(
       `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
-        `interfacePayload you return must still match that render mode.`,
+        `interfacePayload you return must still match that render mode.` +
+        (presentation.guidance ? ` ${presentation.guidance}` : ''),
     ),
     new HumanMessage(
       JSON.stringify({
@@ -480,6 +494,14 @@ export async function modifyTaskContent(
 
   const businessProblemDerived =
     problem === null ? false : result.businessProblemDerived;
+
+  const interfacePayload = presentation.materialize
+    ? presentation.materialize(result.interfacePayload)
+    : result.interfacePayload as Record<string, unknown>;
+  if (patternTypeDef.validateInteraction) {
+    validateInteraction(patternTypeDef.objectiveComponentType, result.objectiveComponent);
+    validateInteractionPresentation(patternTypeDef.objectiveComponentType, result.objectiveComponent, interfaceType, interfacePayload);
+  }
 
   return {
     taskType: existingTask.taskType,
@@ -499,6 +521,6 @@ export async function modifyTaskContent(
       undefined,
     businessProblemDerived,
     interfaceType,
-    interfacePayload: result.interfacePayload as Record<string, unknown>,
+    interfacePayload,
   };
 }

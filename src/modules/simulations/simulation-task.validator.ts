@@ -13,6 +13,8 @@ import {
 } from '../generation/roles/component-schemas';
 import { RoleRegistry } from '../generation/roles/role-registry';
 import { generationConfig } from '../../config/ai.config';
+import { validateInteraction, validateInteractionPresentation } from '../generation/roles/interaction-validation';
+import { presentationCapability } from '../generation/roles/presentation-capabilities';
 
 const baseTaskSchema = z.object({
   id: z.string().min(1),
@@ -117,6 +119,14 @@ export function validateSimulationTasks(
       );
     }
 
+    if (patternTypeDef.allowedInterfaceTypes?.includes(task.interfaceType)) {
+      try {
+        presentationCapability(task.interfaceType).validate?.(task.interfacePayload);
+      } catch (error) {
+        throw new BadRequestException(`tasks[${index}].interfacePayload is invalid: ${(error as Error).message}`);
+      }
+    }
+
     if (patternTypeDef.objectiveComponentType) {
       const schema =
         OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType];
@@ -125,6 +135,14 @@ export function validateSimulationTasks(
         throw new BadRequestException(
           `tasks[${index}].objectiveComponent does not match "${patternTypeDef.objectiveComponentType}": ${result.error.message}`,
         );
+      }
+      if (patternTypeDef.validateInteraction) {
+        try {
+          validateInteraction(patternTypeDef.objectiveComponentType, task.objectiveComponent);
+          validateInteractionPresentation(patternTypeDef.objectiveComponentType, task.objectiveComponent, task.interfaceType, task.interfacePayload);
+        } catch (error) {
+          throw new BadRequestException(`tasks[${index}].objectiveComponent is invalid: ${(error as Error).message}`);
+        }
       }
     }
 

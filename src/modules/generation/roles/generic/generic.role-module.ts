@@ -31,15 +31,18 @@ export enum GenericTaskType {
   INTERPRETATION_ANALYSIS = 'INTERPRETATION_ANALYSIS',
   DATA_INTERPRETATION = 'DATA_INTERPRETATION',
   STAKEHOLDER_PUSHBACK_RESPONSE = 'STAKEHOLDER_PUSHBACK_RESPONSE',
+  CLASSIFY_ITEMS = 'GENERIC_CLASSIFY_ITEMS',
+  PRIORITIZE_ITEMS = 'GENERIC_PRIORITIZE_ITEMS',
+  SEQUENCE_STEPS = 'GENERIC_SEQUENCE_STEPS',
+  CHOOSE_ACTION = 'GENERIC_CHOOSE_ACTION',
+  SELECT_ACTIONS = 'GENERIC_SELECT_ACTIONS',
 }
 
 // Reuses the exact same open-ended component types (and therefore the exact same
 // OPEN_ENDED_COMPONENT_SCHEMAS / INTERFACE_SCHEMAS entries) Finance and Sales already use for
 // their write-in-your-own-words tasks — no new schema, no new frontend interface, just a
 // narrower slice of the existing taxonomy, with several ways to present supporting information.
-// No objective components: NUMERIC_INPUT, CLASSIFICATION, etc. assume a structured render/grading
-// surface (tolerance ranges, bucket rows) that only a purpose-built role module can safely define
-// — never offered here.
+// Quantitative answer keys stay in spec-backed modules where code derives the correct values.
 const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
   {
     key: GenericTaskType.WRITTEN_JUSTIFICATION,
@@ -85,6 +88,51 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     interfaceType: InterfaceType.TEXT_AREA,
     realities: { maxStimulusWords: 200, defaultDurationMinutes: 6 },
   },
+  {
+    key: GenericTaskType.CLASSIFY_ITEMS,
+    label: 'Classify items',
+    objectiveComponentType: 'CLASSIFICATION',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description: 'Group distinct role-specific items into meaningful categories, then justify the choices. Provide enough evidence for the classifications.',
+    interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
+  },
+  {
+    key: GenericTaskType.PRIORITIZE_ITEMS,
+    label: 'Prioritize items',
+    objectiveComponentType: 'PRIORITY_RANKING',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description: 'Rank distinct role-specific requests or actions by priority and explain the top choice. Include clear signals such as impact and urgency.',
+    interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
+  },
+  {
+    key: GenericTaskType.SEQUENCE_STEPS,
+    label: 'Sequence steps',
+    objectiveComponentType: 'PROCEDURAL_SEQUENCING',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description: 'Arrange shuffled steps of a role-specific procedure into the correct order and explain a key dependency.',
+    interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
+  },
+  {
+    key: GenericTaskType.CHOOSE_ACTION,
+    label: 'Choose an action',
+    objectiveComponentType: 'SINGLE_BEST_ACTION',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description: 'Choose the best action in a role-specific situation and explain the decision. Give one clearly defensible best option.',
+    interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 6 },
+  },
+  {
+    key: GenericTaskType.SELECT_ACTIONS,
+    label: 'Select actions',
+    objectiveComponentType: 'MULTI_SELECT_UNDER_CONSTRAINT',
+    openEndedComponentType: 'WRITTEN_JUSTIFICATION',
+    description: 'Select a fixed number of appropriate actions from distinct alternatives and explain the choices. Make the correct set unambiguous from the evidence.',
+    interfaceType: InterfaceType.TEXT_AREA,
+    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
+  },
 ];
 
 const genericInterfaces: [InterfaceType, ...InterfaceType[]] = [
@@ -93,6 +141,12 @@ const genericInterfaces: [InterfaceType, ...InterfaceType[]] = [
   InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
   InterfaceType.CSV_DATA_PANEL,
   InterfaceType.CASE_FILE_TEXT_AREA,
+  InterfaceType.TABLE_VIEW_WITH_CHART,
+];
+const interactionInterfaces: [InterfaceType, ...InterfaceType[]] = [
+  InterfaceType.TEXT_AREA,
+  InterfaceType.CASE_FILE_TEXT_AREA,
+  InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
 ];
 
 export const GenericRoleModule: RoleModule = {
@@ -116,14 +170,18 @@ export const GenericRoleModule: RoleModule = {
       'real practitioner in this exact domain would actually face — a written deliverable, a ' +
       'judgment call they must explain, or an analysis they must produce. Every expected task must ' +
       'be answerable in writing. Input can include a small table, CSV data set, or a case file with ' +
-      'reference tabs where appropriate. Do not assume a calculator or chart. Favor tasks where the written ' +
+      'reference tabs, or a chart with a table, where appropriate. Do not assume a calculator. Favor tasks where the written ' +
       'answer is itself what reveals competence, since that is what a text response can actually ' +
       'assess well.',
   },
 
   allowedTaskPatternTypes: genericTaskPatternTypes.map((pattern) => ({
     ...pattern,
-    allowedInterfaceTypes: genericInterfaces,
+    allowedInterfaceTypes: pattern.objectiveComponentType
+      ? interactionInterfaces
+      : genericInterfaces,
+    validateInteraction: !!pattern.objectiveComponentType,
+    gradeInteractionWithModel: pattern.key === GenericTaskType.SELECT_ACTIONS,
   })),
 
   criticChecks: {
