@@ -25,6 +25,8 @@ import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import Redis from 'ioredis';
+import { REDIS } from '../redis/redis.constants';
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const RESEND_VERIFICATION_COOLDOWN_MS = 60 * 1000;
@@ -42,21 +44,13 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
     private readonly creditLedgerService: CreditLedgerService,
+    @Inject(REDIS) private readonly redis: Redis,
     private readonly configService?: ConfigService,
   ) {}
 
-  private admin2faChallenges = new Map<
-    string,
-    {
-      challengeToken: string;
-      userId: string;
-      email: string;
-      otp: string;
-      expiresAt: number;
-      lastSentAt: number;
-      resendCount: number;
-    }
-  >();
+  private admin2faKey(token: string): string {
+    return `auth:admin-2fa:${crypto.createHash('sha256').update(token).digest('hex')}`;
+  }
 
   private getAdmin2faConfig() {
     return {
@@ -128,22 +122,18 @@ export class AuthService {
     const challengeToken = crypto.randomUUID();
     const now = Date.now();
 
-    // Clean up expired challenges
-    for (const [token, challenge] of this.admin2faChallenges.entries()) {
-      if (challenge.expiresAt < now) {
-        this.admin2faChallenges.delete(token);
-      }
-    }
-
-    this.admin2faChallenges.set(challengeToken, {
-      challengeToken,
-      userId: user.id,
-      email: user.email,
-      otp,
-      expiresAt: now + config.ttlMs,
-      lastSentAt: now,
-      resendCount: 0,
-    });
+    await this.redis.set(
+      this.admin2faKey(challengeToken),
+      JSON.stringify({
+        userId: user.id,
+        email: user.email,
+        otp,
+        lastSentAt: now,
+        resendCount: 0,
+      }),
+      'PX',
+      config.ttlMs,
+    );
 
     // Send 2FA email to admin
     await this.notificationsService.sendAdmin2faEmail(user.email, otp);
@@ -156,30 +146,30 @@ export class AuthService {
   }
 
   async verifyAdmin2fa(challengeToken: string, otp: string) {
-    const challenge = this.admin2faChallenges.get(challengeToken);
-    if (!challenge) {
+    const result = (await this.redis.eval(
+      `local value = redis.call('GET', KEYS[1])
+       if not value then return {0} end
+       local challenge = cjson.decode(value)
+       if challenge.otp ~= ARGV[1] then return {1} end
+       redis.call('DEL', KEYS[1])
+       return {2, challenge.userId}`,
+      1,
+      this.admin2faKey(challengeToken),
+      otp.trim(),
+    )) as [number, string?];
+
+    if (result[0] === 0) {
       throw new BadRequestException(
         '2FA verification session not found or expired. Please sign in again.',
       );
     }
-
-    if (Date.now() > challenge.expiresAt) {
-      this.admin2faChallenges.delete(challengeToken);
-      throw new BadRequestException(
-        '2FA verification session not found or expired. Please sign in again.',
-      );
-    }
-
-    if (challenge.otp !== otp.trim()) {
+    if (result[0] === 1) {
       throw new BadRequestException(
         'Invalid verification code. Please check your email and try again.',
       );
     }
 
-    // OTP verified successfully — clear challenge
-    this.admin2faChallenges.delete(challengeToken);
-
-    const user = await this.usersService.findById(challenge.userId);
+    const user = await this.usersService.findById(result[1]!);
     if (!user || user.role !== UserRole.ADMIN) {
       throw new UnauthorizedException('Administrator account not found');
     }
@@ -195,51 +185,54 @@ export class AuthService {
   }
 
   async resendAdmin2fa(challengeToken: string) {
-    const challenge = this.admin2faChallenges.get(challengeToken);
-    if (!challenge) {
-      throw new BadRequestException(
-        '2FA verification session not found or expired. Please sign in again.',
-      );
-    }
-
-    const now = Date.now();
-    if (now > challenge.expiresAt) {
-      this.admin2faChallenges.delete(challengeToken);
-      throw new BadRequestException(
-        '2FA verification session not found or expired. Please sign in again.',
-      );
-    }
-
     const config = this.getAdmin2faConfig();
+    const newOtp = crypto.randomInt(100000, 999999).toString();
+    const result = (await this.redis.eval(
+      `local value = redis.call('GET', KEYS[1])
+       if not value then return {0} end
+       local challenge = cjson.decode(value)
+       if challenge.resendCount >= tonumber(ARGV[3]) then
+         redis.call('DEL', KEYS[1])
+         return {1}
+       end
+       local wait = tonumber(ARGV[2]) - (tonumber(ARGV[1]) - challenge.lastSentAt)
+       if wait > 0 then return {2, wait} end
+       challenge.otp = ARGV[4]
+       challenge.lastSentAt = tonumber(ARGV[1])
+       challenge.resendCount = challenge.resendCount + 1
+       redis.call('SET', KEYS[1], cjson.encode(challenge), 'PX', ARGV[5])
+       return {3, challenge.email, challenge.resendCount}`,
+      1,
+      this.admin2faKey(challengeToken),
+      Date.now(),
+      config.cooldownMs,
+      config.maxResends,
+      newOtp,
+      config.ttlMs,
+    )) as [number, (string | number)?, number?];
 
-    if (challenge.resendCount >= config.maxResends) {
-      this.admin2faChallenges.delete(challengeToken);
+    if (result[0] === 0) {
+      throw new BadRequestException(
+        '2FA verification session not found or expired. Please sign in again.',
+      );
+    }
+    if (result[0] === 1) {
       throw new BadRequestException(
         `Maximum resend limit of ${config.maxResends} attempts reached. Please sign in again.`,
       );
     }
-
-    if (now - challenge.lastSentAt < config.cooldownMs) {
-      const waitSeconds = Math.ceil(
-        (config.cooldownMs - (now - challenge.lastSentAt)) / 1000,
-      );
+    if (result[0] === 2) {
       throw new BadRequestException(
-        `Please wait ${waitSeconds}s before requesting a new code.`,
+        `Please wait ${Math.ceil(Number(result[1]) / 1000)}s before requesting a new code.`,
       );
     }
 
-    const newOtp = crypto.randomInt(100000, 999999).toString();
-    challenge.otp = newOtp;
-    challenge.lastSentAt = now;
-    challenge.expiresAt = now + config.ttlMs;
-    challenge.resendCount = (challenge.resendCount || 0) + 1;
-
-    await this.notificationsService.sendAdmin2faEmail(challenge.email, newOtp);
+    await this.notificationsService.sendAdmin2faEmail(result[1] as string, newOtp);
 
     return {
       success: true,
       message: 'A fresh verification code has been sent to your email.',
-      remainingResends: Math.max(0, config.maxResends - challenge.resendCount),
+      remainingResends: Math.max(0, config.maxResends - result[2]!),
     };
   }
 
