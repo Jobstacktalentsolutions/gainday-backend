@@ -50,7 +50,7 @@ export const escalationHandoffSpec = defineTaskSpec(dataSchema, (data) => {
           content: factTable([
             ['Receiving team', data.receivingTeam],
             ['Deadline', formatDate(data.deadline)],
-          ]),
+          ]) + '\n\n' + data.requiredFacts.map((fact) => `- ${fact}`).join('\n'),
         },
       ]
     ),

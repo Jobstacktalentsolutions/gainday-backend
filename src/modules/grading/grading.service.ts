@@ -23,6 +23,7 @@ import {
 import { gradingConfig } from '../../config/ai.config';
 import { AnchorGenerationService } from './anchors/anchor-generation.service';
 import { TaskGradingService } from './task-grading.service';
+import { sanitizeTaskForCandidate } from '../simulations/candidate-task.util';
 import { rollUpTaskScores } from './roll-up';
 import { gradeObjective, ObjectiveGradeResult } from './objective/objective-grader';
 import {
@@ -175,6 +176,7 @@ export class GradingService {
       taskTitle: task.title,
       scenarioDescription: task.scenarioDescription,
       questionPrompt: task.questionPrompt,
+      taskContext: sanitizeTaskForCandidate(task, this.taskRoleRegistry),
       anchors,
       candidateResponse: answer.responseBody,
       criteria: criteriaForLlm(objectiveResult !== null),

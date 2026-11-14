@@ -13,12 +13,14 @@ import {
 } from './schemas/task-grading-result.schema';
 import { buildTaskGradingPrompt } from './prompts/task-grading.prompt';
 import { AnchorRoleRegistry } from './roles/anchor-role-registry';
+import type { CandidateSimulationTask } from '../simulations/candidate-task.util';
 
 export interface GradeTaskInput {
   category: string;
   taskTitle: string;
   scenarioDescription: string;
   questionPrompt: string;
+  taskContext: CandidateSimulationTask;
   anchors: AnchorResponse[];
   candidateResponse: string;
   /** The criteria the model scores. Criteria settled by an answer key are left to the caller. */
@@ -66,6 +68,9 @@ export class TaskGradingService {
             title: input.taskTitle,
             scenarioDescription: input.scenarioDescription,
             questionPrompt: input.questionPrompt,
+            interfaceType: input.taskContext.interfaceType,
+            interfacePayload: input.taskContext.interfacePayload,
+            objectiveComponent: input.taskContext.objectiveComponent,
           },
           anchors: input.anchors,
           candidateResponse: input.candidateResponse,

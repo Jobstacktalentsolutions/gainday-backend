@@ -2,8 +2,26 @@ import { TaskSpecError } from '../../role-module.interface';
 import { refundPolicyReplySpec } from './refund-policy-reply.template';
 import { diagnosticQuestionsSpec } from './diagnostic-questions.template';
 import { ticketTriageSpec } from './ticket-triage.template';
+import { escalationHandoffSpec } from './escalation-handoff.template';
 
 type Tab = { label: string; content: string };
+
+describe('escalationHandoffSpec', () => {
+  it('shows every fact required by the grading checklist in the case file', () => {
+    const requiredFacts = ['Five accounts affected', 'Revenue at risk is $150,000', 'Errors occur three times per hour'];
+    const result = escalationHandoffSpec.materialize({
+      customerName: 'Sam', product: 'Example', receivingTeam: 'Engineering', deadline: '2027-04-01',
+      thread: Array.from({ length: 6 }, (_, i) => ({ from: i % 2 === 0 ? 'CUSTOMER' as const : 'AGENT' as const, text: 'A message' })),
+      requiredFacts,
+    });
+    const tabs = (result.interfacePayload.caseFile as { tabs: Tab[] }).tabs;
+    const visible = tabs.map((tab) => tab.content).join('\n');
+    for (const fact of requiredFacts) {
+      expect(visible).toContain(fact);
+      expect(result.rubric?.checklist).toContain(`Includes this fact: ${fact}`);
+    }
+  });
+});
 
 const refundInput = {
   currency: 'USD',

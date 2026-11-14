@@ -55,7 +55,11 @@ worse) scores below it, down to 0:
 ${criteriaLines}${verifiedClause}${rubricClause(rubric)}
 
 Use the anchors as calibration points — place the candidate's response relative to them rather
-than scoring in a vacuum. The hardest, most important distinction is in the middle of the range
+than scoring in a vacuum. Judge facts and policies against the candidate-visible task context, not
+claims invented by an anchor. Do not penalise an answer for omitting facts unavailable to the candidate.
+Where multiple priority orders are defensible, assess the candidate's reasoning and the supplied facts
+rather than requiring the anchor's exact order. Score each criterion on its own merits.
+The hardest, most important distinction is in the middle of the range
 (e.g. telling a 55 from a 65), not at the extremes. For each criterion, give a short rationale (why
 this score) and a specific piece of evidence quoted or closely paraphrased from the candidate's
 actual response — never a generic statement that could apply to any answer.

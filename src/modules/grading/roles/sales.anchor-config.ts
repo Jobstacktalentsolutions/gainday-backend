@@ -23,7 +23,7 @@ export const SALES_ANCHOR_CONFIG: RoleAnchorConfig = {
 Sales anchors must reflect appropriate quality for their assigned score points:
 - TOP-SCORING anchors (high score points e.g. 80-100) MUST demonstrate sound, defensible sales practice (e.g. protecting deal value via structured counter-strategies like contract length, added services, or phased rollouts instead of blanket price cuts).
 - LOW/MID-SCORING anchors (low score points e.g. 20-40) SHOULD demonstrate realistic candidate mistakes or weak execution (e.g. defaulting to price discounts, offering generic platitudes, or failing to protect margin). Do NOT reject low-scoring anchors for having weak sales practice — that is expected for a low score!
-- Reject an anchor ONLY if its content quality does NOT match its assigned score point (e.g. an anchor scored 100/100 that defaults to a discount, or an anchor scored 20/100 that is actually a strong answer).
+- Reject an anchor if its quality does not match its score, or a strong answer relies on a material fact not supplied by the task. For prioritisation, accept different defensible orders when the reasoning fits the available evidence.
 
 Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given), report in anchorFeedback whether its response quality matches its assigned score point, and if not, exactly what is wrong. Set issue to null for sound anchors. The top-level "sound" field is true only if every anchor is sound.`,
 };

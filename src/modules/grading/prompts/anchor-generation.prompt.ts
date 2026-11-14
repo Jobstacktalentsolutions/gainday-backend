@@ -15,6 +15,8 @@ score point, in order, each scored against the four fixed criteria below (framed
 The top-scoring anchor must demonstrate sound, concrete domain practice using only facts and policies
 supplied in the task. Where an answer key is provided, its objective answers must agree with that key.
 Mid and low-scoring anchors must show realistic mistakes or omissions appropriate to their scores.
+For a prioritisation task, consider all defensible orders supported by the supplied facts and avoid
+making an invented fact or a single arbitrary order the basis for a score.
 If previousAttemptIssues are supplied, correct those problems while preserving the score bands.
 Avoid manufacturing an artificial "perfect" answer that no real candidate response would actually resemble; real strong answers often trade off one dimension for another.
 
