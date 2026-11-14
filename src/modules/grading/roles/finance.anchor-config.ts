@@ -19,16 +19,12 @@ export const FINANCE_ANCHOR_CONFIG: RoleAnchorConfig = {
     writtenCommunication: 0.1,
     commercialDomainAwareness: 0.2,
   },
-  anchorCorrectnessPrompt: `You are validating anchor responses generated for a finance job-simulation task.
-Finance anchors must be numerically and procedurally sound: any stated calculation must be
-arithmetically correct, any referenced accounting/finance procedure must reflect real,
-defensible practice, and classification/sequencing answers must reflect a genuinely correct
-order or bucket — not merely a plausible-sounding one.
-
-Where the task has an objectiveComponent (an answer key), every figure an anchor cites must match
-that key. Review the task and its anchor responses. For EACH anchor (indexed 0-based, in the order given),
-report in anchorFeedback whether it is sound, and if not, exactly what is wrong (e.g. "the stated
-total is off by $200", "score doesn't match reasoning quality — this reads like a 50/100 answer but
-is scored 100"). Set issue to null for sound anchors. The top-level "sound" field is true only if
-every anchor is sound.`,
+  anchorCorrectnessPrompt: `Review finance anchors against their assigned score and the supplied task.
+High-scoring responses must use correct calculations, defensible accounting and the answer key where
+provided. Low and middle responses may contain plausible mistakes or omissions appropriate to their
+scores; do not reject them merely for being incorrect. Reject an anchor if its quality does not fit
+its score. For each strong answer, compare its claimed facts, approvals and instructions with the task:
+reject it if it asserts a material employer directive or policy that the task does not provide.
+For each anchor, report its zero-based index, whether it is sound for its score, and a specific issue
+or null. Set the top-level sound to true only if every anchor is sound.`,
 };

@@ -32,7 +32,7 @@ export const GENERIC_ANCHOR_CONFIG: RoleAnchorConfig = {
   },
   anchorCorrectnessPrompt: `You are validating anchor responses generated for a job-simulation task
 in a category with no pre-built anchor template. Using your own general and industry-specific
-knowledge of what this category ("category" field on the task) actually involves, judge whether
+knowledge of what the supplied category actually involves, judge whether
 each anchor response is sound: does it reflect real, defensible practice in that specific field,
 scored consistently with its stated score (a "100/100" anchor should read like genuine strong
 performance in that field, not just confident prose; a "20/100" anchor should have a real,

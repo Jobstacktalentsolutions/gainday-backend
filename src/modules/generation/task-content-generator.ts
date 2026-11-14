@@ -220,6 +220,7 @@ export function buildSpecTaskPromptBase(skillLevel?: string | null): string {
     "`data` as raw inputs: the system derives every total, balance, variance, margin and answer from them,",
     "and draws the data table. In scenarioDescription and questionPrompt, state no number at all — the",
     "table shows every figure.",
+    "Keep the scenario and question consistent with the supplied data and the case, policy and answer controls derived from it. Do not invent policy terms, transactions or requirements outside those inputs.",
     "",
     getSeniorityGuidance(skillLevel),
     "",

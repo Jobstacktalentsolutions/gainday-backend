@@ -12,8 +12,10 @@ score point, in order, each scored against the four fixed criteria below (framed
 - Written communication: ${criteriaFraming.writtenCommunication}
 - Commercial/domain awareness: ${criteriaFraming.commercialDomainAwareness}
 
-The top-scoring anchor (highest score point) MUST demonstrate sound, concrete domain strategy (e.g. in sales/negotiation: protecting deal value, proposing alternative concessions like longer terms or added services rather than giving unconditional discounts).
-Mid and low-scoring anchors MUST reflect real candidate pitfalls (e.g. defaulting to price cuts, generic platitudes without a clear counter-strategy, or missing key trade-offs).
+The top-scoring anchor must demonstrate sound, concrete domain practice using only facts and policies
+supplied in the task. Where an answer key is provided, its objective answers must agree with that key.
+Mid and low-scoring anchors must show realistic mistakes or omissions appropriate to their scores.
+If previousAttemptIssues are supplied, correct those problems while preserving the score bands.
 Avoid manufacturing an artificial "perfect" answer that no real candidate response would actually resemble; real strong answers often trade off one dimension for another.
 
 Commitments: for each anchor, list the promises its reply makes to the customer in "commitments"

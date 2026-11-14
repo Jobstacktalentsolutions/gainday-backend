@@ -17,6 +17,7 @@ export interface EmailPayload {
 
 /** Synthetic test candidates use this domain. Mail to it is dropped, never sent. */
 const BLOCKED_EMAIL_SUFFIX = '@example.com';
+const TEST_EMAIL_CAPTURE_ENABLED = 'true';
 
 @Injectable()
 export class EmailService {
@@ -103,7 +104,25 @@ export class EmailService {
       .filter((email) => !email.toLowerCase().endsWith(BLOCKED_EMAIL_SUFFIX));
   }
 
+  /** Opt-in local capture for synthetic recipients; never sends their mail to the provider. */
+  private async captureTestEmail(payload: EmailPayload): Promise<void> {
+    if (process.env.CAPTURE_TEST_EMAILS !== TEST_EMAIL_CAPTURE_ENABLED) return;
+    const recipients = [payload.to].flat().filter((email) =>
+      email.toLowerCase().endsWith(BLOCKED_EMAIL_SUFFIX),
+    );
+    if (!recipients.length) return;
+    const html = await this.renderTemplate(payload.template, payload.context);
+    const directory = path.join(process.cwd(), 'tmp', 'test-emails');
+    await fs.promises.mkdir(directory, { recursive: true });
+    await fs.promises.appendFile(
+      path.join(directory, 'emails.jsonl'),
+      `${JSON.stringify({ at: new Date().toISOString(), recipients, subject: payload.subject, template: payload.template, html })}\n`,
+      { mode: 0o600 },
+    );
+  }
+
   async sendEmail(payload: EmailPayload): Promise<void> {
+    await this.captureTestEmail(payload);
     const recipients = this.deliverableRecipients(payload.to);
     if (recipients.length === 0) {
       this.logger.log(
@@ -167,6 +186,7 @@ export class EmailService {
     template: string,
     context: Record<string, any> = {},
   ): Promise<void> {
+    await this.captureTestEmail({ to: recipients, subject, template, context });
     const deliverable = this.deliverableRecipients(recipients);
     if (deliverable.length === 0) {
       this.logger.log(

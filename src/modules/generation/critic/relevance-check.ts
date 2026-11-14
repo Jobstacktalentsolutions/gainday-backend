@@ -17,6 +17,7 @@ export function buildCritiqueCheckPrompt(skillLevel?: string | null): string {
     '1. Relevance: confirm the task aligns with the given Category, Intent, and target Seniority / Skill Level.',
     '',
     getSeniorityCriticGuidance(skillLevel),
+    'Also reject tasks whose scenario or question conflicts with their supplied policy, case data, answer key, or answer controls. Check that every required structured answer can be entered using the available controls. Explain the conflict in reasons.',
     '',
     // Section 2: Candidate Text Coaching / Tips Rule
     // Enforces that candidate-facing text states deliverable requirements only, without advising candidates on tactics, approaches, or how to pass.

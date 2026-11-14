@@ -80,8 +80,11 @@ export const refundPolicyReplySpec = defineTaskSpec(dataSchema, (data) => {
             'Explains how the refund is processed',
             'Gives a next step with a timeframe',
           ],
-          gate: `Promises any amount above the order amount of ${money(data.orderAmount)}`,
-          authorisedCommitments: [{ kind: 'CASH_REFUND', amount: data.orderAmount }],
+          gate: `Promises a cash refund above ${money(data.orderAmount)}, or store credit above ${money(data.storeCreditAmount)}`,
+          authorisedCommitments: [
+            { kind: 'CASH_REFUND', amount: data.orderAmount },
+            { kind: 'STORE_CREDIT', amount: data.storeCreditAmount },
+          ],
         },
   };
 });

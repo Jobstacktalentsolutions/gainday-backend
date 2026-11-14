@@ -22,9 +22,13 @@ describe('authorised commitments in customer service templates', () => {
     ]);
   });
 
-  it('authorises the order amount as a cash refund inside the window', () => {
+  it('authorises both the refund and the policy credit inside the window', () => {
     const { rubric } = refundPolicyReplySpec.materialize({ ...refundInput, refundWindowDays: 30 });
-    expect(rubric?.authorisedCommitments).toEqual([{ kind: 'CASH_REFUND', amount: 120 }]);
+    expect(rubric?.authorisedCommitments).toEqual([
+      { kind: 'CASH_REFUND', amount: 120 },
+      { kind: 'STORE_CREDIT', amount: 25 },
+    ]);
+    expect(rubric?.gate).toBe('Promises a cash refund above $120.00, or store credit above $25.00');
   });
 
   it('authorises compensation only, unless the customer makes a threat', () => {
