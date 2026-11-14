@@ -76,7 +76,8 @@ export const generationConfig = {
   candidatePoolSize: 15,
   selectedTaskCount: 4,
   maxCriticAttempts: 3,
-  duplicateSimilarityThreshold: 0.92,
+  duplicateSimilarityThreshold: 0.95,
+  sameSimulationSimilarityThreshold: 0.92,
   noveltyCheckTopK: 5,
   // The grader scores whole numbers 0-100; anchors show what 20, 40, 60, 80 and 100 look like.
   // There is no 0 anchor: a response worse than the lowest one (blank, off-topic) simply scores

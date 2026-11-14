@@ -8,6 +8,7 @@ export interface GenerationConfig {
   selectedTaskCount: number;
   maxCriticAttempts: number;
   duplicateSimilarityThreshold: number;
+  sameSimulationSimilarityThreshold: number;
   noveltyCheckTopK: number;
   anchorScorePoints: number[];
 }

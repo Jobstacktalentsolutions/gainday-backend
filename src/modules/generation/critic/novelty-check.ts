@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { inArray, sql } from 'drizzle-orm';
 import { DrizzleDb } from '../../../db/client';
 import { questionBank } from '../../../db/schema/question-bank.schema';
 import { roleScopeKey } from '../roles/category-routing';
@@ -42,6 +42,36 @@ export async function findSimilarQuestions(
     WHERE regexp_replace(lower(trim(category)), '\\s*>\\s*', ' > ', 'g') = ${scopeKey}
     ORDER BY distance ASC
     LIMIT ${topK}
+  `);
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    taskType: row.task_type,
+    distance: Number(row.distance),
+    scenario: row.scenario,
+  }));
+}
+
+/** Search every task already accepted in this generation, independent of the global top-K. */
+export async function findSimilarSimulationQuestions(
+  db: DrizzleDb,
+  taskIds: string[],
+  embedding: number[],
+): Promise<NoveltyMatch[]> {
+  if (taskIds.length === 0) return [];
+
+  const vectorLiteral = embeddingToPgVectorLiteral(embedding);
+  const result = await db.execute<{
+    id: string;
+    task_type: string;
+    distance: number;
+    scenario: string | null;
+  }>(sql`
+    SELECT id, task_type, (embedding <=> ${vectorLiteral}::vector) AS distance,
+      task_content->>'scenarioDescription' AS scenario
+    FROM ${questionBank}
+    WHERE ${inArray(questionBank.id, taskIds)}
+    ORDER BY distance ASC
   `);
 
   return result.rows.map((row) => ({

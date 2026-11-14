@@ -15,9 +15,8 @@ import { withGeminiSafeStructuredOutput } from '../../../ai/gemini-structured-ou
  * purpose-built role module for (e.g. Legal Counsel, Data Scientist, Marketing Ops, Product
  * Manager, Nurse, Graphic Designer, Executive Assistant, etc. — any unmodeled profession).
  *
- * So this module trades content precision for coverage: it never throws, it only ever produces
- * write-in-your-own-words tasks (Text Area / Rich Text Composer — interfaces we already support
- * and can render/grade generically), optionally reading a small CSV data set (the CSV data panel), and instead of hardcoded per-domain guidance strings, its
+ * This module trades content precision for coverage: it produces written-response tasks with
+ * optional tables or case files. Instead of hardcoded per-domain guidance strings, its
  * extraction/generation prompts explicitly instruct the model to *reason out* what a genuine
  * on-the-job assessment for THIS specific unseen category should look like, using its own general
  * domain knowledge, rather than forcing the category into Finance/Sales-shaped content.
@@ -37,7 +36,7 @@ export enum GenericTaskType {
 // Reuses the exact same open-ended component types (and therefore the exact same
 // OPEN_ENDED_COMPONENT_SCHEMAS / INTERFACE_SCHEMAS entries) Finance and Sales already use for
 // their write-in-your-own-words tasks — no new schema, no new frontend interface, just a
-// narrower slice of the existing taxonomy, plus the CSV data panel for reading a small data set.
+// narrower slice of the existing taxonomy, with several ways to present supporting information.
 // No objective components: NUMERIC_INPUT, CLASSIFICATION, etc. assume a structured render/grading
 // surface (tolerance ranges, bucket rows) that only a purpose-built role module can safely define
 // — never offered here.
@@ -64,7 +63,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     label: 'Interpretation / analysis',
     openEndedComponentType: 'INTERPRETATION_ANALYSIS',
     description:
-      'Interpret or analyze a situation described in the scenario, in writing. There is no data set here; if the task needs one, it is a DATA_INTERPRETATION task.',
+      'Interpret or analyze a situation and supporting evidence in writing.',
     interfaceType: InterfaceType.TEXT_AREA,
     realities: { maxStimulusWords: 300, defaultDurationMinutes: 8 },
   },
@@ -73,7 +72,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     label: 'Data interpretation',
     openEndedComponentType: 'INTERPRETATION_ANALYSIS',
     description:
-      'A small data set (a log, a report extract, a set of measurements) is given as CSV, shown to the candidate as a table; the candidate interprets it in writing. Only for roles whose real work involves reading data like this.',
+      'Interpret a small data set, such as a log, report extract or set of measurements, in writing. Only for roles whose work involves reading such data.',
     interfaceType: InterfaceType.CSV_DATA_PANEL,
     realities: { maxStimulusWords: 300, defaultDurationMinutes: 9 },
   },
@@ -86,6 +85,14 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     interfaceType: InterfaceType.TEXT_AREA,
     realities: { maxStimulusWords: 200, defaultDurationMinutes: 6 },
   },
+];
+
+const genericInterfaces: [InterfaceType, ...InterfaceType[]] = [
+  InterfaceType.TEXT_AREA,
+  InterfaceType.RICH_TEXT_COMPOSER,
+  InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
+  InterfaceType.CSV_DATA_PANEL,
+  InterfaceType.CASE_FILE_TEXT_AREA,
 ];
 
 export const GenericRoleModule: RoleModule = {
@@ -108,15 +115,16 @@ export const GenericRoleModule: RoleModule = {
       'Since this role has no pre-built task template, invent the kind of on-the-job situation a ' +
       'real practitioner in this exact domain would actually face — a written deliverable, a ' +
       'judgment call they must explain, or an analysis they must produce. Every expected task must ' +
-      'be answerable in writing. The only structured input available is a small CSV data set shown to ' +
-      'the candidate as a table (for a role whose real work involves reading data) — never assume a ' +
-      'calculator, chart, or any other structured input surface, since none is available for an ' +
-      'unmodeled domain like this one. Favor the kind of task where the reasoning in the written ' +
+      'be answerable in writing. Input can include a small table, CSV data set, or a case file with ' +
+      'reference tabs where appropriate. Do not assume a calculator or chart. Favor tasks where the written ' +
       'answer is itself what reveals competence, since that is what a text response can actually ' +
       'assess well.',
   },
 
-  allowedTaskPatternTypes: genericTaskPatternTypes,
+  allowedTaskPatternTypes: genericTaskPatternTypes.map((pattern) => ({
+    ...pattern,
+    allowedInterfaceTypes: genericInterfaces,
+  })),
 
   criticChecks: {
     // Un-curated domains carry more risk of vague, could-be-any-job filler than a hand-tuned

@@ -5,7 +5,7 @@ import {
   GenerationStateUpdate,
   CriticResult,
 } from '../state/generation-state';
-import { findSimilarQuestions } from '../critic/novelty-check';
+import { findSimilarQuestions, findSimilarSimulationQuestions } from '../critic/novelty-check';
 import { checkForDuplicate } from '../critic/duplicate-check';
 import { checkRelevance } from '../critic/relevance-check';
 import { embedTaskContent } from '../utils/embedding.util';
@@ -50,16 +50,19 @@ export function criticNode(ctx: GenerationContext) {
       ctx.embeddings,
       candidate.taskContent,
     );
-    const matches = await findSimilarQuestions(
-      ctx.db,
-      state.category,
-      embedding,
-      ctx.config.noveltyCheckTopK,
+    const [matches, simulationMatches] = await Promise.all([
+      findSimilarQuestions(ctx.db, state.category, embedding, ctx.config.noveltyCheckTopK),
+      findSimilarSimulationQuestions(ctx.db, state.finalizedTasks.map((task) => task.questionBankId), embedding),
+    ]);
+    const simulationDuplicate = checkForDuplicate(
+      simulationMatches,
+      ctx.config.sameSimulationSimilarityThreshold,
     );
-    const duplicateResult = checkForDuplicate(
+    const bankDuplicate = checkForDuplicate(
       matches,
       ctx.config.duplicateSimilarityThreshold,
     );
+    const duplicateResult = simulationDuplicate.isDuplicate ? simulationDuplicate : bankDuplicate;
     if (duplicateResult.isDuplicate) {
       // The retry sees the matched scenario, so it can write a different situation. The scenario is
       // cut short to keep the feedback small.

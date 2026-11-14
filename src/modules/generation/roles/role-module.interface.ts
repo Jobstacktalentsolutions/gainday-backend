@@ -65,6 +65,8 @@ export interface TaskPatternTypeDefinition {
   description: string;
   /** Declarative per task-pattern type, not chosen by the LLM. See InterfaceType in interface-type.ts. */
   interfaceType: InterfaceType;
+  /** Optional render modes the model may select for this task pattern. */
+  allowedInterfaceTypes?: [InterfaceType, ...InterfaceType[]];
   /** Set for tasks whose figures must be computed rather than generated (see TaskSpecTemplate). */
   spec?: TaskSpecTemplate;
   /** Timing guideline and reading stimulus bounds for this task pattern type. */

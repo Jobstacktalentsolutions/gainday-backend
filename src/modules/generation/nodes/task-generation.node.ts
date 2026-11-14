@@ -25,6 +25,7 @@ async function generateReplacementCandidate(
       .filter((_, idx) => idx !== state.currentSlotIndex)
       .map((c) => c.taskType),
   );
+  for (const task of state.finalizedTasks) otherSlotTypes.add(task.taskType);
   for (const id of state.triedCandidateIds) {
     const tried = state.candidatePool.find((c) => c.candidateId === id);
     if (tried) otherSlotTypes.add(tried.taskType);
@@ -70,7 +71,7 @@ ${eligibleTypesDescription}`,
   ]);
 
   return {
-    candidateId: result.candidate.candidateId || candidateId,
+    candidateId,
     taskType: result.candidate.taskType,
     briefDescription: result.candidate.briefDescription,
     selected: true,
@@ -79,8 +80,7 @@ ${eligibleTypesDescription}`,
 
 /**
  * Selects the candidate for the current slot: on attempt 0 this is the pre-planned candidate
- * for this slot. On a retry, if an untried candidate exists in the pool it is used; otherwise,
- * a fresh replacement candidate is generated on-demand with an unused taskType.
+ * for this slot. On a retry, generate a fresh candidate so no other slot's candidate is reused.
  */
 async function selectCandidateForSlot(
   ctx: GenerationContext,
@@ -99,21 +99,8 @@ async function selectCandidateForSlot(
     return { candidate };
   }
 
-  const triedIds = new Set(state.triedCandidateIds);
-  const untried = state.candidatePool
-    .filter((c) => !triedIds.has(c.candidateId))
-    .sort(
-      (a, b) =>
-        (b.judgeScore?.composite ?? -Infinity) -
-        (a.judgeScore?.composite ?? -Infinity),
-    );
-
-  if (untried.length > 0) {
-    return { candidate: untried[0] };
-  }
-
   logger.log(
-    `Slot ${state.currentSlotIndex}: no untried candidates in pool — generating replacement candidate on-demand`,
+    `Slot ${state.currentSlotIndex}: generating a fresh replacement candidate`,
   );
   const replacement = await generateReplacementCandidate(ctx, state);
   return {

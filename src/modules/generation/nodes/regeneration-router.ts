@@ -52,7 +52,7 @@ export function regenerationRouter(ctx: GenerationContext) {
 /**
  * State update applied on the RETRY path before looping back to task-generation: advances
  * the attempt counter and marks the failed candidate as tried, so the next task-generation
- * pass picks a different candidate from the original pool.
+ * pass can generate a fresh candidate with awareness of previous attempts.
  */
 export function retryStateUpdate(state: GenerationState) {
   const draft = state.currentTaskDraft;

@@ -1,4 +1,5 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { z } from 'zod';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import { taskGenerationSchema } from './schemas/task-generation.schema';
@@ -125,7 +126,17 @@ export async function generateTaskContent(
       revisionNotes,
     });
   }
-  const interfaceType = patternTypeDef.interfaceType;
+  const interfaceType = patternTypeDef.allowedInterfaceTypes
+    ? (await withGeminiSafeStructuredOutput(
+        model,
+        z.object({ interfaceType: z.enum(patternTypeDef.allowedInterfaceTypes) }),
+      ).invoke([
+        new SystemMessage(
+          'Choose the best interface for this task. TEXT_AREA is for a short written answer; RICH_TEXT_COMPOSER for a drafted document; TABLE_VIEW_RESPONSE_PANEL or CSV_DATA_PANEL for tabular evidence; CASE_FILE_TEXT_AREA for multiple reference documents or tabs. Choose based on the work, not variety.',
+        ),
+        new HumanMessage(JSON.stringify({ category, intent, problem, taskType, briefDescription, guidance })),
+      ])).interfaceType
+    : patternTypeDef.interfaceType;
   const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
   const objectiveComponentSchema = patternTypeDef.objectiveComponentType
     ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
@@ -432,7 +443,7 @@ export async function modifyTaskContent(
       existingTask,
     });
   }
-  const interfaceType = patternTypeDef.interfaceType;
+  const interfaceType = existingTask.interfaceType;
   const interfacePayloadSchema = INTERFACE_SCHEMAS[interfaceType];
   const objectiveComponentSchema = patternTypeDef.objectiveComponentType
     ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
