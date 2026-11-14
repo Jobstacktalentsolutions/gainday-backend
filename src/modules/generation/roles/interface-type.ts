@@ -149,9 +149,7 @@ const caseFileTextAreaSchema = z.object({
       )
       .min(1),
   }),
-  wordLimit: z
-    .object({ min: z.number().int().nonnegative(), max: z.number().int().positive() })
-    .nullable(),
+  wordLimit: wordLimitSchema,
   placeholder: z.string().nullable(),
 });
 
@@ -195,6 +193,24 @@ export const INTERFACE_SCHEMAS: Record<InterfaceType, z.ZodTypeAny> = {
   [InterfaceType.TABLE_VIEW_WITH_CHART]: tableViewWithChartSchema,
   [InterfaceType.CASE_FILE_TEXT_AREA]: caseFileTextAreaSchema,
   [InterfaceType.STAGED_CHAT]: stagedChatSchema,
+};
+
+// Older saved tasks may specify only a maximum. Generation keeps its full min/max contract;
+// the save boundary accepts the stored shape without inventing a minimum.
+const savedWordLimitSchema = z.object({
+  min: z.number().int().nonnegative().optional(),
+  max: z.number().int().positive(),
+});
+const optionalSavedWordLimit = savedWordLimitSchema.nullable().optional();
+
+export const SAVED_INTERFACE_SCHEMAS: Record<InterfaceType, z.ZodTypeAny> = {
+  [InterfaceType.RICH_TEXT_COMPOSER]: richTextComposerSchema.extend({ wordLimit: optionalSavedWordLimit }),
+  [InterfaceType.TEXT_AREA]: textAreaSchema.extend({ wordLimit: optionalSavedWordLimit }),
+  [InterfaceType.TABLE_VIEW_RESPONSE_PANEL]: tableViewResponsePanelSchema.extend({ wordLimit: optionalSavedWordLimit }),
+  [InterfaceType.CSV_DATA_PANEL]: csvDataPanelSchema.extend({ wordLimit: optionalSavedWordLimit }),
+  [InterfaceType.TABLE_VIEW_WITH_CHART]: tableViewWithChartSchema.extend({ wordLimit: optionalSavedWordLimit }),
+  [InterfaceType.CASE_FILE_TEXT_AREA]: caseFileTextAreaSchema.extend({ wordLimit: optionalSavedWordLimit }),
+  [InterfaceType.STAGED_CHAT]: stagedChatSchema.extend({ wordLimit: savedWordLimitSchema }),
 };
 
 export type RichTextComposerPayload = z.infer<typeof richTextComposerSchema>;

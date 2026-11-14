@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { InterfaceType, INTERFACE_SCHEMAS, wordLimitSchema, type TableViewWithChartPayload } from './interface-type';
+import { InterfaceType, SAVED_INTERFACE_SCHEMAS, wordLimitSchema, type TableViewWithChartPayload } from './interface-type';
 import { TaskSpecError } from './role-module.interface';
 
 const CHART_TYPE = { BAR: 'bar', LINE: 'line', COMBO: 'combo', WATERFALL: 'waterfall' } as const;
@@ -57,7 +57,7 @@ export function materializeChartPresentation(input: ChartDataset) {
 
 /** Ensure a saved table and chart still describe the same dataset. */
 export function validateChartPresentation(value: unknown): void {
-  const parsed = INTERFACE_SCHEMAS[InterfaceType.TABLE_VIEW_WITH_CHART].parse(value) as TableViewWithChartPayload;
+  const parsed = SAVED_INTERFACE_SCHEMAS[InterfaceType.TABLE_VIEW_WITH_CHART].parse(value) as TableViewWithChartPayload;
   const { chart, table } = parsed;
   const series = chart.type === CHART_TYPE.WATERFALL
     ? [{ name: table.columns[1], values: chart.values }]

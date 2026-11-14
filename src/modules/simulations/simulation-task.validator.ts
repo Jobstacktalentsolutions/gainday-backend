@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { SimulationTask } from '../../db/schema/simulations.schema';
 import {
   CsvDataPanelPayload,
-  INTERFACE_SCHEMAS,
+  SAVED_INTERFACE_SCHEMAS,
   InterfaceType,
 } from '../generation/roles/interface-type';
 import { findCsvProblem } from '../generation/utils/csv.util';
@@ -22,6 +22,7 @@ const baseTaskSchema = z.object({
   taskType: z.string().min(1),
   category: z.string().min(1),
   title: z.string().min(1),
+  expectedDurationMinutes: z.number().int().optional(),
   scenarioDescription: z.string(),
   questionPrompt: z.string(),
   objectiveComponent: z.record(z.string(), z.unknown()).optional(),
@@ -43,6 +44,7 @@ const baseTaskSchema = z.object({
   businessProblemDerived: z.boolean(),
   interfaceType: z.nativeEnum(InterfaceType),
   interfacePayload: z.record(z.string(), z.unknown()),
+  inReview: z.boolean().optional(),
 });
 
 /**
@@ -80,7 +82,7 @@ export function validateSimulationTasks(
     }
     const task = base.data;
 
-    const interfacePayloadSchema = INTERFACE_SCHEMAS[task.interfaceType];
+    const interfacePayloadSchema = SAVED_INTERFACE_SCHEMAS[task.interfaceType];
     const payloadResult = interfacePayloadSchema.safeParse(
       task.interfacePayload,
     );
