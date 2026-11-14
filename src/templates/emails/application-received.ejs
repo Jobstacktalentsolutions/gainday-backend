@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Application Received</title>
+  <title>Application received</title>
   <%- include('partials/_styles') %>
 </head>
 <body>
@@ -14,25 +14,8 @@
       <div class="content">
         <p class="intro">
           Hi <%= typeof candidateName !== 'undefined' && candidateName ? candidateName : 'there' %>,<br><br>
-          Thanks for applying for <strong><%= typeof jobTitle !== 'undefined' ? jobTitle : 'the role' %></strong><% if (typeof companyName !== 'undefined' && companyName) { %> at <strong><%= companyName %></strong><% } %>. We've received your application and it's now with the hiring team.
+          Thanks for applying for <strong><%= typeof jobTitle !== 'undefined' ? jobTitle : 'the role' %></strong><% if (typeof companyName !== 'undefined' && companyName) { %> at <strong><%= companyName %></strong><% } %>. We've received your application.
         </p>
-
-        <!-- Stepper Component -->
-        <table role="presentation" class="stepper" cellpadding="0" cellspacing="0" border="0" width="100%">
-          <tr>
-            <td><span class="dot dot-done"></span><br>Applied</td>
-            <td><span class="dot dot-current"></span><br><span class="step-label-active">In review</span></td>
-            <td><span class="dot dot-pending"></span><br>Simulation</td>
-            <td><span class="dot dot-pending"></span><br>Decision</td>
-          </tr>
-        </table>
-
-        <div class="standout-box">
-          <div class="standout-title">What happens next</div>
-          <p>
-            The <%= typeof companyName !== 'undefined' && companyName ? companyName : 'hiring' %> team typically reviews applications within 5 working days. If you're shortlisted, we'll email you a link to a work simulation before any interview is scheduled.
-          </p>
-        </div>
 
         <div style="margin: 20px 0; font-size: 14px; color: #3a3a4d;">
           <div style="margin-bottom: 6px;"><strong>Role:</strong> <%= typeof jobTitle !== 'undefined' ? jobTitle : 'Role' %></div>

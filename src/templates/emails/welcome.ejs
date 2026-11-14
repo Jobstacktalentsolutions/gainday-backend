@@ -15,9 +15,9 @@
         <p class="intro">
           Hi <%= fullName %>, your account is ready.
           <% if (isEmployer) { %>
-          Gainday helps you hire on evidence: candidates complete a work simulation based on your role, and you review their results before deciding who to interview.
+          Candidates can complete a work simulation based on your role. You can review their results as you decide who to take forward.
           <% } else { %>
-          Gainday lets you show what you can do: complete a work simulation for a role you are interested in, and receive a scored assessment of your skills.
+          Explore roles that interest you and show your skills through work simulations. You can view your results and feedback after your work is assessed.
           <% } %>
         </p>
 
@@ -38,7 +38,7 @@
             '<strong>Unlock candidate contact details</strong> for the candidates you want to take forward',
           ] : [
             '<strong>Browse open roles</strong> from employers on the job board',
-            '<strong>Complete work simulations</strong> that reflect the job itself',
+            '<strong>Complete work simulations</strong> based on the role',
             '<strong>Receive a scored assessment</strong> of your skills, with feedback on each task',
           ]).forEach(function (item) { %>
           <tr>
@@ -51,7 +51,7 @@
         <div class="divider"></div>
 
         <p class="intro" style="font-size: 13px; color: #6a6a85;">
-          Questions? Visit our <a href="<%= appUrl %>/help" style="color:#1817fe !important; text-decoration:none;">help center</a> or <a href="mailto:support@gainday.com" style="color:#1817fe !important; text-decoration:none;">contact our team</a>.
+          Questions? Visit our <a href="<%= appUrl %>/help" style="color:#1817fe !important; text-decoration:none;">help centre</a> or <a href="mailto:support@gainday.com" style="color:#1817fe !important; text-decoration:none;">contact our team</a>.
         </p>
       </div>
 

@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Alert</title>
+  <title>Admin alert</title>
   <%- include('partials/_styles') %>
 </head>
 <body>
   <div class="wrapper">
     <div class="container">
-      <%- include('partials/_header', { bannerTitle: 'Admin Alert' }) %>
+      <%- include('partials/_header', { bannerTitle: 'Admin alert' }) %>
 
       <div class="content">
         <p class="intro">
           <strong style="color: #b42318; text-transform: uppercase; letter-spacing: 0.5px;"><%= severity %></strong>
-          &mdash; <%= title %>
+          <br><%= title %>
         </p>
 
         <div class="message-box danger"><%= message %></div>
@@ -29,7 +29,7 @@
         <div class="divider"></div>
 
         <p style="font-size: 13px; color: #767592;">
-          View and acknowledge this in the admin portal:
+          View and acknowledge this alert in the admin portal:
           <a href="<%= notificationsUrl %>" style="color: #1817fe; text-decoration: underline;">Notifications</a>
         </p>
       </div>

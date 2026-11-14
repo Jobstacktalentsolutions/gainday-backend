@@ -3,35 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Submissions Received</title>
+  <title>New submissions received</title>
   <%- include('partials/_styles') %>
 </head>
 <body>
   <div class="wrapper">
     <div class="container">
-      <%- include('partials/_header', { bannerTitle: 'New Submissions Received' }) %>
+      <%- include('partials/_header', { bannerTitle: 'New submissions received' }) %>
 
       <div class="content">
         <p class="intro">
-          Great news! You've received new simulation submissions for your job posting.
+          Candidates have submitted work simulations for your job.
         </p>
 
         <div class="stat-card">
           <div class="stat-number"><%= typeof candidateCount !== 'undefined' ? candidateCount : 1 %></div>
-          <div class="stat-label">New Submission<%= (typeof candidateCount !== 'undefined' && candidateCount === 1) ? '' : 's' %></div>
+          <div class="stat-label">New submission<%= (typeof candidateCount !== 'undefined' && candidateCount === 1) ? '' : 's' %></div>
           <div class="stat-title"><%= typeof jobTitle !== 'undefined' ? jobTitle : 'Open Role' %></div>
         </div>
 
         <div class="cta-wrap">
           <a href="<%= typeof appUrl !== 'undefined' ? appUrl : '' %>/employer/jobs" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
-            Review Applications
+            Review applications
           </a>
         </div>
 
         <div class="divider"></div>
 
         <p class="intro" style="font-size: 13px; color: #6a6a85;">
-          Log in to your Gainday dashboard to review candidate submissions, compare capability passports, and advance candidates to interviews.
+          Sign in to review the submissions and candidate results.
         </p>
       </div>
 

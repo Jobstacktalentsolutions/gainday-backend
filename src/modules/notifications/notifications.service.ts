@@ -132,7 +132,7 @@ export class NotificationsService {
 
     await this.emailQueueService.enqueueEmail({
       to,
-      subject: 'Welcome to the Gainday Admin Team - Your Login Credentials',
+      subject: 'Your Gainday admin account',
       template: 'admin-invite',
       context: {
         email: to,
@@ -160,7 +160,7 @@ export class NotificationsService {
 
     await this.emailQueueService.enqueueEmail({
       to,
-      subject: `Your Gainday Admin Verification Code: ${otp}`,
+      subject: `Your Gainday admin verification code: ${otp}`,
       template: 'admin-2fa',
       context: {
         otp,
@@ -360,7 +360,7 @@ export class NotificationsService {
 
     await this.emailQueueService.enqueueEmail({
       to: targetEmail,
-      subject: `[Support Request] ${topic}: ${name}`,
+      subject: `[Support request] ${topic}: ${name}`,
       template: 'support-request',
       context: {
         name,
@@ -395,7 +395,7 @@ export class NotificationsService {
 
     await this.emailQueueService.enqueueEmail({
       to,
-      subject: `Re: [${topic}] - Gainday Support`,
+      subject: `Re: [${topic}] Gainday support`,
       template: 'support-reply',
       context: {
         recipientName,
