@@ -45,6 +45,7 @@ export class JobsService {
       title: dto.title,
       role: dto.role,
       skillLevel: dto.skillLevel,
+      skillCategory: dto.skillCategory,
       location: dto.location,
       employmentType: dto.employmentType,
       isRemoteFriendly: dto.isRemoteFriendly,

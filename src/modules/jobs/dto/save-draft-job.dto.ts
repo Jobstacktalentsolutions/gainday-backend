@@ -27,6 +27,10 @@ export class SaveDraftJobDto {
 
   @IsOptional()
   @IsString()
+  skillCategory?: string;
+
+  @IsOptional()
+  @IsString()
   location?: string;
 
   @IsOptional()
