@@ -198,7 +198,7 @@ export class NotificationsService {
     );
   }
 
-  /** Tells an employer every task slot for their job is resolved, so they can review and publish. */
+  /** Tells an employer every task review for their job is resolved. */
   async sendTaskReviewResolvedEmail(
     employerEmail: string,
     jobTitle: string,

@@ -1058,7 +1058,7 @@ export class AdminService {
     return reviewItem;
   }
 
-  /** Once a job has no task slots left pending, tells its employer the tasks are ready to publish. */
+  /** Notify the employer once all task reviews for the job are resolved. */
   private async notifyEmployerIfReviewComplete(jobId: string): Promise<void> {
     if ((await countPendingTaskReviews(this.db, jobId)) > 0) {
       return;

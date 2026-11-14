@@ -134,11 +134,6 @@ export class JobsService {
   }
 
   async publishJob(jobId: string): Promise<Job> {
-    if ((await countPendingTaskReviews(this.db, jobId)) > 0) {
-      throw new ConflictException(
-        'Some tasks are still under admin review. The job can be published once they are resolved.',
-      );
-    }
     const existing = await this.db.query.jobs.findFirst({
       where: eq(jobs.id, jobId),
       with: { employer: { with: { user: true } } },
