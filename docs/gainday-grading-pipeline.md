@@ -153,9 +153,14 @@ together is worse than anything currently in the pipeline; (2) it keeps the mode
 one task's calibration anchors at a time instead of diluting it with N unrelated tasks' worth of
 anchors.
 
-**Input** (per call): the task's title/scenario/prompt, its 5 anchors, and the candidate's raw
+**Input** (per call): the task's title/scenario/prompt, candidate-visible interface payload and
+objective choices, its 5 anchors, and the candidate's raw
 `responseBody` for that task. **Model:** `GRADING_MODEL`, temperature 0. **Output**
 (`schemas/task-grading-result.schema.ts`):
+
+The interface and objective data use the same sanitisation as the candidate endpoint; answer keys
+and the rubric are not included in that context. The rubric is supplied separately for its checklist
+and gate, and code-checked objective results are supplied as a verified result.
 
 ```ts
 {

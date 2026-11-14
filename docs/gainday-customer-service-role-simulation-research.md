@@ -73,7 +73,7 @@ Interface names refer to the pipeline document's taxonomy (Section 2.5) and the 
 
 ### 2.5 Escalation & Handoff Summary
 **Real-world form:** a case with a messy history gets passed to billing or a second-tier team. Strong handoffs include what was reported, what was tried, the customer's state and any risk, what the next team must do, and by when. Weak ones are long, blame the customer, or treat escalation as a way to clear the queue.
-**Gainday task shape:** a thread of six to ten prior messages and notes. Candidate writes a handoff in a fixed format (for example four bullets). Optional first step: decide whether to escalate and to whom, where the policy makes that unambiguous.
+**Gainday task shape:** a thread of six to ten prior messages and notes, with the required handoff facts visible in the case file. Candidate writes a handoff in a fixed format (for example four bullets). Optional first step: decide whether to escalate and to whom, where the policy makes that unambiguous.
 **Component type:** open-ended with a fact checklist keyed from the spec. This is the most objectively gradable written category, because the facts that must appear are known in advance.
 **What's graded:** required facts present and correct; nothing invented; concise; no blame; clear ask and deadline.
 **Maps to Gainday criteria:** judgment/execution (primary: ownership, completeness), written communication, problem-solving.
