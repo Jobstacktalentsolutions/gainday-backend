@@ -9,6 +9,7 @@ import {
   simulations,
   DEFAULT_SIMULATION_TIME_LIMIT_MINUTES,
   AdminNotificationSeverity,
+  JobStatus,
 } from '../../db/schema';
 import { GENERATION_QUEUE } from './generation.constants';
 import { GenerationService } from './generation.service';
@@ -68,19 +69,10 @@ export class GenerationProcessor extends WorkerHost {
       // Tasks are retained in the simulation draft even when flagged for AI oversight.
       const hasIncompleteSlots = result.finalizedTasks.length === 0;
 
-      // A job with task slots awaiting admin review stays a draft until they are resolved, so it
-      // never goes live with missing tasks.
+      // Generated tasks remain a draft until the employer publishes the job.
       await this.db
         .update(jobs)
-        .set(
-          hasIncompleteSlots
-            ? { status: 'DRAFT', updatedAt: new Date() }
-            : {
-                status: 'ACTIVE',
-                activatedAt: new Date(),
-                updatedAt: new Date(),
-              },
-        )
+        .set({ status: JobStatus.DRAFT, updatedAt: new Date() })
         .where(eq(jobs.id, jobId));
       await this.jobBoardCache.invalidateAll();
 
