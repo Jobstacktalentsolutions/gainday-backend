@@ -223,15 +223,14 @@ export class SubmissionsService {
     // Open staged chats keep their replies and are marked incomplete; grading is not blocked.
     await this.stagedChatService.markOpenSessionsIncomplete(submissionId);
 
-    // Async, off the request path — grading (and, if this is the first submission to reach a
-    // given task, anchor generation for it) happens in the background. See GradingService.
-    await this.gradingService.queueGrading(submissionId);
-
     try {
       await this.notifyApplicationMilestones(submission.jobId);
     } catch (error) {
       this.logger.error(`Failed to queue application milestone notification for job ${submission.jobId}`, error);
     }
+
+    // Grading and anchor generation run in the background.
+    await this.gradingService.queueGrading(submissionId);
 
     return updated;
   }
