@@ -23,6 +23,7 @@ export interface GradeTaskInput {
   taskContext: CandidateSimulationTask;
   anchors: AnchorResponse[];
   candidateResponse: string;
+  writtenResponse?: string;
   /** The criteria the model scores. Criteria settled by an answer key are left to the caller. */
   criteria: readonly GradedCriterion[];
   /** Short description of the code-checked objective result, when there is one. */
@@ -74,6 +75,7 @@ export class TaskGradingService {
           },
           anchors: input.anchors,
           candidateResponse: input.candidateResponse,
+          ...(input.writtenResponse !== undefined ? { writtenResponse: input.writtenResponse } : {}),
         }),
       ),
     ]);

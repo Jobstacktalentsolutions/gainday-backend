@@ -170,6 +170,7 @@ export class GradingService {
       answer.objectiveResponse,
     );
     const anchors = await this.anchorGenerationService.ensureAnchors(row);
+    const hasWrittenAnswer = task.openEndedComponent != null;
 
     const result = await this.taskGradingService.gradeTask({
       category: row.category,
@@ -179,7 +180,8 @@ export class GradingService {
       taskContext: sanitizeTaskForCandidate(task, this.taskRoleRegistry),
       anchors,
       candidateResponse: answer.responseBody,
-      criteria: criteriaForLlm(objectiveResult !== null),
+      ...(hasWrittenAnswer ? { writtenResponse: answer.textResponse } : {}),
+      criteria: criteriaForLlm(objectiveResult !== null, hasWrittenAnswer),
       verifiedResult: objectiveResult
         ? describeObjectiveResult(objectiveResult)
         : undefined,
@@ -194,6 +196,8 @@ export class GradingService {
         result.categoryScores,
         objectiveResult,
         gate,
+        hasWrittenAnswer,
+        answer.textResponse.trim().length > 0,
       ),
       summary: result.summary,
       checklist: checklistResults(task.rubric, result),

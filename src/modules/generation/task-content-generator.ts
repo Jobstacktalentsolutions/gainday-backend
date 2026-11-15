@@ -18,6 +18,7 @@ import {
 import { taskSpecSchema } from './schemas/task-spec.schema';
 import { REQUIREMENT_VS_TIP_RULE, getSeniorityGuidance } from './task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
+import { CustomerServiceTaskType } from './roles/customer-service/customer-service.role-module';
 
 /**
  * What the candidate reads must not give them tips. Shared by the generate and modify prompts so the
@@ -318,8 +319,12 @@ async function generateSpecTaskContent(
       result.expectedDurationMinutes ??
       patternTypeDef.realities?.defaultDurationMinutes ??
       8,
-    scenarioDescription: result.scenarioDescription,
-    questionPrompt: result.questionPrompt,
+    scenarioDescription: patternTypeDef.key === CustomerServiceTaskType.TICKET_TRIAGE
+      ? 'Review the support queue and apply the triage guideline to decide what to do first and how to handle the remaining tickets.'
+      : result.scenarioDescription,
+    questionPrompt: patternTypeDef.key === CustomerServiceTaskType.TICKET_TRIAGE
+      ? 'Use the triage guideline to select an action for every ticket. Explain why you chose the first ticket and how you will handle the others.'
+      : result.questionPrompt,
     objectiveComponent: derived.objectiveComponent,
     openEndedComponent: result.openEndedComponent
       ? result.openEndedComponent

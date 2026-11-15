@@ -39,8 +39,7 @@ export function buildTaskGradingPrompt(
     .map((criterion) => `- ${CRITERION_LABELS[criterion]}: ${criteriaFraming[criterion]}`)
     .join('\n');
   const verifiedClause = verifiedResult
-    ? `\n\nThe figures in this response were already checked against an answer key: ${verifiedResult}. Treat that as settled and do not re-score it; ` +
-      'your summary must be consistent with it.'
+    ? `\n\nThe structured answer was checked against the answer key: ${verifiedResult}. Treat that result as settled. For any problem-solving and judgment scores requested, assess writtenResponse independently, including material contradictions with the structured answer in candidateResponse; missing written reasoning scores zero. Your summary must reflect both parts.`
     : '';
 
   return `You are grading a candidate's response to a job-simulation task. You are given the task

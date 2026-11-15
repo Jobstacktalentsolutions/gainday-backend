@@ -21,6 +21,17 @@ describe('criteriaForLlm', () => {
   it('leaves only the written and commercial criteria to the LLM when the key settles the rest', () => {
     expect(criteriaForLlm(true)).toEqual(['writtenCommunication', 'commercialDomainAwareness']);
   });
+  it('scores written reasoning independently when a keyed task also requires writing', () => {
+    expect(criteriaForLlm(true, true)).toEqual(criteriaForLlm(false));
+    const scores = combineCategoryScores(llmScores, { score: 100, correctParts: 4, totalParts: 4 }, null, true);
+    expect(scores.problemSolving.score).toBe(55);
+    expect(scores.judgmentExecution.score).toBe(60);
+  });
+  it('does not award writing credit when the required explanation is blank', () => {
+    const scores = combineCategoryScores(llmScores, { score: 100, correctParts: 4, totalParts: 4 }, null, true, false);
+    expect(scores.problemSolving.score).toBe(50);
+    expect(scores.judgmentExecution.score).toBe(50);
+  });
 });
 
 describe('combineCategoryScores', () => {
@@ -68,13 +79,13 @@ describe('combineCategoryScores', () => {
       ).toBe(20);
     });
 
-    it('never overrides a judgment settled by the answer key', () => {
+    it('applies the gate even when the structured answer is correct', () => {
       const scores = combineCategoryScores(
         llmScores,
         { score: 100, correctParts: 2, totalParts: 2 },
         { triggered: true, description: 'x' },
       );
-      expect(scores.judgmentExecution.score).toBe(100);
+      expect(scores.judgmentExecution.score).toBe(GATE_JUDGMENT_CAP);
     });
   });
 });

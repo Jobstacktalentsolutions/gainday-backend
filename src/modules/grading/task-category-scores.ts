@@ -18,8 +18,8 @@ export const OBJECTIVE_SETTLED_CRITERIA: readonly GradedCriterion[] = [
 ];
 
 /** The criteria the LLM grader scores: all four, minus those the answer key settles. */
-export function criteriaForLlm(hasObjectiveResult: boolean): readonly GradedCriterion[] {
-  return hasObjectiveResult
+export function criteriaForLlm(hasObjectiveResult: boolean, hasWrittenAnswer = false): readonly GradedCriterion[] {
+  return hasObjectiveResult && !hasWrittenAnswer
     ? GRADED_CRITERIA.filter((criterion) => !OBJECTIVE_SETTLED_CRITERIA.includes(criterion))
     : GRADED_CRITERIA;
 }
@@ -54,6 +54,8 @@ export function combineCategoryScores(
   llmScores: LlmCategoryScores,
   objective: ObjectiveGradeResult | null,
   gate: GateOutcome | null = null,
+  hasWrittenAnswer = false,
+  writtenResponsePresent = true,
 ): CategoryScores {
   const llm = (criterion: GradedCriterion) => fromLlm(llmScores, criterion);
   if (!objective) {
@@ -79,9 +81,19 @@ export function combineCategoryScores(
     rationale: `Checked against the answer key: ${describeObjectiveResult(objective)}.`,
     evidence: `${objective.correctParts} of ${objective.totalParts} parts match the key.`,
   };
+  const mixed = (criterion: GradedCriterion): CategoryScoreDetail => {
+    if (!hasWrittenAnswer) return checked;
+    const written = writtenResponsePresent ? llm(criterion) : { score: 0, rationale: 'Required written response was not provided.', evidence: '' };
+    return {
+      score: Math.round((checked.score + written.score) / 2),
+      rationale: `Objective: ${checked.score}/100 (${describeObjectiveResult(objective)}). Written reasoning: ${written.score}/100. ${written.rationale}`,
+      evidence: `Objective: ${checked.evidence} Written: ${written.evidence}`,
+    };
+  };
+  const judgment = mixed('judgmentExecution');
   return {
-    problemSolving: checked,
-    judgmentExecution: checked,
+    problemSolving: mixed('problemSolving'),
+    judgmentExecution: gate?.triggered ? { ...judgment, score: Math.min(judgment.score, GATE_JUDGMENT_CAP), rationale: `${judgment.rationale} Capped at ${GATE_JUDGMENT_CAP}: ${gate.description}.` } : judgment,
     writtenCommunication: llm('writtenCommunication'),
     commercialDomainAwareness: llm('commercialDomainAwareness'),
   };
