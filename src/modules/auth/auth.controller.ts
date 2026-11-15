@@ -31,7 +31,6 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { EMAIL_NOT_VERIFIED_CODE, JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { AllowUnverifiedEmail } from './decorators/allow-unverified-email.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -133,12 +132,10 @@ export class AuthController {
   @Post('signup')
   async signup(
     @Body() signupDto: SignupEmployerDto,
-    @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.registerEmployer(signupDto);
-    this.setAuthCookie(res, result.access_token);
     return {
-      ...result,
+      user: result.user,
       isEmailVerified: false,
       emailVerified: false,
     };
@@ -147,12 +144,10 @@ export class AuthController {
   @Post('register/employer')
   async registerEmployer(
     @Body() signupDto: SignupEmployerDto,
-    @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.registerEmployer(signupDto);
-    this.setAuthCookie(res, result.access_token);
     return {
-      ...result,
+      user: result.user,
       isEmailVerified: false,
       emailVerified: false,
     };
@@ -161,12 +156,10 @@ export class AuthController {
   @Post('register/candidate')
   async registerCandidate(
     @Body() dto: SignupJobSeekerDto,
-    @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.registerJobSeeker(dto);
-    this.setAuthCookie(res, result.access_token);
     return {
-      ...result,
+      user: result.user,
       isEmailVerified: false,
       emailVerified: false,
     };
@@ -248,7 +241,6 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @AllowUnverifiedEmail()
   getProfile(@CurrentUser() user: any) {
     return {
       user,

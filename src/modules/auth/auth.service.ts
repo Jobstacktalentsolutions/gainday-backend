@@ -389,11 +389,6 @@ export class AuthService {
       UserRole.EMPLOYER,
       redirectPath,
     );
-    await this.notificationsService.sendWelcomeEmail(
-      email,
-      fullName,
-      UserRole.EMPLOYER,
-    );
 
     return this.login(user);
   }
@@ -443,11 +438,6 @@ export class AuthService {
     await this.notificationsService.sendVerificationEmail(
       email,
       emailVerificationToken,
-      UserRole.JOB_SEEKER,
-    );
-    await this.notificationsService.sendWelcomeEmail(
-      email,
-      fullName,
       UserRole.JOB_SEEKER,
     );
 
@@ -529,7 +519,21 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<boolean> {
     const result = await this.usersService.verifyEmailByToken(token);
-    return !!result;
+    if (!result) {
+      return false;
+    }
+
+    const name =
+      result.role === UserRole.EMPLOYER
+        ? (await this.employerProfileService.findByUserId(result.id))?.fullName
+        : (await this.jobSeekerProfileService.findByUserId(result.id))?.fullName;
+
+    await this.notificationsService.sendWelcomeEmail(
+      result.email,
+      name ?? '',
+      result.role,
+    );
+    return true;
   }
 
   /**
