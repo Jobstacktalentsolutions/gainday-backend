@@ -6,16 +6,16 @@ interface PointerForms {
 }
 
 const FORMS: PointerForms = {
-  subject: 'this candidate',
-  object: 'this candidate',
-  possessive: "this candidate's",
+  subject: 'the candidate',
+  object: 'the candidate',
+  possessive: "the candidate's",
   reflexive: 'themself',
 };
 
 const APOS = `['’]`;
 
 // "you <verb>" phrases whose verb changes to singular ("is", "has", "does", etc.). Checked
-// before plain replacements so the verb agrees with "this candidate".
+// before plain replacements so the verb agrees with "the candidate".
 const VERB_PHRASES: { pattern: RegExp; singular: string }[] = [
   { pattern: /\byou are\b/gi, singular: '{s} is' },
   { pattern: new RegExp(`\\byou${APOS}re\\b`, 'gi'), singular: '{s} is' },
@@ -41,7 +41,7 @@ const matchCase = (source: string, replacement: string) =>
 
 /**
  * The grader writes each task summary to the candidate ("You..."); employers read the same text
- * about the candidate, so "you" is swapped for a general pointer ("This candidate").
+ * about the candidate, so "you" is swapped for a general pointer ("The candidate").
  */
 export function rewriteSecondPersonForEmployer(text: string): string {
   let result = text;
