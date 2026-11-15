@@ -253,6 +253,13 @@
       "when": 1793973471117,
       "tag": "0035_curvy_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794722978096,
+      "tag": "0036_ambitious_micromax",
+      "breakpoints": true
     }
   ]
 }

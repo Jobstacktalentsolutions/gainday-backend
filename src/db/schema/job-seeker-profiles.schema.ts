@@ -47,12 +47,13 @@ export interface PassportNarrative {
   generatedAt: string;
 }
 
-export const genderEnum = pgEnum('gender', ['MALE', 'FEMALE', 'NON_BINARY']);
+export const genderEnum = pgEnum('gender', ['MALE', 'FEMALE', 'NON_BINARY', 'OTHER']);
 
 export const Gender = {
   MALE: 'MALE',
   FEMALE: 'FEMALE',
   NON_BINARY: 'NON_BINARY',
+  OTHER: 'OTHER',
 } as const;
 export type Gender = (typeof Gender)[keyof typeof Gender];
 
