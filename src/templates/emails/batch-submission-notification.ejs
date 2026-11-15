@@ -18,12 +18,12 @@
 
         <div class="stat-card">
           <div class="stat-number"><%= typeof candidateCount !== 'undefined' ? candidateCount : 1 %></div>
-          <div class="stat-label">New submission<%= (typeof candidateCount !== 'undefined' && candidateCount === 1) ? '' : 's' %></div>
+          <div class="stat-label">Applications received</div>
           <div class="stat-title"><%= typeof jobTitle !== 'undefined' ? jobTitle : 'Open Role' %></div>
         </div>
 
         <div class="cta-wrap">
-          <a href="<%= typeof appUrl !== 'undefined' ? appUrl : '' %>/employer/jobs" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
+          <a href="<%= appUrl %>/employer/jobs/<%= encodeURIComponent(jobId) %>/submissions" class="cta-button" target="_blank" style="background-color:#1817fe; color:#ffffff !important; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:600; font-size:15px; display:inline-block;">
             Review applications
           </a>
         </div>

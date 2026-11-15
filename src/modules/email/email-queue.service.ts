@@ -9,7 +9,7 @@ export class EmailQueueService {
 
   constructor(@InjectQueue('email') private readonly emailQueue: Queue) {}
 
-  async enqueueEmail(payload: EmailPayload, delayMs?: number): Promise<string> {
+  async enqueueEmail(payload: EmailPayload, delayMs?: number, jobId?: string): Promise<string> {
     try {
       const job = await this.emailQueue.add('default', payload, {
         attempts: 3,
@@ -18,7 +18,9 @@ export class EmailQueueService {
           delay: 2000,
         },
         delay: delayMs,
-        removeOnComplete: true,
+        jobId,
+        // Milestone IDs must remain in Redis after delivery to prevent duplicate emails.
+        removeOnComplete: jobId ? false : true,
         removeOnFail: false,
       });
 

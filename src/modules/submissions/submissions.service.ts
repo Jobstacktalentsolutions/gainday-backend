@@ -23,6 +23,7 @@ import {
 import { GradingService } from '../grading/grading.service';
 import { CreditLedgerService } from '../credits/credit-ledger.service';
 import { CandidateNotificationsService } from '../notifications/candidate-notifications.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RoleRegistry } from '../generation/roles/role-registry';
 import { sanitizeTaskForCandidate } from '../simulations/candidate-task.util';
 import { parseAnswers } from './answer-validation';
@@ -51,6 +52,7 @@ const HEARTBEAT_STALE_THRESHOLD_MS = 90_000;
 // the frontend already caps its own in-memory log at 500 (useSimulationIntegrityStore.ts), this
 // just makes sure the backend never trusts that cap was actually applied client-side.
 const MAX_ANTI_CHEAT_EVENTS = 1000;
+const APPLICATION_NOTIFICATION_INTERVAL = 5;
 
 // Statuses a candidate can still withdraw from. Once the employer has decided (SELECTED /
 // NOT_SELECTED), the candidate was disqualified, or they already withdrew, it's final.
@@ -72,6 +74,7 @@ export class SubmissionsService {
     private readonly roleRegistry: RoleRegistry,
     private readonly candidateNotifications: CandidateNotificationsService,
     private readonly stagedChatService: StagedChatService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async createSubmission(
@@ -224,7 +227,28 @@ export class SubmissionsService {
     // given task, anchor generation for it) happens in the background. See GradingService.
     await this.gradingService.queueGrading(submissionId);
 
+    try {
+      await this.notifyApplicationMilestones(submission.jobId);
+    } catch (error) {
+      this.logger.error(`Failed to queue application milestone notification for job ${submission.jobId}`, error);
+    }
+
     return updated;
+  }
+
+  private async notifyApplicationMilestones(jobId: string): Promise<void> {
+    const [count] = await this.db.select({ value: sql<number>`count(*)::int` })
+      .from(submissions)
+      .where(and(eq(submissions.jobId, jobId), isNotNull(submissions.completedAt)));
+    if (count.value < APPLICATION_NOTIFICATION_INTERVAL) return;
+    const job = await this.db.query.jobs.findFirst({
+      where: eq(jobs.id, jobId),
+      with: { employer: { with: { user: true } } },
+    });
+    if (!job?.employer?.user?.email) return;
+    for (let milestone = APPLICATION_NOTIFICATION_INTERVAL; milestone <= count.value; milestone += APPLICATION_NOTIFICATION_INTERVAL) {
+      await this.notifications.sendBatchNotification(job.employer.user.email, milestone, job.title ?? 'Untitled role', jobId);
+    }
   }
 
   /**

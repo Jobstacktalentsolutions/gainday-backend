@@ -112,7 +112,7 @@ export class NotificationsService {
       context: {
         resetLink: link,
         year,
-        expiryHours: 24,
+        expiryHours: 1,
       },
     });
 
@@ -176,6 +176,7 @@ export class NotificationsService {
     employerEmail: string,
     candidateCount: number,
     jobTitle: string,
+    jobId: string,
   ): Promise<void> {
     const appUrl = this.configService.get<string>('email.appUrl');
     const year = new Date().getFullYear();
@@ -187,11 +188,11 @@ export class NotificationsService {
       context: {
         candidateCount,
         jobTitle,
-        jobId: '',
+        jobId,
         appUrl,
         year,
       },
-    });
+    }, undefined, `application-milestone-${jobId}-${candidateCount}`);
 
     this.logger.log(
       `Batch submission notification enqueued for ${employerEmail}`,
