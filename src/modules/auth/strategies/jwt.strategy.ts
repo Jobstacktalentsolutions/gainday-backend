@@ -57,6 +57,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       profileId: profile?.id,
       fullName: profile?.fullName,
       companyName: (profile as any)?.companyName,
+      phoneNumber: profile && 'phoneNumber' in profile ? profile.phoneNumber : undefined,
       ...jobSeekerProfileFields(profile),
     };
   }
