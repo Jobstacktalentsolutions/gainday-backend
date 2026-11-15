@@ -29,6 +29,7 @@ import { sanitizeTaskForCandidate } from '../simulations/candidate-task.util';
 import { parseAnswers } from './answer-validation';
 import { StagedChatService } from './staged-chat/staged-chat.service';
 import { resolveCandidateContact } from './candidate-contact';
+import { employerVisibleSubmission } from './employer-visible-submission';
 import {
   buildEmployerTaskResults,
   buildTaskResults,
@@ -259,8 +260,7 @@ export class SubmissionsService {
     const rows = await this.db.query.submissions.findMany({
       where: and(
         eq(submissions.jobId, jobId),
-        ne(submissions.status, 'WITHDRAWN'),
-        isNotNull(submissions.completedAt),
+        employerVisibleSubmission(),
       ),
       with: { candidate: { with: { user: true } } },
     });
@@ -284,8 +284,7 @@ export class SubmissionsService {
     const row = await this.db.query.submissions.findFirst({
       where: and(
         eq(submissions.id, id),
-        ne(submissions.status, 'WITHDRAWN'),
-        isNotNull(submissions.completedAt),
+        employerVisibleSubmission(),
       ),
       with: {
         simulation: true,

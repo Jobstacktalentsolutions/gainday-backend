@@ -27,6 +27,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { SaveDraftJobDto } from './dto/save-draft-job.dto';
 import { FindEmployerJobsDto } from './dto/find-employer-jobs.dto';
 import { toSalaryBound } from './salary-bound.util';
+import { employerVisibleSubmission } from '../submissions/employer-visible-submission';
 
 type JobDetailsInput = CreateJobDto | SaveDraftJobDto;
 
@@ -293,7 +294,7 @@ export class JobsService {
         submissionsCount: sql<number>`count(distinct ${submissions.id})::int`,
       })
       .from(jobs)
-      .leftJoin(submissions, eq(submissions.jobId, jobs.id))
+      .leftJoin(submissions, and(eq(submissions.jobId, jobs.id), employerVisibleSubmission()))
       .where(whereClause)
       .groupBy(jobs.id)
       .orderBy(desc(jobs.updatedAt))

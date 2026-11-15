@@ -93,7 +93,7 @@ export interface TaskGradingResult {
  * useFullscreenGuard,useIdleDetection}.ts) plus this backend's own server-observed check (see
  * SubmissionsService.submitAnswers), and a DB enum would need a migration every time a new
  * listener is added — known values today: "tab-hidden", "window-blur", "fullscreen-exit",
- * "idle", "server-stale-heartbeat".
+ * "idle", "copy", "paste", "server-stale-heartbeat". Clipboard contents are not recorded.
  */
 export interface AntiCheatEvent {
   type: string;
