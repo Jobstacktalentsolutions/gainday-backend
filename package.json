@@ -21,6 +21,7 @@
     "db:seed-candidate-titles": "ts-node -r tsconfig-paths/register src/db/scripts/seed-candidate-titles.ts",
     "db:seed-test-candidates": "ts-node -r tsconfig-paths/register src/db/scripts/seed-test-candidates.ts",
     "db:seed-test-applications": "ts-node -r tsconfig-paths/register src/db/scripts/seed-test-applications.ts",
+    "grading-eval": "node src/db/scripts/run-grading-evaluation.cjs",
     "recs:send-test": "ts-node -r tsconfig-paths/register src/modules/job-recommendations/send-test-recommendation.ts",
     "recs:preview": "ts-node -r tsconfig-paths/register src/modules/job-recommendations/preview-matches.ts",
     "roles:evaluate": "ts-node -r tsconfig-paths/register src/modules/generation/roles/evaluation/run-role-evaluation.ts",
