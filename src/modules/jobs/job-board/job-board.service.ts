@@ -86,12 +86,19 @@ export class JobBoardService {
   ): Promise<BoardPage> {
     const activeJobs = await loadActiveJobs(this.db);
     const search = query.search?.trim();
-    const matchingSearchIds = search
+    let matchingSearchIds = search
       ? new Set((await this.db.select({ id: jobs.id }).from(jobs).where(and(
           eq(jobs.status, 'ACTIVE'),
           or(fuzzySearch(search, [jobs.title, jobs.role, jobs.skillCategory]), fuzzySearchArray(search, jobs.requiredSkills)),
         ))).map((job) => job.id))
       : null;
+    if (search && matchingSearchIds?.size === 0) {
+      const descriptionPattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+      matchingSearchIds = new Set((await this.db.select({ id: jobs.id }).from(jobs).where(and(
+        eq(jobs.status, 'ACTIVE'),
+        sql`${jobs.description} ILIKE ${descriptionPattern} ESCAPE chr(92)`,
+      ))).map((job) => job.id));
+    }
     const rankedIds = await this.rankedIds(candidate, activeJobs);
     const jobsById = new Map(activeJobs.map((job) => [job.id, job]));
     const appliedIds = candidate
