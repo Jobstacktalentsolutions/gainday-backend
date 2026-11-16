@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { UserRole } from '../../db/schema';
 import { GoogleAuthService } from './google-auth.service';
 
 const identity = {
@@ -53,8 +54,18 @@ describe('GoogleAuthService.signIn', () => {
     );
   });
 
+  it.each([
+    [UserRole.JOB_SEEKER, UserRole.EMPLOYER],
+    [UserRole.EMPLOYER, UserRole.JOB_SEEKER],
+  ])('rejects role %s on portal %s before linking or signing in', async (role, portal) => {
+    usersService.findByEmailWithPassword.mockResolvedValue(account({ role }));
+    await expect(service.signIn('credential', portal)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(usersService.linkGoogleAccount).not.toHaveBeenCalled();
+    expect(authService.login).not.toHaveBeenCalled();
+  });
+
   it('signs in an existing candidate and links the Google ID on first use', async () => {
-    const result = await service.signIn('credential');
+    const result = await service.signIn('credential', UserRole.JOB_SEEKER);
 
     expect(usersService.linkGoogleAccount).toHaveBeenCalledWith(
       'user-1',
@@ -74,7 +85,7 @@ describe('GoogleAuthService.signIn', () => {
       account({ role: 'EMPLOYER', googleId: 'google-sub-123' }),
     );
 
-    const result = await service.signIn('credential');
+    const result = await service.signIn('credential', UserRole.EMPLOYER);
 
     expect(usersService.linkGoogleAccount).not.toHaveBeenCalled();
     expect(result.access_token).toBe('jwt');
@@ -83,7 +94,7 @@ describe('GoogleAuthService.signIn', () => {
   it('refuses a Google email with no Gainday account, and creates nothing', async () => {
     usersService.findByEmailWithPassword.mockResolvedValue(null);
 
-    await expect(service.signIn('credential')).rejects.toThrow(
+    await expect(service.signIn('credential', UserRole.JOB_SEEKER)).rejects.toThrow(
       new UnauthorizedException(
         'No Gainday account uses this Google email. Sign up first.',
       ),
@@ -95,7 +106,7 @@ describe('GoogleAuthService.signIn', () => {
   it('refuses an unverified Google email before looking anything up', async () => {
     verifier.verify.mockResolvedValue({ ...identity, emailVerified: false });
 
-    await expect(service.signIn('credential')).rejects.toBeInstanceOf(
+    await expect(service.signIn('credential', UserRole.JOB_SEEKER)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
     expect(usersService.findByEmailWithPassword).not.toHaveBeenCalled();
@@ -106,7 +117,7 @@ describe('GoogleAuthService.signIn', () => {
       account({ role: 'ADMIN' }),
     );
 
-    await expect(service.signIn('credential')).rejects.toThrow(
+    await expect(service.signIn('credential', UserRole.JOB_SEEKER)).rejects.toThrow(
       new ForbiddenException(
         'Administrators must sign in from the admin login page.',
       ),
@@ -122,7 +133,7 @@ describe('GoogleAuthService.signIn', () => {
       throw new ForbiddenException('Your account has been suspended: spam.');
     });
 
-    await expect(service.signIn('credential')).rejects.toBeInstanceOf(
+    await expect(service.signIn('credential', UserRole.JOB_SEEKER)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
     expect(authService.assertAccountActive).toHaveBeenCalledWith(
@@ -136,7 +147,7 @@ describe('GoogleAuthService.signIn', () => {
       account({ googleId: 'some-other-google-sub' }),
     );
 
-    await expect(service.signIn('credential')).rejects.toThrow(
+    await expect(service.signIn('credential', UserRole.JOB_SEEKER)).rejects.toThrow(
       new UnauthorizedException(
         'This account is linked to a different Google account.',
       ),
@@ -149,7 +160,7 @@ describe('GoogleAuthService.signIn', () => {
       account({ googleId: 'google-sub-123', isEmailVerified: false }),
     );
 
-    await service.signIn('credential');
+    await service.signIn('credential', UserRole.JOB_SEEKER);
 
     expect(usersService.linkGoogleAccount).toHaveBeenCalledWith(
       'user-1',

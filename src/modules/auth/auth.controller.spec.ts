@@ -33,7 +33,7 @@ describe('AuthController.login', () => {
     authService.validateUser.mockResolvedValue(null);
 
     await expect(
-      controller.login({ email: 'test@example.com', password: 'bad' }, res),
+      controller.employerLogin({ email: 'test@example.com', password: 'bad' }, res),
     ).rejects.toThrow(UnauthorizedException);
   });
 
@@ -46,7 +46,7 @@ describe('AuthController.login', () => {
     });
 
     try {
-      await controller.login(
+      await controller.employerLogin(
         { email: 'emp@example.com', password: 'correct' },
         res,
       );
@@ -74,7 +74,7 @@ describe('AuthController.login', () => {
     });
 
     await expect(
-      controller.login(
+      controller.candidateLogin(
         { email: 'candidate@example.com', password: 'correct' },
         res,
       ),
@@ -99,7 +99,7 @@ describe('AuthController.login', () => {
       },
     });
 
-    const result = await controller.login(
+    const result = await controller.employerLogin(
       { email: 'emp@example.com', password: 'correct' },
       res,
     );
@@ -109,5 +109,19 @@ describe('AuthController.login', () => {
     expect(result.access_token).toBe('jwt-token');
     expect(result.user.emailVerified).toBe(true);
     expect(res.cookie).toHaveBeenCalled();
+  });
+
+  it.each([
+    [UserRole.JOB_SEEKER, 'employerLogin'],
+    [UserRole.EMPLOYER, 'candidateLogin'],
+    [UserRole.ADMIN, 'employerLogin'],
+    [UserRole.ADMIN, 'candidateLogin'],
+  ] as const)('rejects %s on %s without issuing a token', async (role, method) => {
+    authService.validateUser.mockResolvedValue({ role, isEmailVerified: true });
+
+    await expect(controller[method]({ email: 'test@example.com', password: 'correct' }, res))
+      .rejects.toThrow(UnauthorizedException);
+    expect(authService.login).not.toHaveBeenCalled();
+    expect(res.cookie).not.toHaveBeenCalled();
   });
 });

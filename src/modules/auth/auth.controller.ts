@@ -79,28 +79,52 @@ export class AuthController {
     return result;
   }
 
-  @Post('google')
+  @Post('employer/google')
   @HttpCode(HttpStatus.OK)
-  async googleLogin(
+  async employerGoogleLogin(
     @Body() dto: GoogleLoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.googleAuthService.signIn(dto.credential);
+    const result = await this.googleAuthService.signIn(dto.credential, UserRole.EMPLOYER);
     this.setAuthCookie(res, result.access_token);
     return result;
   }
 
-  @Post('login')
+  @Post('candidate/google')
   @HttpCode(HttpStatus.OK)
-  async login(
+  async candidateGoogleLogin(
+    @Body() dto: GoogleLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.googleAuthService.signIn(dto.credential, UserRole.JOB_SEEKER);
+    this.setAuthCookie(res, result.access_token);
+    return result;
+  }
+
+  @Post('employer/login')
+  @HttpCode(HttpStatus.OK)
+  async employerLogin(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
+    return this.loginForRole(loginDto, res, UserRole.EMPLOYER);
+  }
+
+  @Post('candidate/login')
+  @HttpCode(HttpStatus.OK)
+  async candidateLogin(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.loginForRole(loginDto, res, UserRole.JOB_SEEKER);
+  }
+
+  private async loginForRole(loginDto: LoginDto, res: Response, role: UserRole) {
     const user = await this.authService.validateUser(
       loginDto.email,
       loginDto.password,
     );
-    if (!user) {
+    if (!user || user.role !== role) {
       throw new UnauthorizedException('Invalid credentials');
     }
 

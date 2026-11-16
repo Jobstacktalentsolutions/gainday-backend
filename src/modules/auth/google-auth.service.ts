@@ -20,7 +20,7 @@ export class GoogleAuthService {
     private readonly authService: AuthService,
   ) {}
 
-  async signIn(credential: string) {
+  async signIn(credential: string, role: UserRole) {
     const identity = await this.verifier.verify(credential);
     if (!identity.emailVerified) {
       throw new UnauthorizedException('This Google email is not verified.');
@@ -37,6 +37,9 @@ export class GoogleAuthService {
       throw new ForbiddenException(
         'Administrators must sign in from the admin login page.',
       );
+    }
+    if (user.role !== role) {
+      throw new UnauthorizedException('This account cannot sign in to this portal.');
     }
     this.authService.assertAccountActive(user);
 

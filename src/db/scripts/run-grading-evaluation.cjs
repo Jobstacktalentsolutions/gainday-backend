@@ -235,7 +235,7 @@ async function prepare() {
 }
 async function login(email) {
   const password = process.env.EVAL_PASSWORD || 'password';
-  const response = await axios.post(`${API}/auth/login`, { email, password });
+  const response = await axios.post(`${API}/auth/candidate/login`, { email, password });
   assert(response.data.access_token, `Login failed for ${email}`);
   return axios.create({ baseURL: API, headers: { Authorization: `Bearer ${response.data.access_token}` } });
 }
