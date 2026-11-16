@@ -129,3 +129,11 @@ pnpm db:migrate
 # browse the database with Drizzle Studio
 pnpm db:studio
 ```
+
+For each database used by the job search, enable the PostgreSQL extension and create the search indexes after the jobs table exists:
+
+```bash
+pnpm db:setup-fuzzy-search
+```
+
+The script uses `DATABASE_URL`, is safe to rerun, and requires permission to create the extension and indexes. Run it before deploying code that uses fuzzy job search. Existing jobs are indexed automatically.

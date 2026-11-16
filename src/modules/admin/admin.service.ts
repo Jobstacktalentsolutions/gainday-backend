@@ -19,6 +19,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { DRIZZLE } from '../../db/db.constants';
+import { fuzzySearch } from '../../db/fuzzy-search';
 import { buildTimeBuckets } from './analytics-buckets';
 import type { DrizzleDb } from '../../db/client';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -505,8 +506,7 @@ export class AdminService {
       }
     }
     if (query.search && query.search.trim()) {
-      const s = `%${query.search.trim()}%`;
-      conditions.push(or(ilike(jobs.title, s), ilike(jobs.role, s)));
+      conditions.push(fuzzySearch(query.search, [jobs.title, jobs.role]));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

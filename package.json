@@ -27,6 +27,7 @@
     "roles:evaluate": "ts-node -r tsconfig-paths/register src/modules/generation/roles/evaluation/run-role-evaluation.ts",
     "recs:evaluate": "ts-node -r tsconfig-paths/register src/modules/job-recommendations/evaluation/run-evaluation.ts",
     "db:enable-pgvector": "ts-node -r tsconfig-paths/register src/db/scripts/enable-pgvector.ts",
+    "db:setup-fuzzy-search": "ts-node -r tsconfig-paths/register src/db/scripts/setup-fuzzy-search.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "ts-node -r tsconfig-paths/register src/db/migrate.ts",
     "db:seed-admin": "ts-node -r tsconfig-paths/register src/db/scripts/seed-admin.ts",

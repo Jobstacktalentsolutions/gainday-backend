@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, or, sql } from 'drizzle-orm';
+import { fuzzySearch, fuzzySearchArray } from '../../../db/fuzzy-search';
 import { DRIZZLE } from '../../../db/db.constants';
 import type { DrizzleDb } from '../../../db/client';
 import {
@@ -43,16 +44,6 @@ function loadActiveJobs(db: DrizzleDb) {
 }
 
 function matchesFilters(job: BoardJob, query: ListJobBoardDto): boolean {
-  const search = query.search?.trim().toLowerCase() ?? '';
-  if (
-    search &&
-    !(job.title ?? '').toLowerCase().includes(search) &&
-    !(job.role ?? '').toLowerCase().includes(search) &&
-    !(job.skillCategory ?? '').toLowerCase().includes(search) &&
-    !(job.requiredSkills ?? []).some((s) => s.toLowerCase().includes(search))
-  ) {
-    return false;
-  }
   if (query.roleCategory && roleCategoryOf(job) !== query.roleCategory)
     return false;
   if (query.location && locationOf(job) !== query.location) return false;
@@ -94,6 +85,13 @@ export class JobBoardService {
     query: ListJobBoardDto,
   ): Promise<BoardPage> {
     const activeJobs = await loadActiveJobs(this.db);
+    const search = query.search?.trim();
+    const matchingSearchIds = search
+      ? new Set((await this.db.select({ id: jobs.id }).from(jobs).where(and(
+          eq(jobs.status, 'ACTIVE'),
+          or(fuzzySearch(search, [jobs.title, jobs.role, jobs.skillCategory]), fuzzySearchArray(search, jobs.requiredSkills)),
+        ))).map((job) => job.id))
+      : null;
     const rankedIds = await this.rankedIds(candidate, activeJobs);
     const jobsById = new Map(activeJobs.map((job) => [job.id, job]));
     const appliedIds = candidate
@@ -103,7 +101,7 @@ export class JobBoardService {
     const appliedFilter = query.appliedStatus?.toLowerCase();
     const matching = rankedIds.flatMap((id) => {
       const job = jobsById.get(id);
-      if (!job || !matchesFilters(job, query)) return [];
+      if (!job || (matchingSearchIds && !matchingSearchIds.has(id)) || !matchesFilters(job, query)) return [];
       const isApplied = appliedIds.has(job.id);
       if (appliedFilter === 'applied' && !isApplied) return [];
       if (

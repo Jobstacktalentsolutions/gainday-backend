@@ -7,7 +7,8 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { and, desc, eq, getTableColumns, ilike, or, sql } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, sql } from 'drizzle-orm';
+import { fuzzySearch } from '../../db/fuzzy-search';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import {
@@ -261,8 +262,7 @@ export class JobsService {
     const conditions = [eq(jobs.employerId, employerId)];
 
     if (dto?.search && dto.search.trim()) {
-      const s = `%${dto.search.trim()}%`;
-      conditions.push(or(ilike(jobs.title, s), ilike(jobs.role, s), ilike(jobs.location, s))!);
+      conditions.push(fuzzySearch(dto.search, [jobs.title, jobs.role, jobs.location]));
     }
 
     if (dto?.status && dto.status !== 'all') {
