@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { normalizeEmail } from '../../utils/normalize-email';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
 import { users, User, NewUser } from '../../db/schema';
@@ -24,7 +25,7 @@ export class AuthUsersService {
     const [user] = await this.db
       .select(publicColumns)
       .from(users)
-      .where(eq(users.email, email));
+      .where(eq(sql`lower(${users.email})`, normalizeEmail(email)));
     return (user as User) ?? null;
   }
 
@@ -38,7 +39,7 @@ export class AuthUsersService {
         emailVerificationExpires: users.emailVerificationExpires,
       })
       .from(users)
-      .where(eq(users.email, email));
+      .where(eq(sql`lower(${users.email})`, normalizeEmail(email)));
     return row ?? null;
   }
 
@@ -46,7 +47,7 @@ export class AuthUsersService {
     const [user] = await this.db
       .select()
       .from(users)
-      .where(eq(users.email, email));
+      .where(eq(sql`lower(${users.email})`, normalizeEmail(email)));
     return user ?? null;
   }
 
@@ -71,10 +72,10 @@ export class AuthUsersService {
     return (user as User) ?? null;
   }
 
-  async createUser(data: Partial<NewUser>): Promise<User> {
+  async createUser(data: NewUser): Promise<User> {
     const [user] = await this.db
       .insert(users)
-      .values(data as NewUser)
+      .values({ ...data, email: normalizeEmail(data.email) })
       .returning();
     return user;
   }

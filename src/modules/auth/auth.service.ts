@@ -27,6 +27,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import Redis from 'ioredis';
 import { REDIS } from '../redis/redis.constants';
+import { normalizeEmail } from '../../utils/normalize-email';
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const RESEND_VERIFICATION_COOLDOWN_MS = 60 * 1000;
@@ -337,7 +338,8 @@ export class AuthService {
   }
 
   async registerEmployer(dto: SignupEmployerDto) {
-    const { email, password, fullName, companyName, agreedToTerms, redirectPath } = dto;
+    const { password, fullName, companyName, agreedToTerms, redirectPath } = dto;
+    const email = normalizeEmail(dto.email);
 
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
@@ -394,7 +396,8 @@ export class AuthService {
   }
 
   async registerJobSeeker(dto: SignupJobSeekerDto) {
-    const { email, password, fullName, agreedToTerms } = dto;
+    const { password, fullName, agreedToTerms } = dto;
+    const email = normalizeEmail(dto.email);
 
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {

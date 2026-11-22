@@ -6,14 +6,15 @@ import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
 import { users } from '../schema/users.schema';
 import { adminProfiles } from '../schema/admin-profiles.schema';
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
+import { normalizeEmail } from '../../utils/normalize-email';
 
 async function main() {
   if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL is not set');
   }
 
-  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@gainday.com').toLowerCase().trim();
+  const adminEmail = normalizeEmail(process.env.ADMIN_EMAIL || 'admin@gainday.com');
   const adminPassword = process.env.ADMIN_PASSWORD || 'AdminGainday2026!';
 
   console.log(`Using Super Admin credentials: ${adminEmail}`);
@@ -25,7 +26,7 @@ async function main() {
   const otherAdmins = await db
     .select()
     .from(users)
-    .where(and(eq(users.role, 'ADMIN'), ne(users.email, adminEmail)));
+    .where(and(eq(users.role, 'ADMIN'), ne(sql`lower(${users.email})`, adminEmail)));
 
   for (const oldAdmin of otherAdmins) {
     console.log(`Deleting previous/duplicate super admin account: ${oldAdmin.email}`);
@@ -37,7 +38,7 @@ async function main() {
   const existingUsers = await db
     .select()
     .from(users)
-    .where(eq(users.email, adminEmail))
+    .where(eq(sql`lower(${users.email})`, adminEmail))
     .limit(1);
 
   let adminUserId: string;
@@ -53,7 +54,7 @@ async function main() {
         isEmailVerified: true,
         updatedAt: new Date(),
       })
-      .where(eq(users.email, adminEmail))
+      .where(eq(sql`lower(${users.email})`, adminEmail))
       .returning();
     adminUserId = updated.id;
     console.log('Admin role and password updated successfully.');

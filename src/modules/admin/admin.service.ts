@@ -15,10 +15,12 @@ import {
   ilike,
   inArray,
   max,
+  sql,
 } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { DRIZZLE } from '../../db/db.constants';
+import { normalizeEmail } from '../../utils/normalize-email';
 import { fuzzySearch } from '../../db/fuzzy-search';
 import { buildTimeBuckets } from './analytics-buckets';
 import type { DrizzleDb } from '../../db/client';
@@ -402,7 +404,7 @@ export class AdminService {
     }
 
     const existing = await this.db.query.users.findFirst({
-      where: eq(users.email, dto.email.toLowerCase().trim()),
+      where: eq(sql`lower(${users.email})`, normalizeEmail(dto.email)),
     });
     if (existing) {
       throw new ConflictException(
@@ -417,7 +419,7 @@ export class AdminService {
     const [newUser] = await this.db
       .insert(users)
       .values({
-        email: dto.email.toLowerCase().trim(),
+        email: normalizeEmail(dto.email),
         password: hashedPassword,
         role: 'ADMIN',
         authProvider: 'local',
