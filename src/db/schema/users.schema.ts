@@ -4,9 +4,10 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { baseColumns } from './columns.helpers';
 import { employerProfiles } from './employer-profiles.schema';
 import { jobSeekerProfiles } from './job-seeker-profiles.schema';
@@ -55,7 +56,7 @@ export const users = pgTable('users', {
   suspensionReason: text('suspension_reason'),
   suspendedAt: timestamp('suspended_at', { withTimezone: true }),
   mustChangePassword: boolean('must_change_password').notNull().default(false),
-});
+}, (table) => [uniqueIndex('users_email_lower_unique').on(sql`lower(${table.email})`)]);
 
 export const usersRelations = relations(users, ({ one }) => ({
   employerProfile: one(employerProfiles, {
