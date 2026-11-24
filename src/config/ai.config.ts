@@ -1,4 +1,4 @@
-const FIREWORKS_MINIMAX_MODEL = 'accounts/fireworks/models/minimax-m3p1-flash';
+const FIREWORKS_MINIMAX_MODEL = 'accounts/fireworks/models/minimax-m3';
 
 export const aiConfig = {
   // Configurable via AI_PROVIDER env variable ('gemini' | 'groq' | 'fireworks'), defaulting to

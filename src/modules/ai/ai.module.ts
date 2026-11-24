@@ -62,6 +62,7 @@ export function buildChatModel(
     return new ChatOpenAI({
       apiKey: config.get<string>('ai.fireworks.apiKey'),
       model: config.getOrThrow<string>(`ai.fireworks.${role}`),
+      modelKwargs: { reasoning_effort: 'none' },
       temperature: config.get<number>(temperatureKey),
       timeout: 60_000,
       configuration: {
