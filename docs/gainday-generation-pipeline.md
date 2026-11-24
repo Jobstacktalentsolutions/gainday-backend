@@ -26,7 +26,7 @@ Different roles need to be approached differently — not just in wording, but i
 Because roles differ this much, one shared set of generation instructions produces generic, poorly-targeted output for at least one side. The pipeline is built instead so each role owns its own configuration, plugged into a common skeleton.
 
 ### 2.1 What stays shared (the skeleton)
-The pipeline stages in Sections 3–7 below apply to every role. This is the reusable backbone: extraction → overgenerate-and-rank → per-task generation with anchors → critic validation → storage/delivery. This does not change per role.
+The pipeline stages in Sections 3–7 below apply to every role. The active backbone is extraction → direct task planning → per-task generation → critic validation → storage/delivery. Anchors are generated later during grading.
 
 ### 2.2 What gets isolated per role
 Each role supplies its own version of the following, as a self-contained, independently-editable module (a chain/node in LangGraph):
@@ -42,7 +42,7 @@ Each role supplies its own version of the following, as a self-contained, indepe
 Adding a new role means writing a new self-contained module (extraction specifics, allowed task types, criteria framing, critic checks, presentation spec) and registering it under a new Category value. It does not require editing any existing role's module or the shared skeleton. Removing a role means removing its registration. Retuning a role over time means editing only that role's module.
 
 ### 2.4 Current rollout status
-Both role modules are registered in `roles/role-registry.ts` (`SalesRoleModule`, `FinanceRoleModule`), with `GenericRoleModule` as the fallback for any other category.
+Sales, finance, and customer service role modules are registered, with `GenericRoleModule` as the fallback for other categories.
 
 - **Sales first.** Sales content is primarily text-based, so it could be built and validated inside the current architecture without also solving a data-visualization presentation layer. The companion document — GAINDAY Sales Role: Simulation Categories & Grading — fills the sales module described in 2.2.
 - **Finance second.** Finance needs tabular and, later, chart presentation on top of the generation logic. Its content is specified in `docs/gainday-finance-role-simulation-research.md`. The finance module's figure-bearing tasks are spec templates: the model supplies raw inputs, and code derives the table, chart and answer key (Section 5, `docs/gainday-finance-role-simulation-research.md`).
@@ -74,21 +74,17 @@ Four fields are extracted from the recruiter input. The specifics of each field 
 | **Category** | Domain and sub-domain (e.g. Finance > Reconciliation; for sales, this needs sub-role granularity — SDR / AE / CSM — not just "Sales" as one bucket). Doubles as the router to the correct role module (Section 2.2). | Always extracted/inferred |
 | **Intent** | The skills and competencies the employer is expecting the hire to demonstrate. | Always extracted/inferred |
 | **Problem** | The specific business problem the employer describes wanting this hire to help solve, if stated in the input. | Extracted if present; otherwise null — never fabricated |
-| **Expected task** | A set of plausible on-the-job tasks inferred from the role/description, using the model's general and industry-specific knowledge. Generated as a candidate pool (Section 4), not a single task. | Always inferred |
+| **Expected task** | A set of plausible on-the-job tasks planned from the role and description using the model's general and industry-specific knowledge (Section 4). | Always inferred |
 
 **Purpose of Category:** beyond routing to a role module, it constrains which task-pattern types are plausible for the specific sub-domain, preventing task-type selection from producing mismatched items — e.g. a numeric-calculation task for a role centered on stakeholder communication.
 
 ---
 
-## 4. Task Candidate Generation (Overgenerate-and-Rank)
+## 4. Direct Task Planning
 
-1. Using the four extracted fields, the model generates a candidate pool of **~15 expected tasks** (number may vary).
-2. A selection step scores each candidate against explicit relevance criteria: alignment with Intent, alignment with Category, and — if a Problem was extracted — whether the task can meaningfully incorporate it. This scoring must be explicit (e.g. an LLM-as-judge pass against a defined rubric), not implicit "pick what looks relevant."
-3. The top-scoring subset (**default: 4 tasks**, variable) is selected to proceed to full generation.
+The active graph calls `planTasksNode` after extraction. It asks the model to plan exactly the configured number of tasks (currently four), using the role's allowed task types, category, intent, problem, and seniority. It selects distinct task types when enough are available; otherwise it uses all available types and repeats some. Code fills missing slots when necessary.
 
-This is the established "overgenerate-and-rank" pattern used in LLM question-generation: generate a larger diverse candidate pool, then rank/select, rather than generating the final count directly. This also absorbs the repetition-avoidance goal — variety comes from which candidates get selected and how the pool is generated, not from unconstrained random task-type draws.
-
-**Task-type selection is constrained, not fully random:** it is limited to task-pattern types allowed for the extracted Category's role module (Section 2.2) before any randomization happens.
+Each planned slot then goes through task generation and the critic. The previous overgeneration and ranking nodes remain in the repository but are not connected to the active graph. There is no 15-idea ranking step in the current pipeline. The plan does not require the tasks to form a connected narrative.
 
 ---
 
@@ -163,7 +159,7 @@ The critic agent is a separate step from generation. It validates each generated
 
 ### 7.2 Regeneration loop
 - **Repair first.** If the draft fails for a fixable reason (figures in the text the table does not show, a payload problem, or inputs that do not form a valid task), the repair step revises that draft. The critic's reasons go back to the model, which changes only what they name. The same candidate stays. Figure and spec checks are deterministic code, so the model never judges its own repair: the critic reruns on the repaired draft.
-- **New candidate.** If the idea itself is rejected (a duplicate, or a task that is irrelevant to the category and intent), the generation agent selects another candidate from the original overgenerated pool (Section 4). Each new attempt is told why the last one was rejected.
+- **New candidate.** If the idea itself is rejected (a duplicate, or a task that is irrelevant to the category and intent), the generation agent retries the slot with a fresh candidate and awareness of previous attempts.
 - Every repair or retry uses one of the slot's attempts (Section 7.2 cap).
 - **Iteration cap:** a hard maximum number of regeneration attempts per task slot is enforced — **3 attempts** (`generationConfig.maxCriticAttempts`). Without a cap, an unbounded loop risks stalling indefinitely on a niche or oversaturated role category.
 - **Fallback on cap exhaustion:** if a task slot fails all attempts, it routes to an admin review view (generations the engine failed to validate) rather than being silently dropped or forced through unvalidated.
@@ -185,7 +181,7 @@ Each job posting generates **one simulation, shown identically to every candidat
 
 ## 9. Grading Note (Context Only)
 
-Generation and grading run at different points and use different model settings. Grading uses low/zero temperature for consistency across repeated scoring of the same answer, and compares candidate submissions against anchor responses. Generation, by contrast, benefits from higher temperature for creativity and variety in producing the task pool. These are separate settings for separate stages — not one shared value.
+Generation and grading run at different points and use different model settings. Grading uses low/zero temperature for consistency across repeated scoring of the same answer, and compares candidate submissions against anchor responses. Generation, by contrast, benefits from higher temperature for creativity and variety in planning and generating tasks. These are separate settings for separate stages — not one shared value.
 
 **Note on anchors (Section 6.2 above):** anchors are no longer generated as part of per-task generation — that was true only through 2026-08-30. They are now generated lazily by the grading pipeline itself, on the first candidate submission that needs them, not during generation. Full detail — the generate/critique loop, per-role criteria framing, scoring/rollup, and what still blocks this from running end-to-end — is in `docs/gainday-grading-pipeline.md`, not here.
 

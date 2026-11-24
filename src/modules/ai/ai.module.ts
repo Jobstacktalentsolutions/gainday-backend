@@ -53,10 +53,7 @@ export function buildChatModel(
     });
   }
   if (provider === 'fireworks') {
-    // Fireworks serves gpt-oss via an OpenAI-compatible endpoint, so ChatOpenAI is pointed at
-    // Fireworks' base URL instead of OpenAI's — same models/reasoning as the groq branch above,
-    // just a different host now that Groq's own subscription signup is temporarily broken.
-    //
+    // Fireworks exposes its models through an OpenAI-compatible endpoint.
     // `timeout` is required here, unlike the other two providers: without it, a call that hangs
     // server-side (observed with the untested light-tier model) blocks forever with zero log
     // output and zero error — nothing client-side ever gives up. 60s is generous for a single
