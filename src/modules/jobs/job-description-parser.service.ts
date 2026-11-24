@@ -8,7 +8,7 @@ import {
   ParsedJobDescription,
 } from './schemas/parsed-job-description.schema';
 import { dropUnspecifiedFields } from './drop-unspecified-fields';
-import { roleInferenceInstructions } from '../generation/roles/role-inference';
+import { inferRole } from '../generation/roles/role-inference';
 import {
   JOB_DESCRIPTION_MAX_LENGTH,
   JOB_DESCRIPTION_TARGET_LENGTH,
@@ -28,8 +28,7 @@ Rules:
 - Never invent information that is not present in the text — return null for any field you cannot
   determine from the text.
 - Normalize enum-shaped fields (skillLevel, employmentType) to exactly one of the allowed values
-  described on each field — do not return any other spelling or value. For "role", follow this:
-  ${roleInferenceInstructions()}
+  described on each field — do not return any other spelling or value.
 - The rewritten description is a cleanup and reformat of the original. Keep all substantive content
   (responsibilities, requirements, context); shorten only the wording, never drop a point.
 - Omit any application instructions, CV/resume submission details, or links/methods on how to apply.
@@ -59,13 +58,14 @@ export class JobDescriptionParserService {
 
     const model = withGeminiSafeStructuredOutput(
       this.generationModel,
-      parsedJobDescriptionSchema,
+      parsedJobDescriptionSchema.omit({ role: true }),
     );
 
-    const result = await model.invoke([
-      new SystemMessage(PARSE_PROMPT),
-      new HumanMessage(rawText),
+    const [parsed, inferred] = await Promise.all([
+      model.invoke([new SystemMessage(PARSE_PROMPT), new HumanMessage(rawText)]),
+      inferRole(this.generationModel, { jobDescription: rawText, requiredSkills: [], chosenRole: null }),
     ]);
+    const result = { ...parsed, role: inferred.role };
 
     logger.log(
       `Parsed job description: title="${result.title ?? 'null'}", role=${result.role ?? 'null'}, businessProblem=${result.businessProblem ? 'present' : 'null'}`,

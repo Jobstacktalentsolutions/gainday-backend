@@ -13,6 +13,7 @@ import { taskCandidateSchema } from '../schemas/task-candidate.schema';
 import { getSeniorityGuidance } from '../task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
 import { z } from 'zod';
+import { DEFAULT_SIMULATION_TIME_LIMIT_MINUTES } from '../../../db/schema/simulations.schema';
 
 const logger = new Logger('GenerationPipeline:taskGeneration');
 
@@ -138,6 +139,8 @@ export function taskGenerationNode(ctx: GenerationContext) {
         category: state.category,
         intent: state.intent,
         problem: state.problem,
+        skillLevel: state.skillLevel,
+        timeBudgetMinutes: DEFAULT_SIMULATION_TIME_LIMIT_MINUTES / ctx.config.selectedTaskCount,
         taskType: candidate.taskType,
         briefDescription: candidate.briefDescription,
         revisionNotes: revisionNotesFor(state),

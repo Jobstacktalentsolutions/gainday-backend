@@ -33,11 +33,13 @@ ${REQUIREMENT_VS_TIP_RULE}`;
 const MARKDOWN_RULES = `Free-text fields are GitHub-flavored Markdown. Use lists, bold or italics only to present the
 material itself (emails, line items, data), never HTML, and never to list what the answer should contain.`;
 
-export const TIMING_AND_LIMITS_RULE = (realities?: TaskPatternRealities) => {
+const TASK_SCOPE_RULE = `Keep the task to one focused piece of work. The structured answer and any written response should support the same objective. Do not add separate deliverables beyond what the task type requires.`;
+
+export const TIMING_AND_LIMITS_RULE = (realities?: TaskPatternRealities, timeBudgetMinutes?: number) => {
   const maxStimulus = realities?.maxStimulusWords ?? 250;
   const defaultDuration = realities?.defaultDurationMinutes ?? 8;
   return `Simulation Timing & Limits:
-- Set expectedDurationMinutes based on depth (guideline: ~${defaultDuration} mins, allowed range: 3-15).
+- Set expectedDurationMinutes based on depth (guideline: ~${timeBudgetMinutes ?? defaultDuration} mins, allowed range: 3-15).
 - Keep scenarioDescription concise: strictly facts, situation, and stimulus (hard ceiling: ${maxStimulus} words).
 - In interfacePayload, set wordLimit: { min, max } realistic for the allocated time (or null if purely objective).`;
 };
@@ -46,10 +48,11 @@ export function buildTaskGenerationPromptBase(skillLevel?: string | null): strin
   return [
     "Generate the full content for one job-simulation task,",
     "matching the given candidate's taskType. Produce a scenario and the task components appropriate",
-    "to that taskType. The task must need knowledge, judgment, or conventions specific to the role's",
-    "domain: someone with only general common sense should not be able to answer it well.",
+    "to that taskType. Focus on one manageable piece of work that assesses relevant role knowledge or judgment.",
     "",
     getSeniorityGuidance(skillLevel),
+    "",
+    TASK_SCOPE_RULE,
     "",
     CANDIDATE_FACING_TEXT_RULES,
     "",
@@ -71,6 +74,7 @@ export interface GenerateTaskContentParams {
   guidance?: string;
   /** Why the previous attempt at this slot was rejected. The next attempt must correct them. */
   revisionNotes?: string[];
+  timeBudgetMinutes?: number;
 }
 
 /** Feedback from a rejected attempt, in the words the critic used. Empty when there is none. */
@@ -100,6 +104,7 @@ export async function generateTaskContent(
     briefDescription,
     guidance,
     revisionNotes,
+    timeBudgetMinutes,
   } = params;
 
   const allowedTypeKeys = roleModule.allowedTaskPatternTypes.map(
@@ -126,6 +131,7 @@ export async function generateTaskContent(
       briefDescription,
       guidance,
       revisionNotes,
+      timeBudgetMinutes,
     });
   }
   const interfaceType = patternTypeDef.allowedInterfaceTypes
@@ -163,7 +169,7 @@ export async function generateTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you generate must match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : '') +
         `${guidanceClause}${revisionClause(revisionNotes)}`,
@@ -225,6 +231,8 @@ export function buildSpecTaskPromptBase(skillLevel?: string | null): string {
     "",
     getSeniorityGuidance(skillLevel),
     "",
+    TASK_SCOPE_RULE,
+    "",
     CANDIDATE_FACING_TEXT_RULES,
     "",
     MARKDOWN_RULES,
@@ -251,6 +259,7 @@ interface GenerateSpecTaskContentParams {
   /** Set when editing an existing task: the model returns that task with the guidance applied. */
   existingTask?: QuestionBankTaskContent;
   revisionNotes?: string[];
+  timeBudgetMinutes?: number;
 }
 
 /**
@@ -273,6 +282,7 @@ async function generateSpecTaskContent(
     guidance,
     existingTask,
     revisionNotes,
+    timeBudgetMinutes,
   } = params;
 
   const openEndedComponentSchema = patternTypeDef.openEndedComponentType
@@ -290,7 +300,7 @@ async function generateSpecTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
+      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({

@@ -18,17 +18,17 @@ export function getSeniorityGuidance(skillLevel?: string | null): string {
     case 'Senior level':
       return [
         'Target Seniority: SENIOR / LEAD LEVEL.',
-        '- Scope & Focus: Emphasize high strategic ambiguity, systemic trade-offs, architecture/policy decisions, and multi-stakeholder negotiation.',
-        '- Task Structure: Open-ended problem statements, conflicting constraints, and executive-facing deliverables.',
-        '- Difficulty Calibration: Must require nuanced domain judgment that cannot be solved with general business common sense.',
+        '- Scope & Focus: Assess the judgment expected of an experienced practitioner on one focused, realistic decision.',
+        '- Task Structure: Include only the context and constraints needed for that decision; avoid turning it into a large strategic project.',
+        '- Difficulty Calibration: Allow experienced candidates to demonstrate nuanced judgment within the allotted time.',
       ].join('\n');
 
     case 'Mid level':
     default:
       return [
         'Target Seniority: MID LEVEL.',
-        '- Scope & Focus: Emphasize independent operational execution, multi-factor trade-offs, and practical cross-functional coordination.',
-        '- Task Structure: Realistic business scenarios requiring candidate to balance competing operational priorities without step-by-step guidance.',
+        '- Scope & Focus: Assess independent execution and practical judgment in a typical responsibility for the role.',
+        '- Task Structure: Focus on one manageable scenario, including competing priorities only when relevant.',
         '- Difficulty Calibration: Requires solid domain competence and familiarity with industry standards.',
       ].join('\n');
   }
@@ -47,8 +47,7 @@ export function getSeniorityCriticGuidance(skillLevel?: string | null): string {
     case 'Senior level':
       return [
         'Seniority Calibration (SENIOR / LEAD LEVEL):',
-        '- The task MUST require advanced domain judgment, strategic trade-offs, or specialized domain expertise.',
-        '- Reject tasks that are purely procedural, overly guided, or solvable with general business common sense.',
+        '- Assess whether the task offers an experienced candidate a reasonable opportunity to demonstrate relevant judgment; a focused procedural task can be appropriate.',
       ].join('\n');
 
     case 'Mid level':

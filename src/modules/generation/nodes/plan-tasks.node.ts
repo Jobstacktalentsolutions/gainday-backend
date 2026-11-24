@@ -10,6 +10,7 @@ import { getSeniorityGuidance } from '../task-text-rules';
 import { RoleModuleNotConfiguredError } from '../roles/role-module.interface';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
+import { DEFAULT_SIMULATION_TIME_LIMIT_MINUTES } from '../../../db/schema/simulations.schema';
 
 const logger = new Logger('GenerationPipeline:planTasks');
 
@@ -37,7 +38,8 @@ export function buildPlanTasksPrompt(
 
   return [
     `Plan exactly ${targetCount} realistic on-the-job simulation tasks for this role.`,
-    'Prioritize role-specific expertise aligned with the stated Category, Intent, and Problem.',
+    `Together the tasks must fit in ${DEFAULT_SIMULATION_TIME_LIMIT_MINUTES} minutes, including reading and answering. Keep each focused on a manageable piece of work.`,
+    'Choose work aligned with the stated Category, Intent, and Problem.',
     '',
     seniorityGuidance,
     '',
