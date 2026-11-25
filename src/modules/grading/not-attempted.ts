@@ -19,9 +19,10 @@ const NOT_ATTEMPTED_DETAIL: CategoryScoreDetail = {
  * calling the grader, so it needs no anchors or LLM call.
  */
 export function isNotAttempted(
-  answer: Pick<CandidateAnswer, 'textResponse' | 'objectiveResponse'>,
+  answer: Pick<CandidateAnswer, 'textResponse' | 'objectiveResponse' | 'itemReasons'>,
 ): boolean {
-  return answer.textResponse.trim() === '' && answer.objectiveResponse === null;
+  return answer.textResponse.trim() === '' && answer.objectiveResponse === null &&
+    !Object.values(answer.itemReasons ?? {}).some((reason) => reason.trim().length > 0);
 }
 
 /** The stored result for a task the candidate did not attempt: zero on every criterion. */

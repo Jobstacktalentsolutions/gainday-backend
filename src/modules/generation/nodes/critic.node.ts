@@ -83,12 +83,15 @@ export function criticNode(ctx: GenerationContext) {
     );
 
     // Relevance check
+    const patternDef = state.roleModule.allowedTaskPatternTypes.find(
+      (p) => p.key === candidate.taskType,
+    );
     const relevanceResult = await checkRelevance(ctx.criticModel, candidate, {
       category: state.category,
       intent: state.intent,
       problem: state.problem,
       skillLevel: state.skillLevel ?? null,
-    });
+    }, patternDef?.objectiveComponentType);
     if (!relevanceResult.relevant) {
       failureReasons.push(...relevanceResult.reasons);
     }
@@ -136,9 +139,6 @@ export function criticNode(ctx: GenerationContext) {
     }
 
     // Stimulus reading length ceiling: check against the task pattern type's realities
-    const patternDef = state.roleModule.allowedTaskPatternTypes.find(
-      (p) => p.key === candidate.taskType,
-    );
     const maxStimulusWords = patternDef?.realities?.maxStimulusWords;
     let stimulusWithinLimit = true;
     if (maxStimulusWords && candidate.taskContent.scenarioDescription) {

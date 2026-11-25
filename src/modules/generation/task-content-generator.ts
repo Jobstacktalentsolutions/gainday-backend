@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import { taskGenerationSchema } from './schemas/task-generation.schema';
-import { presentationCapability } from './roles/presentation-capabilities';
+import { answerControls, presentationCapability } from './roles/presentation-capabilities';
 import { validateInteraction, validateInteractionPresentation } from './roles/interaction-validation';
 import {
   OBJECTIVE_COMPONENT_SCHEMAS,
@@ -35,6 +35,8 @@ material itself (emails, line items, data), never HTML, and never to list what t
 
 const TASK_SCOPE_RULE = `Keep the task to one focused piece of work. The structured answer and any written response should support the same objective. Do not add separate deliverables beyond what the task type requires.`;
 
+const READABILITY_RULE = `Make the candidate-facing material easy to scan. Omit repetition and details the target candidate can reasonably infer. Keep all case-specific facts, policies, and data needed to answer fairly; compress when required, but do not compress them at the expense of clarity.`;
+
 export const TIMING_AND_LIMITS_RULE = (realities?: TaskPatternRealities, timeBudgetMinutes?: number) => {
   const maxStimulus = realities?.maxStimulusWords ?? 250;
   const defaultDuration = realities?.defaultDurationMinutes ?? 8;
@@ -53,6 +55,8 @@ export function buildTaskGenerationPromptBase(skillLevel?: string | null): strin
     getSeniorityGuidance(skillLevel),
     "",
     TASK_SCOPE_RULE,
+    "",
+    READABILITY_RULE,
     "",
     CANDIDATE_FACING_TEXT_RULES,
     "",
@@ -169,7 +173,7 @@ export async function generateTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you generate must match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : '') +
         `${guidanceClause}${revisionClause(revisionNotes)}`,
@@ -232,6 +236,8 @@ export function buildSpecTaskPromptBase(skillLevel?: string | null): string {
     getSeniorityGuidance(skillLevel),
     "",
     TASK_SCOPE_RULE,
+    "",
+    READABILITY_RULE,
     "",
     CANDIDATE_FACING_TEXT_RULES,
     "",
@@ -300,7 +306,7 @@ async function generateSpecTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
+      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nAvailable controls: ${answerControls(patternTypeDef.interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({

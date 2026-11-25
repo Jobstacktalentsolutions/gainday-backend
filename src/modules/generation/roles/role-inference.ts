@@ -5,9 +5,8 @@ import { RoleCategory } from './role-category.enum';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
 
 /**
- * The one place a job's role is inferred. The extraction step and the job description parser both use
- * these instructions, so the two cannot disagree. Routing is not decided by keywords here: the model
- * reads the posting, and code only checks the shape of the answer.
+ * Shared role inference for job parsing and generation. Each call reads the posting independently,
+ * so results can vary; the saved employer-selected role controls generation routing.
  */
 
 export const roleInferenceSchema = z.object({
@@ -30,7 +29,7 @@ apart.
 
 Supported top-level roles: ${supported}. Use one of these when the work fits it. If the work fits none of
 them, name its domain in the posting's own terms (2-4 words). Add the sub-role after " > " when the work
-makes a specific one clear, e.g. "Finance > Private Equity". Do not force the work into a role it does not
+makes a specific one clear, e.g. "Role > Sub-role". Do not force the work into a role it does not
 fit, and do not favour any role.`;
 }
 

@@ -160,6 +160,7 @@ export function buildEmployerTaskResults(
         ? {
             objectiveResponse: answer.objectiveResponse,
             textResponse: answer.textResponse,
+            itemReasons: answer.itemReasons,
           }
         : null,
       score: result ? taskScorePercent(result) : null,

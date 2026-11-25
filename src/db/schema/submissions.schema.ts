@@ -51,6 +51,8 @@ export interface CandidateAnswer {
   objectiveResponse: unknown;
   /** The candidate's written answer. */
   textResponse: string;
+  /** Optional explanations keyed by the item they refer to. */
+  itemReasons?: Record<string, string>;
   timeSpentSeconds: number;
 }
 

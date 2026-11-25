@@ -9,6 +9,7 @@ const answerEnvelopeSchema = z.object({
   taskId: z.string().min(1),
   responseBody: z.string(),
   textResponse: z.string(),
+  itemReasons: z.record(z.string(), z.string()).optional(),
   timeSpentSeconds: z.number().nonnegative(),
   objectiveResponse: z.unknown(),
 });

@@ -171,6 +171,7 @@ export class GradingService {
     );
     const anchors = await this.anchorGenerationService.ensureAnchors(row);
     const hasWrittenAnswer = task.openEndedComponent != null;
+    const writtenResponse = [answer.textResponse, ...Object.entries(answer.itemReasons ?? {}).filter(([, value]) => value.trim()).map(([item, value]) => `${item}: ${value}`)].filter((value) => value.trim()).join('\n');
 
     const result = await this.taskGradingService.gradeTask({
       category: row.category,
@@ -180,7 +181,7 @@ export class GradingService {
       taskContext: sanitizeTaskForCandidate(task, this.taskRoleRegistry),
       anchors,
       candidateResponse: answer.responseBody,
-      ...(hasWrittenAnswer ? { writtenResponse: answer.textResponse } : {}),
+      ...(hasWrittenAnswer ? { writtenResponse } : {}),
       criteria: criteriaForLlm(objectiveResult !== null, hasWrittenAnswer),
       verifiedResult: objectiveResult
         ? describeObjectiveResult(objectiveResult)
@@ -197,7 +198,7 @@ export class GradingService {
         objectiveResult,
         gate,
         hasWrittenAnswer,
-        answer.textResponse.trim().length > 0,
+        writtenResponse.length > 0,
       ),
       summary: result.summary,
       checklist: checklistResults(task.rubric, result),

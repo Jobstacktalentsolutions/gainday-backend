@@ -39,6 +39,11 @@ function answer(taskId: string, objectiveResponse: unknown) {
 }
 
 describe('parseAnswers', () => {
+  it('preserves item explanations alongside the structured response', () => {
+    const submitted = { ...answer('t1', { sides: ['BANK', null], adjustedBalance: 9500 }), itemReasons: { 'First item': 'This is outstanding.' } };
+    const [parsed] = parseAnswers([submitted], [reconciliationTask], registry);
+    expect(parsed.itemReasons).toEqual(submitted.itemReasons);
+  });
   it('accepts a well-formed objective response for its component type', () => {
     const parsed = parseAnswers(
       [answer('t1', { sides: ['BANK', null], adjustedBalance: 9500 })],

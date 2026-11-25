@@ -7,6 +7,8 @@ import {
 } from '../roles/role-module.interface';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
 import { REQUIREMENT_VS_TIP_RULE, getSeniorityCriticGuidance } from '../task-text-rules';
+import { answerControls } from '../roles/presentation-capabilities';
+import type { ObjectiveComponentType } from '../roles/role-module.interface';
 
 export function buildCritiqueCheckPrompt(skillLevel?: string | null): string {
   return [
@@ -32,6 +34,7 @@ export async function checkRelevance(
   criticModel: BaseChatModel,
   task: GeneratedTaskCandidate,
   extraction: ExtractionResult,
+  objectiveType?: ObjectiveComponentType,
 ): Promise<{
   relevant: boolean;
   reasons: string[];
@@ -48,6 +51,7 @@ export async function checkRelevance(
         category: extraction.category,
         intent: extraction.intent,
         skillLevel: extraction.skillLevel ?? null,
+        availableControls: answerControls(task.taskContent.interfaceType, objectiveType),
         taskContent: task.taskContent,
       }),
     ),
