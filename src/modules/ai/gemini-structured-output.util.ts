@@ -89,6 +89,7 @@ function isMalformedOutputError(err: unknown): boolean {
   return (
     message.includes('json_validate_failed') ||
     message.includes('Failed to generate JSON') ||
+    ('lc_error_code' in err && err.lc_error_code === 'OUTPUT_PARSING_FAILURE') ||
     err.name === 'SyntaxError'
   );
 }
@@ -140,12 +141,24 @@ export function withGeminiSafeStructuredOutput<T extends Record<string, any>>(
         return result;
       } catch (err) {
         lastError = err;
+        // LangChain's parser may mistake a fenced JSON example inside a valid JSON string for
+        // the complete response. Recover only the complete JSON document, then validate normally.
+        if (err instanceof Error && 'lc_error_code' in err && err.lc_error_code === 'OUTPUT_PARSING_FAILURE' &&
+            'llmOutput' in err && typeof err.llmOutput === 'string') {
+          try {
+            const recovered = schema.parse(JSON.parse(err.llmOutput));
+            logger.log(`[${modelName}] recovered complete JSON on attempt ${attempt + 1}`);
+            return recovered;
+          } catch {
+            // Invalid JSON or schema: retry the provider call rather than accepting it.
+          }
+        }
         const elapsed = Date.now() - startedAt;
         const malformed = isMalformedOutputError(err);
         logger.warn(
           `[${modelName}] attempt ${attempt + 1} failed after ${elapsed}ms ` +
             `(${malformed ? 'malformed output, will retry' : 'non-retryable, rethrowing'}): ` +
-            `${err instanceof Error ? err.message : String(err)}`,
+            `${malformed ? 'output could not be parsed or validated' : err instanceof Error ? err.message : String(err)}`,
         );
         if (!malformed) throw err;
       }

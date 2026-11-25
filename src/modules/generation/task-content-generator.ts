@@ -499,7 +499,7 @@ export async function modifyTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you return must still match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : ''),
     ),
