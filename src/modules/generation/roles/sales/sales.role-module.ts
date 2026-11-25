@@ -4,6 +4,7 @@ import {
 } from '../role-module.interface';
 import { InterfaceType } from '../interface-type';
 import { RoleCategory } from '../role-category.enum';
+import { withCaseFileOption } from '../case-file-option';
 
 /** Sales's task-pattern-type keys, given literal typing here so this module and its call
  *  sites get autocomplete/typo-safety — kept local to sales rather than a shared cross-role
@@ -116,7 +117,7 @@ export const SalesRoleModule: RoleModule = {
       'conversational exercise.',
   },
 
-  allowedTaskPatternTypes: salesTaskPatternTypes,
+  allowedTaskPatternTypes: salesTaskPatternTypes.map(withCaseFileOption),
 
   criticChecks: {},
 };

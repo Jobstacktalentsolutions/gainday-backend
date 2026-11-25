@@ -4,6 +4,7 @@ import {
 } from '../role-module.interface';
 import { InterfaceType } from '../interface-type';
 import { RoleCategory } from '../role-category.enum';
+import { withCaseFileOption } from '../case-file-option';
 import { reconciliationSpec } from './templates/reconciliation.template';
 import { journalEntrySpec } from './templates/journal-entry.template';
 import { varianceSpec } from './templates/variance.template';
@@ -146,7 +147,7 @@ export const FinanceRoleModule: RoleModule = {
       'scenario naturally has.',
   },
 
-  allowedTaskPatternTypes: financeTaskPatternTypes,
+  allowedTaskPatternTypes: financeTaskPatternTypes.map(withCaseFileOption),
 
   criticChecks: {},
 };
