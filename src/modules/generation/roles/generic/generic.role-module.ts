@@ -59,6 +59,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     openEndedComponentType: 'DRAFTED_COMMUNICATION',
     description: 'Draft a message, summary, or deliverable to a stakeholder.',
     interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
+    allowedInterfaceTypes: [InterfaceType.RICH_TEXT_COMPOSER],
     realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },
   {
@@ -179,7 +180,7 @@ export const GenericRoleModule: RoleModule = {
     ...pattern,
     allowedInterfaceTypes: pattern.objectiveComponentType
       ? interactionInterfaces
-      : genericInterfaces,
+      : (pattern.allowedInterfaceTypes ?? genericInterfaces),
     validateInteraction: !!pattern.objectiveComponentType,
     gradeInteractionWithModel: pattern.key === GenericTaskType.SELECT_ACTIONS,
   })),
