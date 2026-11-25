@@ -9,4 +9,5 @@ export const relevanceCheckSchema = z.object({
 // An empty tipSentences list passes.
 export const taskCriticSchema = relevanceCheckSchema.extend({
   tipSentences: z.array(z.string()),
+  presentationProblems: z.array(z.string()).describe('Specific substantial duplication or unusable answer controls; empty if none.'),
 });

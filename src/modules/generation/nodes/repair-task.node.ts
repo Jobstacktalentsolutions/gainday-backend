@@ -30,6 +30,7 @@ export function repairTaskNode(ctx: GenerationContext) {
         category: state.category,
         intent: state.intent,
         problem: state.problem,
+        skillLevel: state.skillLevel,
         existingTask: draft.taskContent,
         revisionNotes: critic.failureReasons,
       });

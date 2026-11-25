@@ -2,9 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { DevelopmentLogger } from './common/logging/development-logger';
 
 async function bootstrap() {
+  const development = process.env.NODE_ENV !== 'production';
   const app = await NestFactory.create(AppModule, {
+    logger: development ? new DevelopmentLogger() : undefined,
     // Stripe webhook signatures are computed over the exact raw request bytes.
     rawBody: true,
   });

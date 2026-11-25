@@ -3,6 +3,7 @@ import {
   ObjectiveComponentType,
   OpenEndedComponentType,
 } from './role-module.interface';
+import { TASK_TEXT_LIMITS } from '../task-text-rules';
 
 /**
  * Gemini's structured-output API (response_schema) only accepts fixed, enumerated object
@@ -67,15 +68,15 @@ const priorityRankingSchema = z.object({
       z.object({
         label: z
           .string()
-          .describe('Short name of the item, e.g. who it is from.'),
+        .describe(`Short, distinct item name, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters.`),
         description: z
           .string()
-          .describe('One-line detail the candidate ranks on.'),
+        .describe('Include essential comparison facts here, or a brief identifier when they are already in the scenario; do not repeat them.'),
       }),
     )
     .min(2)
     .describe(
-      'Items to rank, in shuffled presentation order. Each item must carry enough signal (deadlines, impact, seniority) that some orderings are clearly better than others.',
+      'Items to rank, in shuffled presentation order. Across the task, supply enough evidence to compare them.',
     ),
 });
 

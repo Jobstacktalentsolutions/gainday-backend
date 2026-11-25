@@ -12,6 +12,7 @@ import { embedTaskContent } from '../utils/embedding.util';
 import { findCsvProblem } from '../utils/csv.util';
 import { InterfaceType } from '../roles/interface-type';
 import { GeneratedTaskCandidate } from '../roles/role-module.interface';
+import { taskLengthProblems } from '../utils/task-length.util';
 
 const logger = new Logger('GenerationPipeline:critic');
 
@@ -86,6 +87,8 @@ export function criticNode(ctx: GenerationContext) {
     const patternDef = state.roleModule.allowedTaskPatternTypes.find(
       (p) => p.key === candidate.taskType,
     );
+    const lengthProblems = taskLengthProblems(candidate.taskContent, patternDef?.objectiveComponentType, state.skillLevel);
+    failureReasons.push(...lengthProblems);
     const relevanceResult = await checkRelevance(ctx.criticModel, candidate, {
       category: state.category,
       intent: state.intent,
@@ -95,6 +98,7 @@ export function criticNode(ctx: GenerationContext) {
     if (!relevanceResult.relevant) {
       failureReasons.push(...relevanceResult.reasons);
     }
+    failureReasons.push(...relevanceResult.presentationProblems);
 
     let additionalRelevanceOk = true;
     if (state.roleModule.criticChecks.additionalRelevanceCheck) {
@@ -156,6 +160,8 @@ export function criticNode(ctx: GenerationContext) {
       passed:
         payloadValid &&
         stimulusWithinLimit &&
+        lengthProblems.length === 0 &&
+        relevanceResult.presentationProblems.length === 0 &&
         tips.length === 0 &&
         !duplicateResult.isDuplicate &&
         relevanceResult.relevant &&

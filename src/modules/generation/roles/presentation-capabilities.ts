@@ -1,13 +1,24 @@
 import { InterfaceType, INTERFACE_SCHEMAS } from './interface-type';
 import { chartDatasetSchema, materializeChartPresentation, validateChartPresentation } from './chart-presentation';
-import { INTERACTION, type ObjectiveComponentType } from './role-module.interface';
+import { type ObjectiveComponentType } from './role-module.interface';
+
+const OBJECTIVE_CONTROLS: Record<ObjectiveComponentType, string> = {
+  CLASSIFICATION: 'classify items into supplied buckets, with optional item-specific reasons',
+  KEYED_CLASSIFICATION: 'classify items into supplied buckets, with optional item-specific reasons',
+  PRIORITY_RANKING: 'reorder items by priority, with optional item-specific reasons',
+  PROCEDURAL_SEQUENCING: 'reorder supplied steps, with optional item-specific reasons',
+  SINGLE_BEST_ACTION: 'choose one supplied option',
+  MULTI_SELECT_UNDER_CONSTRAINT: 'choose the specified number of supplied options',
+  NUMERIC_INPUT: 'enter one number',
+  NUMERIC_TABLE: 'enter numbers in the supplied answer table, with optional row-specific reasons',
+  RECONCILIATION: 'assign a side to each item and enter an adjusted balance',
+  JOURNAL_ENTRY: 'enter journal lines using the supplied references and accounts',
+};
 
 export function answerControls(interfaceType: InterfaceType, objectiveType?: ObjectiveComponentType): string {
   const presentation = presentationCapability(interfaceType).description;
-  const structured = objectiveType ? `Structured answer: ${objectiveType}.` : 'No structured answer control.';
-  const reasons = objectiveType === INTERACTION.CLASSIFICATION || objectiveType === INTERACTION.PRIORITY_RANKING || objectiveType === INTERACTION.PROCEDURAL_SEQUENCING
-    ? ' Optional item-specific reasons are available.' : '';
-  return `${presentation}. ${structured}${reasons}`;
+  const structured = objectiveType ? `Structured answer: ${OBJECTIVE_CONTROLS[objectiveType]}.` : 'No structured answer control.';
+  return `${presentation}. ${structured}`;
 }
 
 /** Presentation contracts shared across roles. Spec-backed tasks can still build their own data. */
@@ -17,7 +28,7 @@ export const PRESENTATION_CAPABILITIES = {
   [InterfaceType.TABLE_VIEW_RESPONSE_PANEL]: { description: 'a read-only data table and a written response field' },
   [InterfaceType.CSV_DATA_PANEL]: { description: 'a read-only downloadable data table and a written response field' },
   [InterfaceType.CASE_FILE_TEXT_AREA]: { description: 'read-only reference tabs and a written response field' },
-  [InterfaceType.STAGED_CHAT]: { description: 'a staged conversation and read-only reference tabs' },
+  [InterfaceType.STAGED_CHAT]: { description: 'a staged conversation with reply fields and read-only reference tabs; no separate email or log editor' },
   [InterfaceType.TABLE_VIEW_WITH_CHART]: {
     description: 'a read-only chart and table with a written response field',
     inputSchema: chartDatasetSchema,

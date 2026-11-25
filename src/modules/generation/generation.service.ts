@@ -286,6 +286,7 @@ export class GenerationService {
           category: extraction.category,
           intent: extraction.intent,
           problem: extraction.problem,
+          skillLevel: jobRecord?.skillLevel ?? null,
           existingTask,
           guidance,
         });

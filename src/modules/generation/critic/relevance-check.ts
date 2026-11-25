@@ -6,7 +6,10 @@ import {
   GeneratedTaskCandidate,
 } from '../roles/role-module.interface';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
-import { REQUIREMENT_VS_TIP_RULE, getSeniorityCriticGuidance } from '../task-text-rules';
+import {
+  REQUIREMENT_VS_TIP_RULE,
+  getSeniorityCriticGuidance,
+} from '../task-text-rules';
 import { answerControls } from '../roles/presentation-capabilities';
 import type { ObjectiveComponentType } from '../roles/role-module.interface';
 
@@ -19,13 +22,12 @@ export function buildCritiqueCheckPrompt(skillLevel?: string | null): string {
     '1. Relevance: confirm the task aligns with the given Category, Intent, and target Seniority / Skill Level.',
     '',
     getSeniorityCriticGuidance(skillLevel),
-    'Also reject tasks whose scenario or question conflicts with their supplied policy, case data, answer key, or answer controls. Check that every required structured answer can be entered using the available controls. Explain the conflict in reasons.',
+    'Reject tasks whose question or scenario conflicts with the supplied evidence, policy, or answer key. Do not assume facts not supplied. Explain conflicts in reasons.',
+    'In presentationProblems, identify substantial repeated evidence across the scenario, reference material and answer controls, or required actions unavailable in availableControls. Short labels referring to evidence are fine. Name the affected fields and preserve facts needed to answer.',
+    'Candidate-visible material includes scenarioDescription, questionPrompt, interfacePayload and objective item labels and options. Answer keys, serverOnly, rubric and openEndedComponent are not visible. wordLimit is interface metadata, not an instruction in the question.',
     '',
-    // Section 2: Candidate Text Coaching / Tips Rule
-    // Enforces that candidate-facing text states deliverable requirements only, without advising candidates on tactics, approaches, or how to pass.
-    `2. Tips: return each sentence in scenarioDescription or questionPrompt that is a tip. ${REQUIREMENT_VS_TIP_RULE}`,
-    '   Example requirement: "Reply in no more than 150 words." Example requirement: "Calculate the total cost per site."',
-    '   Example tip: "Keep the tone calm and avoid technical terms." Example tip: "Start by acknowledging the delay."',
+    `2. Candidate guidance: ${REQUIREMENT_VS_TIP_RULE}`,
+    'Treat instructions to produce, explain, format, scope, or support a deliverable with evidence as requirements, not tips. Return only clear advice that gives away the answer or tells the candidate which conclusion or tactic to choose.',
   ].join('\n');
 }
 
@@ -39,6 +41,7 @@ export async function checkRelevance(
   relevant: boolean;
   reasons: string[];
   tipSentences: string[];
+  presentationProblems: string[];
 }> {
   const structuredModel = withGeminiSafeStructuredOutput(
     criticModel,
@@ -51,7 +54,10 @@ export async function checkRelevance(
         category: extraction.category,
         intent: extraction.intent,
         skillLevel: extraction.skillLevel ?? null,
-        availableControls: answerControls(task.taskContent.interfaceType, objectiveType),
+        availableControls: answerControls(
+          task.taskContent.interfaceType,
+          objectiveType,
+        ),
         taskContent: task.taskContent,
       }),
     ),

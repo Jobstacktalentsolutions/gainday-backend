@@ -14,9 +14,10 @@ import {
   TaskPatternTypeDefinition,
   TaskPatternRealities,
   TaskSpecTemplate,
+  INTERACTION,
 } from './roles/role-module.interface';
 import { taskSpecSchema } from './schemas/task-spec.schema';
-import { REQUIREMENT_VS_TIP_RULE, getSeniorityGuidance } from './task-text-rules';
+import { REQUIREMENT_VS_TIP_RULE, textLimitsForSeniority, getSeniorityGuidance } from './task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 import { CustomerServiceTaskType } from './roles/customer-service/customer-service.role-module';
 
@@ -35,7 +36,7 @@ material itself (emails, line items, data), never HTML, and never to list what t
 
 const TASK_SCOPE_RULE = `Keep the task to one focused piece of work. The structured answer and any written response should support the same objective. Do not add separate deliverables beyond what the task type requires.`;
 
-const READABILITY_RULE = `Make the candidate-facing material easy to scan. Omit repetition and details the target candidate can reasonably infer. Keep all case-specific facts, policies, and data needed to answer fairly; compress when required, but do not compress them at the expense of clarity.`;
+const READABILITY_RULE = `Make the candidate-facing material easy to scan. Put each substantive fact in one place across the scenario, reference material and answer controls; use short labels to refer to it. Keep the facts, policies and data needed to answer fairly. Use a brief placeholder, not repeated instructions.`;
 
 export const TIMING_AND_LIMITS_RULE = (realities?: TaskPatternRealities, timeBudgetMinutes?: number) => {
   const maxStimulus = realities?.maxStimulusWords ?? 250;
@@ -173,7 +174,7 @@ export async function generateTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}\nKeep questionPrompt within ${textLimitsForSeniority(skillLevel).questionWords} words; state the work once without repeating the scenario or interface instructions.${patternTypeDef.objectiveComponentType === INTERACTION.PRIORITY_RANKING ? `\nKeep each ranking description within ${textLimitsForSeniority(skillLevel).rankingDescriptionCharacters} characters.` : ''}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you generate must match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : '') +
         `${guidanceClause}${revisionClause(revisionNotes)}`,
@@ -306,7 +307,7 @@ async function generateSpecTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nAvailable controls: ${answerControls(patternTypeDef.interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
+      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${existingTask ? '' : `\nKeep questionPrompt within ${textLimitsForSeniority(skillLevel).questionWords} words; state the work once without repeating the scenario or interface instructions.`}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nAvailable controls: ${answerControls(patternTypeDef.interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -452,6 +453,7 @@ export async function modifyTaskContent(
     category,
     intent,
     problem,
+    skillLevel,
     existingTask,
     guidance,
   } = params;
@@ -472,6 +474,7 @@ export async function modifyTaskContent(
       category,
       intent,
       problem,
+      skillLevel,
       briefDescription: existingTask.title,
       guidance,
       existingTask,
