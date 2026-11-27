@@ -2,7 +2,7 @@
  * The line between what a task says and advice on doing it well. The generator writes to it and the
  * critic checks against it, so both read one definition and cannot drift.
  */
-export const REQUIREMENT_VS_TIP_RULE = `Candidate-facing text should state the deliverable and any needed format, evidence, scope, or tone. Do not coach the candidate toward the answer by suggesting a strategy, preferred conclusion, or specific tactic. Flag only clear answer-leading advice; when unsure, treat it as a requirement. Never state word counts or length rules — the platform UI handles those.`;
+export const REQUIREMENT_VS_TIP_RULE = `Candidate-facing text should state the deliverable and any needed format, evidence, scope, or tone. Do not coach the candidate toward the answer by suggesting a strategy, preferred conclusion, or specific tactic, or by naming the factors, sources or points the answer should cover. Flag only clear answer-leading advice; when unsure, treat it as a requirement. Never state word counts or length rules — the platform UI handles those.`;
 
 export const TASK_TEXT_LIMITS = {
   rankingLabelCharacters: 60,

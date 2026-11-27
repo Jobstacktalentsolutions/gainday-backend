@@ -111,7 +111,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     label: 'Sequence steps',
     objectiveComponentType: 'PROCEDURAL_SEQUENCING',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
-    description: 'Arrange shuffled steps of a role-specific procedure into the correct order and explain a key dependency.',
+    description: 'Arrange the steps of a role-specific procedure into the correct order and explain a key dependency.',
     interfaceType: InterfaceType.TEXT_AREA,
     realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },

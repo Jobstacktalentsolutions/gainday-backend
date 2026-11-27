@@ -38,6 +38,7 @@ import {
   readingWordsCeiling,
   slotBudgetMinutes,
 } from './utils/task-budget.util';
+import { shuffleObjectiveOrder } from './utils/objective-order.util';
 import { InterfaceType, withWrittenWordLimit } from './roles/interface-type';
 
 /**
@@ -73,7 +74,7 @@ export const TIMING_AND_LIMITS_RULE = (
   return `Time and size:
 - The task budget is ${timeBudgetMinutes} minutes, reading included. Set expectedDurationMinutes to the time this task needs, at most ${timeBudgetMinutes}, and size wordLimit to fit it.
 - Words the candidate reads, at most ${ceiling} in total: scenario ${scenarioWords}, question ${questionWords}, and reference tabs, tables and options together ${ceiling - scenarioWords - questionWords}.
-- Ask for one deliverable with at most 3 requirements, in plain sentences, not a numbered multi-part list.
+- State the deliverable in one sentence, plus at most one constraint. No numbered or multi-part lists.
 - State each fact once, where the candidate needs it. Do not restate reference or table figures in the scenario.`;
 };
 
@@ -252,8 +253,10 @@ export async function generateTaskContent(
     scenarioDescription: result.scenarioDescription,
     questionPrompt: result.questionPrompt,
     objectiveComponent:
-      (result.objectiveComponent as Record<string, unknown> | null) ??
-      undefined,
+      shuffleObjectiveOrder(
+        patternTypeDef.objectiveComponentType,
+        result.objectiveComponent as Record<string, unknown> | null,
+      ) ?? undefined,
     openEndedComponent:
       (result.openEndedComponent as Record<string, unknown> | null) ??
       undefined,
@@ -362,7 +365,10 @@ async function generateFlexibleTaskContent(
     scenarioDescription: selection.scenarioDescription,
     questionPrompt: selection.questionPrompt,
     objectiveComponent:
-      (draft.objectiveComponent as Record<string, unknown> | null) ?? undefined,
+      shuffleObjectiveOrder(
+        pattern.objectiveComponentType,
+        draft.objectiveComponent as Record<string, unknown> | null,
+      ) ?? undefined,
     openEndedComponent:
       (draft.openEndedComponent as Record<string, unknown> | null) ?? undefined,
     businessProblemDerived:

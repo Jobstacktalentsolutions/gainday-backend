@@ -39,7 +39,7 @@ const classificationSchema = z.object({
 const proceduralSequencingSchema = z.object({
   steps: z
     .array(z.string())
-    .describe('Steps to be ordered, shuffled for presentation. 4 to 7 steps, each a short imperative phrase of at most 12 words.'),
+    .describe('Steps to be ordered. 4 to 7 steps, each a short imperative phrase of at most 12 words.'),
   correctOrder: z
     .array(z.number())
     .describe('0-indexed positions into `steps` giving the correct order.'),
@@ -74,7 +74,7 @@ const priorityRankingSchema = z.object({
       z.object({
         label: z
           .string()
-          .describe(`Short, distinct item name, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters. A plain name: no rank or priority wording such as "Top 1" or "urgent".`),
+          .describe(`Short, distinct item name, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters.`),
         description: z
           .string()
           .describe('A few words that tell this item apart from the others, such as its source or time. The facts used to compare items go once in the scenario or reference material, not here.'),
@@ -82,7 +82,7 @@ const priorityRankingSchema = z.object({
     )
     .min(2)
     .describe(
-      'Items to rank, in shuffled presentation order: exactly the items the scenario asks the candidate to rank.',
+      'Items to rank: exactly the items the scenario asks the candidate to rank.',
     ),
 });
 

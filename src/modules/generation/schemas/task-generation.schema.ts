@@ -27,7 +27,7 @@ export const taskGenerationSchema = (
     questionPrompt: z
       .string()
       .describe(
-        'GitHub-flavored Markdown. The requirements of the deliverable only: one deliverable, at most 3 requirements. Never state word counts, limits, or length rules; the platform shows the word limit. No tips: approach advice, example tactics, or what a good answer does.',
+        'GitHub-flavored Markdown. The requirements of the deliverable only: the deliverable in one sentence, plus at most one constraint. Never state word counts, limits, or length rules; the platform shows the word limit. No tips: approach advice, example tactics, or what a good answer does.',
       ),
     businessProblemDerived: z.boolean(),
     objectiveComponent: objectiveComponentSchema
