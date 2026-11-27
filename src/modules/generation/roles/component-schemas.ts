@@ -41,7 +41,7 @@ const proceduralSequencingSchema = z.object({
   steps: z
     .array(z.string())
     .describe(
-      'Steps to be ordered. 4 to 7 steps, each a short imperative phrase of at most 12 words.',
+      'The real actions of the procedure that the candidate reorders. 4 to 7 steps, each a short imperative phrase of at most 12 words, never an instruction about how to answer.',
     ),
   correctOrder: z
     .array(z.number())
@@ -53,7 +53,7 @@ const proceduralSequencingDraftSchema = z.object({
   steps: z
     .array(z.string())
     .describe(
-      'The steps of the procedure in their correct order. 4 to 7 steps, each a short imperative phrase of at most 12 words.',
+      'The real actions of the procedure in their correct order, which the platform shows the candidate as a list to reorder. 4 to 7 steps, each a short imperative phrase of at most 12 words, never an instruction about how to answer.',
     ),
 });
 

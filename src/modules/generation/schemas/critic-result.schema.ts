@@ -8,7 +8,11 @@ export const relevanceCheckSchema = z.object({
 // The generic critic call: relevance plus the tip sentences in the candidate-facing text.
 // An empty tipSentences list passes.
 export const taskCriticSchema = relevanceCheckSchema.extend({
-  tipSentences: z.array(z.string()),
+  tipSentences: z
+    .array(z.string())
+    .describe(
+      'Sentences quoted exactly from the candidate text that coach the candidate toward the answer; empty if none. Never list requirements or explanations.',
+    ),
   presentationProblems: z
     .array(z.string())
     .describe(

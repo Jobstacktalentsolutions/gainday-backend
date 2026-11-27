@@ -25,6 +25,7 @@ import {
   TaskSpecTemplate,
   TaskSpecError,
   INTERACTION,
+  type ObjectiveComponentType,
 } from './roles/role-module.interface';
 import { taskSpecSchema } from './schemas/task-spec.schema';
 import {
@@ -57,6 +58,17 @@ const CANDIDATE_FACING_TEXT_RULES = `Candidate-facing fields (scenarioDescriptio
 - scenarioDescription: strictly the situation, facts, and stimulus.
 - questionPrompt: deliverables and requirements only.
 ${REQUIREMENT_VS_TIP_RULE}`;
+
+/**
+ * The structured answer is its own control, built from objectiveComponent. Without this the model lists the
+ * items in the question and fills objectiveComponent with instructions about how to answer.
+ */
+function structuredAnswerRule(objectiveType?: ObjectiveComponentType): string {
+  return objectiveType
+    ? `
+The platform shows the structured answer as its own control, built from objectiveComponent, and the written answer covers only the written part. objectiveComponent holds only the real items, one entry each written out in full, never a letter or label that points elsewhere. The question refers to them ("the steps", "the options") without listing, lettering or numbering them, and never asks the candidate to type them.`
+    : '';
+}
 
 const MARKDOWN_RULES = `Free-text fields are GitHub-flavored Markdown. Use lists, bold or italics only to present the
 material itself (emails, line items, data), never HTML, and never to list what the answer should contain.`;
@@ -221,7 +233,7 @@ export async function generateTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(patternTypeDef)))}\nState the work once without repeating the scenario or interface instructions.${patternTypeDef.objectiveComponentType === INTERACTION.PRIORITY_RANKING ? `\nKeep each ranking description within ${textLimitsForSeniority(skillLevel).rankingDescriptionCharacters} characters.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(patternTypeDef)))}\nState the work once without repeating the scenario or interface instructions.${structuredAnswerRule(patternTypeDef.objectiveComponentType)}${patternTypeDef.objectiveComponentType === INTERACTION.PRIORITY_RANKING ? `\nKeep each ranking description within ${textLimitsForSeniority(skillLevel).rankingDescriptionCharacters} characters.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you generate must match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : '') +
         `${guidanceClause}${revisionClause(revisionNotes)}`,
@@ -317,7 +329,7 @@ async function generateFlexibleTaskContent(
   );
   const draft = await draftModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(pattern)))}\nDescribe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(pattern)))}\nDescribe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${structuredAnswerRule(pattern.objectiveComponentType)}${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -350,7 +362,7 @@ async function generateFlexibleTaskContent(
     selectionSchema,
   ).invoke([
     new SystemMessage(
-      `Choose the interface that best supports the task's actual answer and reference needs. ${allowedInterfaces.map((type) => `${type}: ${answerControls(type, pattern.objectiveComponentType)}${presentationCapability(type).guidance ? ` ${presentationCapability(type).guidance}` : ''}`).join('\n')}\nPopulate only the selected payload; set every other payload to null. Set wordLimit for every written answer, matched to the task's depth and allotted time. Use null only for an objective-only task. Preserve all facts, evidence, answer options, and task requirements. Put reference material in the selected interface when supported, otherwise include it in scenarioDescription. Adjust scenarioDescription and questionPrompt only to match the chosen controls. Do not ask for unavailable controls.`,
+      `Choose the interface that best supports the task's actual answer and reference needs. ${allowedInterfaces.map((type) => `${type}: ${answerControls(type, pattern.objectiveComponentType)}${presentationCapability(type).guidance ? ` ${presentationCapability(type).guidance}` : ''}`).join('\n')}\nPopulate only the selected payload; set every other payload to null. Set wordLimit for every written answer, matched to the task's depth and allotted time. Use null only for an objective-only task. Preserve all facts, evidence, and task requirements.${structuredAnswerRule(pattern.objectiveComponentType)} Put reference material in the selected interface when supported, otherwise include it in scenarioDescription. Adjust scenarioDescription and questionPrompt only to match the chosen controls. Do not ask for unavailable controls.`,
     ),
     new HumanMessage(JSON.stringify({ category, intent, task: draft })),
   ]);
@@ -696,7 +708,7 @@ export async function modifyTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, undefined, hasReferenceMaterial([existingTask.interfaceType]))}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, undefined, hasReferenceMaterial([existingTask.interfaceType]))}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.${structuredAnswerRule(patternTypeDef.objectiveComponentType)}\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you return must still match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : ''),
     ),

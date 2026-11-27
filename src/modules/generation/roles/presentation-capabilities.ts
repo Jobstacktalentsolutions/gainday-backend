@@ -6,7 +6,7 @@ const OBJECTIVE_CONTROLS: Record<ObjectiveComponentType, string> = {
   CLASSIFICATION: 'classify items into supplied buckets',
   KEYED_CLASSIFICATION: 'classify items into supplied buckets',
   PRIORITY_RANKING: 'reorder all supplied items by priority',
-  PROCEDURAL_SEQUENCING: 'reorder supplied steps',
+  PROCEDURAL_SEQUENCING: 'drag the supplied steps into order',
   SINGLE_BEST_ACTION: 'choose one supplied option',
   MULTI_SELECT_UNDER_CONSTRAINT: 'choose the specified number of supplied options',
   NUMERIC_INPUT: 'enter one number',

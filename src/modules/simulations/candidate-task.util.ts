@@ -68,6 +68,14 @@ const CANDIDATE_VIEW: Record<
   },
 };
 
+/** What the candidate sees of a stored objective component: everything except its answer key. */
+export function candidateObjectiveView(
+  componentType: ObjectiveComponentType,
+  component: StoredComponent,
+): StoredComponent {
+  return CANDIDATE_VIEW[componentType](component);
+}
+
 function resolvePatternType(task: SimulationTask, roleRegistry: RoleRegistry) {
   let roleModule: RoleModule;
   try {
@@ -110,7 +118,7 @@ export function sanitizeTaskForCandidate(
     ...rest,
     expectedDurationMinutes,
     objectiveComponent: {
-      ...CANDIDATE_VIEW[componentType](objectiveComponent),
+      ...candidateObjectiveView(componentType, objectiveComponent),
       componentType,
     },
   };

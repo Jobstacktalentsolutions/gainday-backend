@@ -10,6 +10,9 @@ import {
   REQUIREMENT_VS_TIP_RULE,
   getSeniorityCriticGuidance,
 } from '../task-text-rules';
+import { candidateObjectiveView } from '../../simulations/candidate-task.util';
+import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
+import { candidateReadingText } from '../utils/task-budget.util';
 import { answerControls } from '../roles/presentation-capabilities';
 import type { ObjectiveComponentType } from '../roles/role-module.interface';
 
@@ -17,11 +20,46 @@ export function buildCritiqueCheckPrompt(skillLevel?: string | null): string {
   return [
     'You are checking a generated job-simulation task. Be lenient: flag only clear problems.',
     '1. Relevance: the task fits the Category, Intent and seniority.',
-    'In presentationProblems, note clearly repeated evidence across the scenario, reference material and answer controls, or actions the controls cannot do.',
+    'In presentationProblems, always report, with no leniency: (a) questionPrompt or scenarioDescription lists, letters or numbers the items of an answer control; (b) questionPrompt asks the candidate to type, enter or write those items; (c) reference material repeats the items or steps. Also report actions the controls cannot do.',
     'Candidate-visible material is scenarioDescription, questionPrompt, interfacePayload and objective item labels and options; answer keys, serverOnly, rubric, openEndedComponent and wordLimit are not.',
     `2. Candidate guidance: ${REQUIREMENT_VS_TIP_RULE}`,
     'Treat instructions to produce, explain, format, scope, or support a deliverable as requirements, not tips.',
   ].join('\n');
+}
+
+/**
+ * What the critic reads: only what the candidate sees. The grading guidance (openEndedComponent), the
+ * platform's word limit and the answer key are not candidate text, so a critic that sees them flags them
+ * as tips or leaks; code removes them instead of the prompt asking the model to ignore them.
+ */
+function candidateVisibleContent(
+  task: QuestionBankTaskContent,
+  objectiveType?: ObjectiveComponentType,
+) {
+  const { wordLimit: _wordLimit, ...interfacePayload } = task.interfacePayload;
+  return {
+    title: task.title,
+    scenarioDescription: task.scenarioDescription,
+    questionPrompt: task.questionPrompt,
+    interfaceType: task.interfaceType,
+    interfacePayload,
+    objectiveComponent:
+      objectiveType && task.objectiveComponent
+        ? candidateObjectiveView(objectiveType, task.objectiveComponent)
+        : null,
+  };
+}
+
+/** A tip is a sentence the candidate reads; the model's commentary about the task is not one. */
+function quotedTips(
+  sentences: string[],
+  task: QuestionBankTaskContent,
+): string[] {
+  const normalise = (text: string) => text.replace(/s+/g, ' ').trim();
+  const visible = normalise(
+    `${candidateReadingText(task)} ${String(task.interfacePayload.placeholder ?? '')}`,
+  );
+  return sentences.filter((sentence) => visible.includes(normalise(sentence)));
 }
 
 /** One call for both checks: relevance against the extraction, and tips in the candidate text. */
@@ -40,7 +78,7 @@ export async function checkRelevance(
     criticModel,
     taskCriticSchema,
   );
-  return structuredModel.invoke([
+  const result = await structuredModel.invoke([
     new SystemMessage(buildCritiqueCheckPrompt(extraction.skillLevel)),
     new HumanMessage(
       JSON.stringify({
@@ -51,8 +89,12 @@ export async function checkRelevance(
           task.taskContent.interfaceType,
           objectiveType,
         ),
-        taskContent: task.taskContent,
+        taskContent: candidateVisibleContent(task.taskContent, objectiveType),
       }),
     ),
   ]);
+  return {
+    ...result,
+    tipSentences: quotedTips(result.tipSentences, task.taskContent),
+  };
 }
