@@ -1,4 +1,5 @@
-import { IsArray, IsOptional, IsString, IsNotEmpty } from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsString, IsNotEmpty } from 'class-validator';
+import { SKILL_LEVEL } from '../task-text-rules';
 
 export class TestGenerateDto {
   @IsString()
@@ -13,4 +14,14 @@ export class TestGenerateDto {
   @IsOptional()
   @IsString()
   businessProblem?: string;
+
+  /** Defaults to mid level, as a job saved without a level does. */
+  @IsOptional()
+  @IsIn(Object.values(SKILL_LEVEL))
+  skillLevel?: string;
+
+  /** Omit to let the pipeline infer the role from the description. */
+  @IsOptional()
+  @IsString()
+  role?: string;
 }

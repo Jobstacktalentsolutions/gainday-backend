@@ -47,7 +47,7 @@ import {
 } from './task-content-generator';
 import { randomUUID } from 'crypto';
 import { TaskSpecError } from './roles/role-module.interface';
-import { SKILL_LEVEL } from './task-text-rules';
+import { resolveSkillLevel } from './task-text-rules';
 import { JobBoardCacheService } from '../jobs/job-board/job-board-cache.service';
 
 export interface GenerationResult {
@@ -397,8 +397,8 @@ export class GenerationService {
         title: 'Pipeline Test Job',
         description: dto.description,
         requiredSkills: dto.requiredSkills ?? [],
-        role: 'Finance',
-        skillLevel: SKILL_LEVEL.MID,
+        role: dto.role ?? null,
+        skillLevel: resolveSkillLevel(dto.skillLevel),
         location: 'N/A',
         employmentType: 'N/A',
         salaryRange: { min: null, max: null, currency: 'GBP' },

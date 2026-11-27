@@ -63,6 +63,8 @@ interface DifficultyProfile {
   strongAnswer: string;
   data: string;
   planning: string;
+  /** How a replacement candidate is focused: the scope it stays within. */
+  replacementFocus: string;
 }
 
 const DIFFICULTY_PROFILES: Record<SkillLevel, DifficultyProfile> = {
@@ -70,24 +72,26 @@ const DIFFICULTY_PROFILES: Record<SkillLevel, DifficultyProfile> = {
     label: 'JUNIOR / ENTRY LEVEL',
     asks: 'apply a stated rule, policy or procedure to clear evidence.',
     constraints:
-      '1 to 2 constraints in play. The material holds everything needed and one answer is clearly best.',
+      'Scope: one component, one failure, or one rule. The answer follows from a fact stated in the material, and one answer is clearly best. A justification restates the rule that applies; it does not weigh competing designs.',
     stakeholders:
       'at most one, cooperative. No executive trade-offs or politics.',
     strongAnswer: 'correct application of the rule and clear reasoning.',
     data: 'few lines or rows, and no ambiguous item.',
     planning:
-      'Prefer task types that apply a stated rule or procedure (classify, sequence, choose an action). Each briefDescription names the one rule or fact the task turns on.',
+      'At most one task whose answer is open-ended writing. The others choose an action, classify, sequence, or interpret supplied data. Each briefDescription names the one rule or fact the task turns on.',
+    replacementFocus: "Favour the job's subject matter, at the scope the level sets.",
   },
   [SKILL_LEVEL.MID]: {
     label: 'MID LEVEL',
     asks: 'diagnose a problem or prioritise competing work from the evidence.',
     constraints:
-      'about 3 constraints in play and one detail that does not matter. The candidate combines two sources of information.',
+      'about 2 constraints in play  The candidate combines two sources of information.',
     stakeholders: 'up to two, with different interests.',
     strongAnswer: 'sound reasoning that names one trade-off.',
     data: 'a moderate number of lines or rows, including one that does not affect the answer.',
     planning:
       'Prefer task types that diagnose or prioritise. Each briefDescription names the competing priorities or the detail to ignore.',
+    replacementFocus: "Favour the job's subject matter, at the scope the level sets.",
   },
   [SKILL_LEVEL.SENIOR]: {
     label: 'SENIOR / LEAD LEVEL',
@@ -100,6 +104,7 @@ const DIFFICULTY_PROFILES: Record<SkillLevel, DifficultyProfile> = {
     data: 'enough lines or rows that one needs a stated assumption or judgement call.',
     planning:
       'Prefer judgment-heavy task types (pushback, justification, trade-off decisions). Each briefDescription names the tension or the missing information the candidate must handle.',
+    replacementFocus: 'Favour role-specific expertise.',
   },
 };
 
@@ -130,6 +135,10 @@ export function getSeniorityPlanningGuidance(
 }
 
 /** How complex the supplied data should be for this level, for tasks whose figures the model supplies. */
+export function getSeniorityReplacementFocus(skillLevel?: string | null): string {
+  return DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)].replacementFocus;
+}
+
 export function getSeniorityDataGuidance(skillLevel?: string | null): string {
   return DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)].data;
 }
