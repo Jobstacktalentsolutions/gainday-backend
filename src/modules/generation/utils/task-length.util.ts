@@ -7,6 +7,7 @@ import {
 import { InterfaceType } from '../roles/interface-type';
 import { TASK_TEXT_LIMITS, textLimitsForSeniority } from '../task-text-rules';
 import {
+  candidateContextText,
   candidateReadingWords,
   hasReferenceMaterial,
   readingBreakdown,
@@ -22,6 +23,57 @@ const BUDGET_TOLERANCE = 1.25;
 const rankingItems = z.object({
   items: z.array(z.object({ label: z.string(), description: z.string() })),
 });
+
+const normalise = (text: string) =>
+  text
+    .replace(/[*_s]+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+/** The name part of a label, without a trailing detail such as "Alex Rivera - PM". */
+const itemName = (label: string) => normalise(label.split(/[—–-:(]/)[0]);
+
+/**
+ * Ranking items must be the things the scenario asks the candidate to rank. A revision that only had to meet
+ * a length limit can replace them with placeholder slots ("Rank 1: lead to call back"), which pass every other
+ * check, so at least half of the item names must appear in the text the candidate reads.
+ */
+function rankingItemProblems(
+  task: QuestionBankTaskContent,
+  items: { label: string; description: string }[],
+  limits: { rankingDescriptionCharacters: number },
+): string[] {
+  const problems: string[] = [];
+  items.forEach((item, index) => {
+    const over: string[] = [];
+    if (item.label.length > TASK_TEXT_LIMITS.rankingLabelCharacters) {
+      over.push(
+        `the label is ${item.label.length} characters (limit ${TASK_TEXT_LIMITS.rankingLabelCharacters})`,
+      );
+    }
+    if (item.description.length > limits.rankingDescriptionCharacters) {
+      over.push(
+        `the description is ${item.description.length} characters (limit ${limits.rankingDescriptionCharacters})`,
+      );
+    }
+    if (over.length > 0) {
+      problems.push(
+        `Ranking item ${index + 1} ("${item.label}"): ${over.join(' and ')}. Shorten only that, keep the item's real name, and keep the facts used to compare items in the scenario.`,
+      );
+    }
+  });
+  const context = normalise(candidateContextText(task));
+  const missing = items.filter((item) => {
+    const name = itemName(item.label);
+    return name.length === 0 || !context.includes(name);
+  });
+  if (items.length > 0 && missing.length * 2 >= items.length) {
+    problems.push(
+      `Ranking items must be the items the scenario names, but ${missing.map((item) => `"${item.label}"`).join(', ')} ${missing.length === 1 ? 'does' : 'do'} not appear in the scenario or reference material. Use the real names the scenario gives.`,
+    );
+  }
+  return problems;
+}
 
 /** Length feedback for repair; no candidate-facing text is truncated. */
 export function taskLengthProblems(
@@ -81,16 +133,7 @@ export function taskLengthProblems(
   if (objectiveType === INTERACTION.PRIORITY_RANKING) {
     const ranking = rankingItems.safeParse(task.objectiveComponent);
     if (ranking.success) {
-      ranking.data.items.forEach((item, index) => {
-        if (
-          item.label.length > TASK_TEXT_LIMITS.rankingLabelCharacters ||
-          item.description.length > limits.rankingDescriptionCharacters
-        ) {
-          problems.push(
-            `Ranking item ${index + 1}: shorten the label to ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters and description to ${limits.rankingDescriptionCharacters} characters; retain comparison facts elsewhere in the candidate-visible task.`,
-          );
-        }
-      });
+      problems.push(...rankingItemProblems(task, ranking.data.items, limits));
     }
   }
   return problems;

@@ -30,15 +30,15 @@ const TEXT_LIMITS: Record<
   SkillLevel,
   { questionWords: number; rankingDescriptionCharacters: number }
 > = {
-  [SKILL_LEVEL.ENTRY]: { questionWords: 80, rankingDescriptionCharacters: 50 },
+  [SKILL_LEVEL.ENTRY]: { questionWords: 80, rankingDescriptionCharacters: 90 },
   [SKILL_LEVEL.JUNIOR]: {
     questionWords: 100,
-    rankingDescriptionCharacters: 60,
+    rankingDescriptionCharacters: 100,
   },
-  [SKILL_LEVEL.MID]: { questionWords: 120, rankingDescriptionCharacters: 80 },
+  [SKILL_LEVEL.MID]: { questionWords: 120, rankingDescriptionCharacters: 120 },
   [SKILL_LEVEL.SENIOR]: {
     questionWords: 140,
-    rankingDescriptionCharacters: 100,
+    rankingDescriptionCharacters: 140,
   },
 };
 
@@ -170,14 +170,10 @@ export function getSeniorityDataGuidance(skillLevel?: string | null): string {
 
 /** One light line per level for the critic. It checks fit, not difficulty, so it stays lenient. */
 const CRITIC_GUIDANCE: Record<SkillLevel, string> = {
-  [SKILL_LEVEL.ENTRY]:
-    "Entry level: everyday tasks are fine.",
-  [SKILL_LEVEL.JUNIOR]:
-    "Junior level: foundational tasks are fine.",
-  [SKILL_LEVEL.MID]:
-    'Mid level: independent problem-solving is fine.',
-  [SKILL_LEVEL.SENIOR]:
-    'Senior level: judgment-based tasks are fine.',
+  [SKILL_LEVEL.ENTRY]: 'Entry level: everyday tasks are fine.',
+  [SKILL_LEVEL.JUNIOR]: 'Junior level: foundational tasks are fine.',
+  [SKILL_LEVEL.MID]: 'Mid level: independent problem-solving is fine.',
+  [SKILL_LEVEL.SENIOR]: 'Senior level: judgment-based tasks are fine.',
 };
 
 export function getSeniorityCriticGuidance(skillLevel?: string | null): string {

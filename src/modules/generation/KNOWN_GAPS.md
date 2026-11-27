@@ -44,3 +44,39 @@ content leans heavily on reusing similar scenarios with different graded
 components. At that point, decide deliberately how to textify structured
 fields for embedding (e.g., flattened description, or just the anchor
 score-0/score-100 responses as bookends) rather than embedding raw JSON.
+
+---
+
+# Known gap: a repair can replace ranking items with placeholder slots
+
+**Where:** `utils/task-length.util.ts` (ranking item check), `task-content-generator.ts`
+(`reviseTaskContent` / `modifyTaskContent`), `roles/interaction-validation.ts`.
+
+**Seen:** 2026-11-27, Sales > SDR, `INBOX_PRIORITIZATION`, kept `inReview`. The scenario named three real
+leads, but the ranking control held `"Rank 1: lead to call back first"`, `"Rank 2: lead to call back"` and
+`"Rank 3: lead to call back"`, each with the description `"Rank 1 lead and why, in a sentence a customer would
+understand."`. The candidate ranks three identical-looking slots.
+
+## What the logs show
+
+All three attempts failed on the same ranking message: `Ranking item N: shorten the label to 60 characters and
+description to 50 characters; retain comparison facts elsewhere in the candidate-visible task.` The final items
+are still over the limit (the description is 62 characters), so the repair gave up on meeting it and turned
+the items into generic slots instead.
+
+## Causes (in the order they act)
+
+1. The description cap is 50 characters at Entry level, shorter than what the model puts there, so the first
+   draft fails the check.
+2. The feedback is the same sentence for every item and does not say which field is over or by how much, so
+   the model cannot tell what to fix.
+3. The feedback says to move comparison facts elsewhere, and nothing says the items must stay the real things
+   the scenario asks the candidate to rank.
+4. `validateInteraction` accepts any two or more distinct labels, so placeholder slots pass.
+5. When the attempts run out, the last attempt is the one kept for review, not the best one.
+
+## Not fixed
+
+Nothing checks that ranking or classification items actually appear in the scenario or reference material.
+A fix would make the length feedback name the field and the limit, tell the repair to keep the item names,
+and check that each ranking label is found in the candidate-visible text.

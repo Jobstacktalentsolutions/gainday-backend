@@ -104,12 +104,19 @@ function stringsIn(value: unknown, skipKeys?: ReadonlySet<string>): string[] {
   return [];
 }
 
-/** The text the candidate must read: scenario, question, reference tabs and tables, and answer options. */
-export function candidateReadingText(task: QuestionBankTaskContent): string {
+/** The text the answer control's items are named in: scenario, question, and reference tabs and tables. */
+export function candidateContextText(task: QuestionBankTaskContent): string {
   return [
     task.scenarioDescription,
     task.questionPrompt,
     ...stringsIn(task.interfacePayload, NON_READING_PAYLOAD_KEYS),
+  ].join('\n');
+}
+
+/** The text the candidate must read: the context, plus the answer options. */
+export function candidateReadingText(task: QuestionBankTaskContent): string {
+  return [
+    candidateContextText(task),
     ...stringsIn(task.objectiveComponent),
   ].join('\n');
 }
