@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { JOB_DESCRIPTION_TARGET_LENGTH } from '../job-description.constants';
+import { SKILL_LEVEL_VALUES } from '../../../common/skill-level';
 
 // Structured output for POST /jobs/parse-description — takes a recruiter's raw, unstructured job
 // description text and both (a) extracts the fields the employer job-posting form knows about,
@@ -22,10 +23,10 @@ export const parsedJobDescriptionSchema = z.object({
         'into a fixed list. Null only if genuinely undeterminable.',
     ),
   skillLevel: z
-    .enum(['Junior', 'Mid level', 'Senior level'])
+    .enum(SKILL_LEVEL_VALUES)
     .nullable()
     .describe(
-      'Seniority level ONLY if the posting explicitly names one (e.g. "junior", "entry-level", "mid-level", "senior", "lead", "principal"). Never infer it from conventional details',
+      'Seniority level ONLY if the posting explicitly names one (e.g. "entry-level" or "graduate" for Entry level, "junior" for Junior, "mid-level" for Mid level, "senior", "lead" or "principal" for Senior level). Never infer it from conventional details',
     ),
   skillCategory: z
     .string()

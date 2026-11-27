@@ -25,6 +25,7 @@
     "recs:send-test": "ts-node -r tsconfig-paths/register src/modules/job-recommendations/send-test-recommendation.ts",
     "recs:preview": "ts-node -r tsconfig-paths/register src/modules/job-recommendations/preview-matches.ts",
     "roles:evaluate": "ts-node -r tsconfig-paths/register src/modules/generation/roles/evaluation/run-role-evaluation.ts",
+    "seniority:evaluate": "ts-node -r tsconfig-paths/register src/modules/generation/evaluation/run-seniority-evaluation.ts",
     "recs:evaluate": "ts-node -r tsconfig-paths/register src/modules/job-recommendations/evaluation/run-evaluation.ts",
     "db:enable-pgvector": "ts-node -r tsconfig-paths/register src/db/scripts/enable-pgvector.ts",
     "db:setup-fuzzy-search": "ts-node -r tsconfig-paths/register src/db/scripts/setup-fuzzy-search.ts",

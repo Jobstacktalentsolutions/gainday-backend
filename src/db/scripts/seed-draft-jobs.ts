@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { eq } from 'drizzle-orm';
 import { jobs, employerProfiles, users } from '../schema';
-import { SKILL_LEVEL } from '../../modules/generation/task-text-rules';
+import { SKILL_LEVEL } from '../../common/skill-level';
 
 const EMPLOYER_EMAIL =
   process.env.SEED_EMPLOYER_EMAIL || 'enweremproper2@gmail.com';

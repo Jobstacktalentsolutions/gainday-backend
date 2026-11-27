@@ -41,6 +41,7 @@ import {
   slotBudgetMinutes,
   writtenResponseLimit,
 } from './utils/task-budget.util';
+import { requireTaskText } from './utils/task-text.util';
 import {
   shuffleObjectiveOrder,
   withAnswerKey,
@@ -97,7 +98,7 @@ export function buildTaskGenerationPromptBase(
   return [
     'Generate the full content for one job-simulation task,',
     "matching the given candidate's taskType. Produce a scenario and the task components appropriate",
-    'to that taskType. Focus on one manageable piece of work that assesses relevant role knowledge or judgment.',
+    'to that taskType. Focus on one manageable piece of work that fits the target seniority.',
     '',
     getSeniorityGuidance(skillLevel),
     '',
@@ -239,6 +240,7 @@ export async function generateTaskContent(
     ),
   ]);
 
+  requireTaskText(result.title, result.scenarioDescription);
   // Hard rule enforcement, not just prompt-trusted: never fabricate a business problem.
   const businessProblemDerived =
     problem === null ? false : result.businessProblemDerived;
@@ -360,6 +362,7 @@ async function generateFlexibleTaskContent(
   }
   const parsedPayload: unknown =
     presentation.inputSchema.parse(selectedPayload);
+  requireTaskText(draft.title, selection.scenarioDescription);
   const interfacePayload = presentation.materialize
     ? presentation.materialize(parsedPayload)
     : (parsedPayload as Record<string, unknown>);

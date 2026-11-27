@@ -1,9 +1,9 @@
 import {
-  SKILL_LEVEL,
   getSeniorityGuidance,
   getSeniorityPlanningGuidance,
   resolveSkillLevel,
 } from './task-text-rules';
+import { SKILL_LEVEL } from '../../common/skill-level';
 
 describe('skill level', () => {
   it('treats a job with no level as mid level', () => {

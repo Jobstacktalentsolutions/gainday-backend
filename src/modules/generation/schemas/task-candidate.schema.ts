@@ -26,5 +26,6 @@ export const plannedSimulationSchema = (
   z.object({
     candidates: z
       .array(taskCandidateSchema(allowedTypeKeys))
+      .min(1)
       .describe('The planned candidate tasks for this simulation.'),
   });

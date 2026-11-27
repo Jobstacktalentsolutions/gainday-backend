@@ -92,31 +92,30 @@ export function readingBreakdown(task: QuestionBankTaskContent) {
   };
 }
 
-function wordsIn(value: unknown, skipKeys?: ReadonlySet<string>): number {
-  if (typeof value === 'string') return countWords(value);
+function stringsIn(value: unknown, skipKeys?: ReadonlySet<string>): string[] {
+  if (typeof value === 'string') return [value];
   if (Array.isArray(value))
-    return value.reduce<number>(
-      (sum, item) => sum + wordsIn(item, skipKeys),
-      0,
-    );
+    return value.flatMap((item) => stringsIn(item, skipKeys));
   if (value && typeof value === 'object') {
-    return Object.entries(value).reduce(
-      (sum, [key, item]) =>
-        skipKeys?.has(key) ? sum : sum + wordsIn(item, skipKeys),
-      0,
+    return Object.entries(value).flatMap(([key, item]) =>
+      skipKeys?.has(key) ? [] : stringsIn(item, skipKeys),
     );
   }
-  return 0;
+  return [];
 }
 
-/** Words the candidate must read: scenario, question, reference tabs and tables, and answer options. */
+/** The text the candidate must read: scenario, question, reference tabs and tables, and answer options. */
+export function candidateReadingText(task: QuestionBankTaskContent): string {
+  return [
+    task.scenarioDescription,
+    task.questionPrompt,
+    ...stringsIn(task.interfacePayload, NON_READING_PAYLOAD_KEYS),
+    ...stringsIn(task.objectiveComponent),
+  ].join('\n');
+}
+
 export function candidateReadingWords(task: QuestionBankTaskContent): number {
-  return (
-    countWords(task.scenarioDescription) +
-    countWords(task.questionPrompt) +
-    wordsIn(task.interfacePayload, NON_READING_PAYLOAD_KEYS) +
-    wordsIn(task.objectiveComponent)
-  );
+  return countWords(candidateReadingText(task));
 }
 
 function roundToStep(value: number): number {

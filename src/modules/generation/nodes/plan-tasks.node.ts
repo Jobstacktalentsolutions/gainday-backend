@@ -7,7 +7,11 @@ import {
 } from '../state/generation-state';
 import { plannedSimulationSchema } from '../schemas/task-candidate.schema';
 import { getSeniorityPlanningGuidance } from '../task-text-rules';
-import { RoleModuleNotConfiguredError } from '../roles/role-module.interface';
+import {
+  RoleModuleNotConfiguredError,
+  TaskPatternTypeDefinition,
+} from '../roles/role-module.interface';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
 import { DEFAULT_SIMULATION_TIME_LIMIT_MINUTES } from '../../../db/schema/simulations.schema';
@@ -35,7 +39,7 @@ export function buildPlanTasksPrompt(
 3. Do not invent new task types.`;
 
   return [
-    `Plan exactly ${targetCount} realistic on-the-job simulation tasks for this role.`,
+    `Plan exactly ${targetCount} realistic simulation tasks for this role.`,
     `Together the tasks must fit in ${DEFAULT_SIMULATION_TIME_LIMIT_MINUTES} minutes, including reading and answering. Keep each focused on a manageable piece of work.`,
     'Choose work aligned with the stated Category, Intent, and Problem.',
     '',
@@ -43,6 +47,51 @@ export function buildPlanTasksPrompt(
     '',
     constraintRules,
   ].join('\n');
+}
+
+export interface TaskPlanRequest {
+  targetCount: number;
+  allowedTypes: TaskPatternTypeDefinition[];
+  category: string;
+  intent: string;
+  problem: string | null;
+  skillLevel?: string | null;
+}
+
+/** Asks the model to plan the simulation's tasks. Shared by the pipeline and the seniority evaluation. */
+export async function requestTaskPlan(
+  model: BaseChatModel,
+  request: TaskPlanRequest,
+) {
+  const allowedTypeKeys = request.allowedTypes.map((t) => t.key) as [
+    string,
+    ...string[],
+  ];
+  const planner = withGeminiSafeStructuredOutput(
+    model,
+    plannedSimulationSchema(allowedTypeKeys),
+  );
+  const allowedTypesDescription = request.allowedTypes
+    .map((t) => `- ${t.key}: ${t.description}`)
+    .join('\n');
+  const prompt = buildPlanTasksPrompt(
+    request.targetCount,
+    allowedTypeKeys.length,
+    request.skillLevel,
+  );
+  return planner.invoke([
+    new SystemMessage(
+      `${prompt}\n\nAllowed task types:\n${allowedTypesDescription}`,
+    ),
+    new HumanMessage(
+      JSON.stringify({
+        category: request.category,
+        intent: request.intent,
+        problem: request.problem,
+        skillLevel: request.skillLevel ?? null,
+      }),
+    ),
+  ]);
 }
 
 export function planTasksNode(ctx: GenerationContext) {
@@ -59,34 +108,14 @@ export function planTasksNode(ctx: GenerationContext) {
       `Planning ${targetCount} simulation tasks for job ${state.jobId} (category="${state.category}", availableTypes=${allowedTypeKeys.length}, constrained=${isConstrained})`,
     );
 
-    const schema = plannedSimulationSchema(
-      allowedTypeKeys as [string, ...string[]],
-    );
-    const model = withGeminiSafeStructuredOutput(ctx.generationModel, schema);
-
-    const allowedTypesDescription = allowedTypes
-      .map((t) => `- ${t.key}: ${t.description}`)
-      .join('\n');
-
-    const prompt = buildPlanTasksPrompt(
+    const result = await requestTaskPlan(ctx.generationModel, {
       targetCount,
-      allowedTypeKeys.length,
-      state.skillLevel,
-    );
-
-    const result = await model.invoke([
-      new SystemMessage(
-        `${prompt}\n\nAllowed task types:\n${allowedTypesDescription}`,
-      ),
-      new HumanMessage(
-        JSON.stringify({
-          category: state.category,
-          intent: state.intent,
-          problem: state.problem,
-          skillLevel: state.skillLevel ?? null,
-        }),
-      ),
-    ]);
+      allowedTypes,
+      category: state.category,
+      intent: state.intent,
+      problem: state.problem,
+      skillLevel: state.skillLevel,
+    });
 
     let candidatePool: TaskCandidateRecord[] = [];
 

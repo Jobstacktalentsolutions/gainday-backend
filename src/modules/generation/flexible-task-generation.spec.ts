@@ -181,7 +181,7 @@ describe('flexible task generation', () => {
       },
       {
         interfaceType: InterfaceType.TABLE_VIEW_WITH_CHART,
-        scenarioDescription: 'Compare weekly errors.',
+        scenarioDescription: 'Your team tracks how many errors the service logs each week, and the chart shows the last four weeks.',
         questionPrompt: 'Explain the change.',
         payloads,
       },

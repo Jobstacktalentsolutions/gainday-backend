@@ -1,7 +1,8 @@
 import { InterfaceType } from '../roles/interface-type';
 import { INTERACTION } from '../roles/role-module.interface';
 import { taskLengthProblems } from './task-length.util';
-import { SKILL_LEVEL, textLimitsForSeniority } from '../task-text-rules';
+import { SKILL_LEVEL } from '../../../common/skill-level';
+import { textLimitsForSeniority } from '../task-text-rules';
 import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 
 const task: QuestionBankTaskContent = {

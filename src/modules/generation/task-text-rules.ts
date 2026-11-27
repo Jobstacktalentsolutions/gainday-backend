@@ -1,3 +1,5 @@
+import { SKILL_LEVEL, SkillLevel } from '../../common/skill-level';
+
 /**
  * The line between what a task says and advice on doing it well. The generator writes to it and the
  * critic checks against it, so both read one definition and cannot drift.
@@ -7,13 +9,6 @@ export const REQUIREMENT_VS_TIP_RULE = `Candidate-facing text should state the d
 export const TASK_TEXT_LIMITS = {
   rankingLabelCharacters: 60,
 } as const;
-export const SKILL_LEVEL = {
-  JUNIOR: 'Junior',
-  MID: 'Mid level',
-  SENIOR: 'Senior level',
-} as const;
-export type SkillLevel = (typeof SKILL_LEVEL)[keyof typeof SKILL_LEVEL];
-
 /**
  * A job saved without a level is treated as mid level. Any other unrecognised value is a data
  * error and fails here, instead of being quietly generated at the wrong difficulty.
@@ -35,6 +30,7 @@ const TEXT_LIMITS: Record<
   SkillLevel,
   { questionWords: number; rankingDescriptionCharacters: number }
 > = {
+  [SKILL_LEVEL.ENTRY]: { questionWords: 80, rankingDescriptionCharacters: 50 },
   [SKILL_LEVEL.JUNIOR]: {
     questionWords: 100,
     rankingDescriptionCharacters: 60,
@@ -62,36 +58,60 @@ interface DifficultyProfile {
   stakeholders: string;
   strongAnswer: string;
   data: string;
+  /** How the task is worded: vocabulary, jargon, how much of an artefact is shown, and the answer asked for. */
+  language: string;
   planning: string;
   /** How a replacement candidate is focused: the scope it stays within. */
   replacementFocus: string;
 }
 
 const DIFFICULTY_PROFILES: Record<SkillLevel, DifficultyProfile> = {
+  [SKILL_LEVEL.ENTRY]: {
+    label: 'ENTRY LEVEL (recent graduate, no job experience)',
+    asks: 'use everyday common sense on a short situation about what a customer or the business sees, such as an order, a message or a refund. The candidate is not placed in the technical role, and no rule, procedure or job knowledge is needed; the facts given are enough.',
+    constraints:
+      'One constraint in play. One answer is clearly best, and an average person would pick it without training. Put everything in a short situation of a few sentences, with no policy, rule or reference notes; the sensible, fair choice is the answer. Ask one question for one common-sense decision, never a trade-off between options.',
+    stakeholders: 'at most one, friendly. No politics or pressure.',
+    strongAnswer:
+      'a clear, honest answer in everyday words that uses the information given.',
+    data: 'three or four rows with plain labels and no ambiguous item.',
+    language:
+      'everyday words only: no tool, protocol or acronym names, no code, and no talk of systems, servers or engineers. Write about what a customer or the business sees and does, for example "a customer got the same message twice". If the brief names a technical idea, write about the everyday event it causes instead. Short sentences, one idea each. Show only the one fact the answer turns on. Ask for a short answer in the candidate\'s own words.',
+    planning:
+      "Every task is an everyday situation that a customer or the business sees in the job's field, never the technical work itself. Example for a backend role: 'A customer was charged twice for one order. What should the shop do first?' Choose task types an average person can answer by common sense: choose an action, classify, or sequence familiar steps. At most one short written reply. Each briefDescription names the one fact the answer turns on, not a tool or a rule.",
+    replacementFocus:
+      "Favour everyday situations from the job's field, with no tools or jargon.",
+  },
   [SKILL_LEVEL.JUNIOR]: {
     label: 'JUNIOR / ENTRY LEVEL',
     asks: 'apply a stated rule, policy or procedure to clear evidence.',
     constraints:
-      'Scope: one component, one failure, or one rule. The answer follows from a fact stated in the material, and one answer is clearly best. A justification restates the rule that applies; it does not weigh competing designs.',
+      'Scope: one component, one failure, or one rule. The answer follows from a fact stated in the material, and one answer is clearly best. When options are offered, the stated rule rules out all but one. A justification restates the rule that applies; it does not weigh competing designs.',
     stakeholders:
       'at most one, cooperative. No executive trade-offs or politics.',
     strongAnswer: 'correct application of the rule and clear reasoning.',
     data: 'few lines or rows, and no ambiguous item.',
+    language:
+      'plain words first. Name a field term only after saying what it means, for example "a message that can arrive twice (a duplicate)". Common tools may be named with no setup detail. Short sentences. Describe what a log or record shows in words instead of pasting it, and refer to things by what they are, not by code names. Ask for a short explanation.',
     planning:
       'At most one task whose answer is open-ended writing. The others choose an action, classify, sequence, or interpret supplied data. Each briefDescription names the one rule or fact the task turns on.',
-    replacementFocus: "Favour the job's subject matter, at the scope the level sets.",
+    replacementFocus:
+      "Favour the job's subject matter, at the scope the level sets.",
   },
   [SKILL_LEVEL.MID]: {
     label: 'MID LEVEL',
     asks: 'diagnose a problem or prioritise competing work from the evidence.',
     constraints:
-      'about 2 constraints in play  The candidate combines two sources of information.',
+      'no more than 3 constraints in play, and one detail that does not matter. The candidate combines two sources of information.',
     stakeholders: 'up to two, with different interests.',
     strongAnswer: 'sound reasoning that names one trade-off.',
     data: 'a moderate number of lines or rows, including one that does not affect the answer.',
+    language:
+      'field terms without defining the common ones; define only specialised ones. Show a realistic artefact with one irrelevant detail. A sentence may carry two related ideas. Ask for reasoning with one trade-off.',
     planning:
       'Prefer task types that diagnose or prioritise. Each briefDescription names the competing priorities or the detail to ignore.',
-    replacementFocus: "Favour the job's subject matter, at the scope the level sets.",
+    replacementFocus:
+      "Favour the job's subject matter, at the scope the level sets.",
   },
   [SKILL_LEVEL.SENIOR]: {
     label: 'SENIOR / LEAD LEVEL',
@@ -102,6 +122,8 @@ const DIFFICULTY_PROFILES: Record<SkillLevel, DifficultyProfile> = {
     strongAnswer:
       'a recommendation, the trade-off it accepts, and how the remaining risk is handled.',
     data: 'enough lines or rows that one needs a stated assumption or judgement call.',
+    language:
+      'field terms assumed, with no definitions. Terse, consequence-led stakeholder language (cost, risk, timeline). Show full artefacts and let the candidate find what matters. Longer, denser sentences are fine. Ask for a recommendation and the trade-off it accepts.',
     planning:
       'Prefer judgment-heavy task types (pushback, justification, trade-off decisions). Each briefDescription names the tension or the missing information the candidate must handle.',
     replacementFocus: 'Favour role-specific expertise.',
@@ -115,6 +137,7 @@ export function getSeniorityGuidance(skillLevel?: string | null): string {
     `- The task asks the candidate to ${profile.asks}`,
     `- Constraints and information: ${profile.constraints}`,
     `- Stakeholders: ${profile.stakeholders}`,
+    `- Language: ${profile.language}`,
     `- A strong answer shows: ${profile.strongAnswer}`,
     'Difficulty comes from what the candidate must decide, never from more material; stay within the size limits.',
   ].join('\n');
@@ -135,7 +158,9 @@ export function getSeniorityPlanningGuidance(
 }
 
 /** How complex the supplied data should be for this level, for tasks whose figures the model supplies. */
-export function getSeniorityReplacementFocus(skillLevel?: string | null): string {
+export function getSeniorityReplacementFocus(
+  skillLevel?: string | null,
+): string {
   return DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)].replacementFocus;
 }
 
@@ -143,27 +168,18 @@ export function getSeniorityDataGuidance(skillLevel?: string | null): string {
   return DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)].data;
 }
 
+/** One light line per level for the critic. It checks fit, not difficulty, so it stays lenient. */
+const CRITIC_GUIDANCE: Record<SkillLevel, string> = {
+  [SKILL_LEVEL.ENTRY]:
+    "Entry level: plain everyday tasks are expected; flag one only if it has no link to the job's field.",
+  [SKILL_LEVEL.JUNIOR]:
+    "Junior: foundational tasks are fine; flag one only if it has no link to the role's domain.",
+  [SKILL_LEVEL.MID]:
+    'Mid level: some independent problem-solving is expected; do not ask for more.',
+  [SKILL_LEVEL.SENIOR]:
+    'Senior level: a task that lets an experienced person show judgment is expected; a focused one is fine.',
+};
+
 export function getSeniorityCriticGuidance(skillLevel?: string | null): string {
-  switch (skillLevel) {
-    case SKILL_LEVEL.JUNIOR:
-      return [
-        'Seniority Calibration (JUNIOR / ENTRY LEVEL):',
-        '- Evaluate whether the task tests real foundational domain knowledge and execution relevant to this role (e.g. core workflows, key domain metrics, standard operating procedures).',
-        '- DO NOT penalize or reject a junior task simply because its domain concepts are foundational, its procedures follow industry best-practice standards, or its scope avoids executive-level complexity.',
-        "- Reject ONLY if the task has zero connection to the role's domain or requires no domain understanding at all.",
-      ].join('\n');
-
-    case SKILL_LEVEL.SENIOR:
-      return [
-        'Seniority Calibration (SENIOR / LEAD LEVEL):',
-        '- Assess whether the task offers an experienced candidate a reasonable opportunity to demonstrate relevant judgment; a focused procedural task can be appropriate.',
-      ].join('\n');
-
-    case SKILL_LEVEL.MID:
-    default:
-      return [
-        'Seniority Calibration (MID LEVEL):',
-        '- The task should require independent operational problem-solving and domain competence beyond basic common sense, without requiring executive-level authority.',
-      ].join('\n');
-  }
+  return CRITIC_GUIDANCE[resolveSkillLevel(skillLevel)];
 }

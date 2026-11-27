@@ -1,5 +1,5 @@
 import { IsArray, IsIn, IsOptional, IsString, IsNotEmpty } from 'class-validator';
-import { SKILL_LEVEL } from '../task-text-rules';
+import { SKILL_LEVEL } from '../../../common/skill-level';
 
 export class TestGenerateDto {
   @IsString()
