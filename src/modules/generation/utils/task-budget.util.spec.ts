@@ -74,4 +74,13 @@ describe('time budget problems', () => {
   it('does not ask for a word limit when there is no written answer', () => {
     expect(taskLengthProblems(task({ openEndedComponent: undefined, interfacePayload: { wordLimit: null } }), undefined, undefined, 7)).toEqual([]);
   });
+
+  it('tolerates a small reading overshoot but says which section to cut when it is large', () => {
+    const slightly = task({ scenarioDescription: words(300), questionPrompt: words(100) });
+    expect(taskLengthProblems(slightly, undefined, undefined, 7).join(' ')).not.toContain('must read');
+    const heavy = task({ scenarioDescription: words(420), questionPrompt: words(110) });
+    const message = taskLengthProblems(heavy, undefined, undefined, 7).join(' ');
+    expect(message).toContain('scenario 420 (limit 170)');
+    expect(message).toContain('question 110');
+  });
 });

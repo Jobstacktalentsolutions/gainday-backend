@@ -1,5 +1,6 @@
 import { INTERACTION } from '../roles/role-module.interface';
-import { shuffleObjectiveOrder } from './objective-order.util';
+import { shuffleObjectiveOrder, withAnswerKey } from './objective-order.util';
+import { validateInteraction } from '../roles/interaction-validation';
 
 describe('shuffleObjectiveOrder', () => {
   it('reorders ranking items, keeping every item, and never returns the original order', () => {
@@ -40,5 +41,37 @@ describe('shuffleObjectiveOrder', () => {
     expect(
       shuffleObjectiveOrder(INTERACTION.PRIORITY_RANKING, null),
     ).toBeNull();
+  });
+
+  it('builds the sequencing key from steps written in their correct order, then shuffles them', () => {
+    const steps = ['first', 'second', 'third'];
+    const keyed = withAnswerKey(INTERACTION.PROCEDURAL_SEQUENCING, { steps });
+    expect(keyed!.correctOrder).toEqual([0, 1, 2]);
+    expect(() =>
+      validateInteraction(INTERACTION.PROCEDURAL_SEQUENCING, keyed),
+    ).not.toThrow();
+    const shuffled = shuffleObjectiveOrder(
+      INTERACTION.PROCEDURAL_SEQUENCING,
+      keyed,
+    );
+    const ordered = (shuffled!.correctOrder as number[]).map(
+      (index) => (shuffled!.steps as string[])[index],
+    );
+    expect(ordered).toEqual(steps);
+  });
+
+  it('names what is wrong with an invalid interaction', () => {
+    expect(() =>
+      validateInteraction(INTERACTION.PROCEDURAL_SEQUENCING, {
+        steps: ['a', 'b'],
+        correctOrder: [1, 2],
+      }),
+    ).toThrow('correctOrder must list each step position from 0 to 1');
+    expect(() =>
+      validateInteraction(INTERACTION.SINGLE_BEST_ACTION, {
+        options: ['a', 'a'],
+        correctOptionIndex: 0,
+      }),
+    ).toThrow('options must be distinct');
   });
 });
