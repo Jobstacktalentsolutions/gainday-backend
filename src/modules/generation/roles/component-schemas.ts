@@ -91,7 +91,7 @@ const priorityRankingSchema = z.object({
         label: z
           .string()
           .describe(
-            `Short, distinct item name, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters.`,
+            `The name the scenario gives the thing being ranked, such as a lead, request or ticket, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters.`,
           ),
         description: z
           .string()

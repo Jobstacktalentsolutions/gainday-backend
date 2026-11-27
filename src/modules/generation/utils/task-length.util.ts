@@ -26,17 +26,26 @@ const rankingItems = z.object({
 
 const normalise = (text: string) =>
   text
-    .replace(/[*_s]+/g, ' ')
+    .replace(/[*_\s]+/g, ' ')
     .trim()
     .toLowerCase();
 
-/** The name part of a label, without a trailing detail such as "Alex Rivera - PM". */
-const itemName = (label: string) => normalise(label.split(/[—–-:(]/)[0]);
+/** The parts of an item that can name it, such as "Lead A" and "Maya Chen" in "Lead A - Maya Chen". */
+const itemNames = (item: { label: string; description: string }) =>
+  `${item.label}.${item.description}`
+    .split(/[—–\-:(.,;]/)
+    .map(normalise)
+    .filter((part) => part.length >= 3);
+
+/** A label that states a position ("2nd to call", "Rank 1", "3") gives the answer away and names nothing. */
+const POSITION_LABEL =
+  /\b\d+(?:st|nd|rd|th)\b|\brank\s*\d|^\s*\d+\s*$|\b(?:call|do|handle|take)\s+(?:first|second|third|fourth|fifth|last)\b|\b(?:first|second|third|fourth|fifth|last)\s+(?:to\s+\w+|call(?:\s*back)?|lead|priority)\b|^\s*(?:first|second|third|fourth|fifth|last)\s*$/i;
 
 /**
- * Ranking items must be the things the scenario asks the candidate to rank. A revision that only had to meet
- * a length limit can replace them with placeholder slots ("Rank 1: lead to call back"), which pass every other
- * check, so at least half of the item names must appear in the text the candidate reads.
+ * Ranking items must be the things the scenario asks the candidate to rank. A draft, or a revision that only
+ * had to meet a length limit, can turn them into position slots ("Rank 1: lead to call back"), which pass
+ * every other check. So a label may not state a position, and at least half of the items must be named in the
+ * text the candidate reads.
  */
 function rankingItemProblems(
   task: QuestionBankTaskContent,
@@ -62,11 +71,16 @@ function rankingItemProblems(
       );
     }
   });
+  const positional = items.filter((item) => POSITION_LABEL.test(item.label));
+  if (positional.length > 0) {
+    problems.push(
+      `Ranking labels must name the items, not their position: ${positional.map((item) => `"${item.label}"`).join(', ')}. Use the real name the scenario gives each item; the order is the candidate's answer.`,
+    );
+  }
   const context = normalise(candidateContextText(task));
-  const missing = items.filter((item) => {
-    const name = itemName(item.label);
-    return name.length === 0 || !context.includes(name);
-  });
+  const missing = items.filter(
+    (item) => !itemNames(item).some((name) => context.includes(name)),
+  );
   if (items.length > 0 && missing.length * 2 >= items.length) {
     problems.push(
       `Ranking items must be the items the scenario names, but ${missing.map((item) => `"${item.label}"`).join(', ')} ${missing.length === 1 ? 'does' : 'do'} not appear in the scenario or reference material. Use the real names the scenario gives.`,

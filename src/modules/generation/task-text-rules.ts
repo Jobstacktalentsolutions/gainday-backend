@@ -30,15 +30,15 @@ const TEXT_LIMITS: Record<
   SkillLevel,
   { questionWords: number; rankingDescriptionCharacters: number }
 > = {
-  [SKILL_LEVEL.ENTRY]: { questionWords: 80, rankingDescriptionCharacters: 90 },
+  [SKILL_LEVEL.ENTRY]: { questionWords: 80, rankingDescriptionCharacters: 140 },
   [SKILL_LEVEL.JUNIOR]: {
     questionWords: 100,
-    rankingDescriptionCharacters: 100,
+    rankingDescriptionCharacters: 140,
   },
-  [SKILL_LEVEL.MID]: { questionWords: 120, rankingDescriptionCharacters: 120 },
+  [SKILL_LEVEL.MID]: { questionWords: 120, rankingDescriptionCharacters: 160 },
   [SKILL_LEVEL.SENIOR]: {
     questionWords: 140,
-    rankingDescriptionCharacters: 140,
+    rankingDescriptionCharacters: 180,
   },
 };
 
