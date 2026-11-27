@@ -76,6 +76,7 @@ export interface PaginatedResponse<T> {
 }
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import { SimulationTask } from '../../db/schema/simulations.schema';
+import { placeReviewedTask } from '../simulations/simulation-tasks.util';
 import { EMBEDDINGS } from '../ai/ai.constants';
 import { Embeddings } from '@langchain/core/embeddings';
 import { embedTaskContent } from '../generation/utils/embedding.util';
@@ -1006,21 +1007,7 @@ export class AdminService {
         inReview: false,
       };
 
-      const updatedTasks = [...simulation.tasks];
-      if (
-        reviewItem.slotIndex !== null &&
-        reviewItem.slotIndex !== undefined &&
-        reviewItem.slotIndex < updatedTasks.length
-      ) {
-        updatedTasks[reviewItem.slotIndex] = newTask;
-      } else {
-        const inReviewIndex = updatedTasks.findIndex((t) => t.inReview);
-        if (inReviewIndex !== -1) {
-          updatedTasks[inReviewIndex] = newTask;
-        } else {
-          updatedTasks.push(newTask);
-        }
-      }
+      const updatedTasks = placeReviewedTask(simulation.tasks, reviewItem.slotIndex, newTask);
 
       await this.db
         .update(simulations)

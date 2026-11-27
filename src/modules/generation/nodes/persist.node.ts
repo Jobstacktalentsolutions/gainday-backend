@@ -68,6 +68,7 @@ export function persistNode(ctx: GenerationContext) {
           questionBankId,
           taskType: draft.taskType,
           taskContent,
+          slotIndex: state.currentSlotIndex,
         },
       ],
     };

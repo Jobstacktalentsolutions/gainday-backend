@@ -16,6 +16,7 @@ import {
 } from './roles/interaction-validation';
 import {
   OBJECTIVE_COMPONENT_SCHEMAS,
+  generationObjectiveSchema,
   OPEN_ENDED_COMPONENT_SCHEMAS,
 } from './roles/component-schemas';
 import {
@@ -31,14 +32,15 @@ import {
   REQUIREMENT_VS_TIP_RULE,
   textLimitsForSeniority,
   getSeniorityGuidance,
+  getSeniorityDataGuidance,
 } from './task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 import { CustomerServiceTaskType } from './roles/customer-service/customer-service.role-module';
+import { readingBudget, slotBudgetMinutes } from './utils/task-budget.util';
 import {
-  readingWordsCeiling,
-  slotBudgetMinutes,
-} from './utils/task-budget.util';
-import { shuffleObjectiveOrder } from './utils/objective-order.util';
+  shuffleObjectiveOrder,
+  withAnswerKey,
+} from './utils/objective-order.util';
 import { InterfaceType, withWrittenWordLimit } from './roles/interface-type';
 
 /**
@@ -58,22 +60,19 @@ const TASK_SCOPE_RULE = `Keep the task to one focused piece of work. The structu
 
 const READABILITY_RULE = `Make the candidate-facing material easy to scan. Put each substantive fact in one place across the scenario, reference material and answer controls; use short labels to refer to it. Keep the facts, policies and data needed to answer fairly. Use a brief placeholder, not repeated instructions.`;
 
-/** Share of the reading budget the scenario may use; the rest goes to the question and reference material. */
-const SCENARIO_SHARE = 0.4;
-
 export const TIMING_AND_LIMITS_RULE = (
   realities: TaskPatternRealities | undefined,
   questionWords: number,
   timeBudgetMinutes: number = slotBudgetMinutes(),
 ) => {
-  const ceiling = readingWordsCeiling(timeBudgetMinutes);
-  const scenarioWords = Math.min(
-    realities?.maxStimulusWords ?? ceiling,
-    Math.round((ceiling * SCENARIO_SHARE) / 10) * 10,
+  const budget = readingBudget(
+    timeBudgetMinutes,
+    questionWords,
+    realities?.maxStimulusWords,
   );
   return `Time and size:
 - The task budget is ${timeBudgetMinutes} minutes, reading included. Set expectedDurationMinutes to the time this task needs, at most ${timeBudgetMinutes}, and size wordLimit to fit it.
-- Words the candidate reads, at most ${ceiling} in total: scenario ${scenarioWords}, question ${questionWords}, and reference tabs, tables and options together ${ceiling - scenarioWords - questionWords}.
+- Words the candidate reads, at most ${budget.total} in total: scenario about ${budget.scenario}, question ${budget.question}, and reference tabs, tables and options together ${budget.reference}.
 - State the deliverable in one sentence, plus at most one constraint. No numbered or multi-part lists.
 - State each fact once, where the candidate needs it. Do not restate reference or table figures in the scenario.`;
 };
@@ -186,7 +185,7 @@ export async function generateTaskContent(
     ? withWrittenWordLimit(presentation.inputSchema)
     : presentation.inputSchema;
   const objectiveComponentSchema = patternTypeDef.objectiveComponentType
-    ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
+    ? generationObjectiveSchema(patternTypeDef.objectiveComponentType)
     : null;
   const openEndedComponentSchema = patternTypeDef.openEndedComponentType
     ? OPEN_ENDED_COMPONENT_SCHEMAS[patternTypeDef.openEndedComponentType]
@@ -233,14 +232,18 @@ export async function generateTaskContent(
   const interfacePayload = presentation.materialize
     ? presentation.materialize(result.interfacePayload)
     : (result.interfacePayload as Record<string, unknown>);
+  const objectiveComponent = withAnswerKey(
+    patternTypeDef.objectiveComponentType,
+    result.objectiveComponent as Record<string, unknown> | null,
+  );
   if (patternTypeDef.validateInteraction) {
     validateInteraction(
       patternTypeDef.objectiveComponentType,
-      result.objectiveComponent,
+      objectiveComponent,
     );
     validateInteractionPresentation(
       patternTypeDef.objectiveComponentType,
-      result.objectiveComponent,
+      objectiveComponent,
       interfaceType,
       interfacePayload,
     );
@@ -255,7 +258,7 @@ export async function generateTaskContent(
     objectiveComponent:
       shuffleObjectiveOrder(
         patternTypeDef.objectiveComponentType,
-        result.objectiveComponent as Record<string, unknown> | null,
+        objectiveComponent,
       ) ?? undefined,
     openEndedComponent:
       (result.openEndedComponent as Record<string, unknown> | null) ??
@@ -287,7 +290,7 @@ async function generateFlexibleTaskContent(
   if (!allowedInterfaces)
     throw new Error('Flexible task requires allowed interfaces');
   const objectiveSchema = pattern.objectiveComponentType
-    ? OBJECTIVE_COMPONENT_SCHEMAS[pattern.objectiveComponentType]
+    ? generationObjectiveSchema(pattern.objectiveComponentType)
     : null;
   const openEndedSchema = pattern.openEndedComponentType
     ? OPEN_ENDED_COMPONENT_SCHEMAS[pattern.openEndedComponentType]
@@ -346,14 +349,15 @@ async function generateFlexibleTaskContent(
   const interfacePayload = presentation.materialize
     ? presentation.materialize(parsedPayload)
     : (parsedPayload as Record<string, unknown>);
+  const objectiveComponent = withAnswerKey(
+    pattern.objectiveComponentType,
+    draft.objectiveComponent as Record<string, unknown> | null,
+  );
   if (pattern.validateInteraction) {
-    validateInteraction(
-      pattern.objectiveComponentType,
-      draft.objectiveComponent,
-    );
+    validateInteraction(pattern.objectiveComponentType, objectiveComponent);
     validateInteractionPresentation(
       pattern.objectiveComponentType,
-      draft.objectiveComponent,
+      objectiveComponent,
       interfaceType,
       interfacePayload,
     );
@@ -367,7 +371,7 @@ async function generateFlexibleTaskContent(
     objectiveComponent:
       shuffleObjectiveOrder(
         pattern.objectiveComponentType,
-        draft.objectiveComponent as Record<string, unknown> | null,
+        objectiveComponent,
       ) ?? undefined,
     openEndedComponent:
       (draft.openEndedComponent as Record<string, unknown> | null) ?? undefined,
@@ -387,6 +391,7 @@ export function buildSpecTaskPromptBase(skillLevel?: string | null): string {
     'Keep the scenario and question consistent with the supplied data and the case, policy and answer controls derived from it. Do not invent policy terms, transactions or requirements outside those inputs.',
     '',
     getSeniorityGuidance(skillLevel),
+    `Data for this level: ${getSeniorityDataGuidance(skillLevel)}`,
     '',
     TASK_SCOPE_RULE,
     '',
@@ -590,7 +595,7 @@ export async function reviseTaskContent(
     problem,
     skillLevel,
     existingTask,
-    guidance: `Fix these problems and change nothing else: ${revisionNotes.join(' ')}`,
+    guidance: `Fix these problems and keep everything else. Where a problem is a word limit, rewrite or cut candidate-facing text to meet it, removing the least necessary detail first and keeping every fact the answer needs: ${revisionNotes.join(' ')}`,
   });
 }
 

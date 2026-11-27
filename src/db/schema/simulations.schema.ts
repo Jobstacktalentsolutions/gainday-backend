@@ -60,6 +60,9 @@ export interface SimulationTask {
   interfacePayload: Record<string, unknown>;
   /** Set to true when the task failed critic checks and was retained for AI oversight / admin review. */
   inReview?: boolean;
+  /** The generation slot this task came from (0-based). Identifies the task across review and
+   *  saves, where array position does not (a slot that produced no task leaves a gap). */
+  slotIndex?: number;
 }
 
 export const simulations = pgTable('simulations', {

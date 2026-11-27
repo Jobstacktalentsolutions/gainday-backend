@@ -88,7 +88,7 @@ export function criticNode(ctx: GenerationContext) {
     const patternDef = state.roleModule.allowedTaskPatternTypes.find(
       (p) => p.key === candidate.taskType,
     );
-    const lengthProblems = taskLengthProblems(candidate.taskContent, patternDef?.objectiveComponentType, state.skillLevel, slotBudgetMinutes(ctx.config.selectedTaskCount));
+    const lengthProblems = taskLengthProblems(candidate.taskContent, patternDef?.objectiveComponentType, state.skillLevel, slotBudgetMinutes(ctx.config.selectedTaskCount), patternDef?.realities?.maxStimulusWords);
     failureReasons.push(...lengthProblems);
     const relevanceResult = await checkRelevance(ctx.criticModel, candidate, {
       category: state.category,

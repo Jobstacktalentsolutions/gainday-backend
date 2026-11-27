@@ -1,8 +1,13 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Job as BullJob } from 'bullmq';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { DRIZZLE } from '../../db/db.constants';
+import {
+  generationReviewItems,
+  GenerationReviewStatus,
+} from '../../db/schema/generation-review.schema';
+import { generationConfig } from '../../config/ai.config';
 import type { DrizzleDb } from '../../db/client';
 import {
   jobs,
@@ -45,6 +50,22 @@ export class GenerationProcessor extends WorkerHost {
       .where(eq(jobs.id, jobId));
 
     try {
+      // A new run replaces the simulation, so review items from the previous run no longer point at
+      // a saved task. They are closed here so the new run's slots are reviewed on their own.
+      await this.db
+        .update(generationReviewItems)
+        .set({
+          status: GenerationReviewStatus.REJECTED,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(generationReviewItems.jobId, jobId),
+            eq(generationReviewItems.status, GenerationReviewStatus.PENDING),
+          ),
+        );
+
       const result = await this.generationService.runGeneration(
         job,
         (progress) => bullJob.updateProgress(progress),
@@ -67,7 +88,8 @@ export class GenerationProcessor extends WorkerHost {
         });
 
       // Tasks are retained in the simulation draft even when flagged for AI oversight.
-      const hasIncompleteSlots = result.finalizedTasks.length === 0;
+      const hasIncompleteSlots =
+        result.finalizedTasks.length < generationConfig.selectedTaskCount;
 
       // Generated tasks remain a draft until the employer publishes the job.
       await this.db
@@ -79,7 +101,7 @@ export class GenerationProcessor extends WorkerHost {
       this.logger.log(
         `Generation complete for Job ID ${jobId}: ${result.finalizedTasks.length} tasks, ${result.adminReviewItemsPersisted} sent to admin review.` +
           (hasIncompleteSlots
-            ? ' Some generation slots sent to admin review pending resolution.'
+            ? ` Simulation incomplete: ${result.finalizedTasks.length} of ${generationConfig.selectedTaskCount} tasks saved. Retry generation to rebuild it.`
             : ''),
       );
 

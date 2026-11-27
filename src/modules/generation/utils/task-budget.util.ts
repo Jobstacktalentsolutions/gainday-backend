@@ -39,6 +39,40 @@ export function readingWordsCeiling(budgetMinutes: number): number {
   return budgetMinutes * TASK_BUDGET.readingWordsPerBudgetMinute;
 }
 
+/** Share of the reading budget the scenario may use; the rest goes to the question and reference material. */
+const SCENARIO_SHARE = 0.4;
+
+/** How the reading budget splits across the scenario, the question, and tabs, tables and options. */
+export function readingBudget(
+  budgetMinutes: number,
+  questionWords: number,
+  maxScenarioWords?: number,
+) {
+  const total = readingWordsCeiling(budgetMinutes);
+  const scenario = Math.min(
+    maxScenarioWords ?? total,
+    Math.round((total * SCENARIO_SHARE) / TASK_BUDGET.roundingStep) *
+      TASK_BUDGET.roundingStep,
+  );
+  return {
+    total,
+    scenario,
+    question: questionWords,
+    reference: Math.max(total - scenario - questionWords, 0),
+  };
+}
+
+/** Words in the scenario and question, and the rest of what the candidate reads as reference material. */
+export function readingBreakdown(task: QuestionBankTaskContent) {
+  const scenario = countWords(task.scenarioDescription);
+  const question = countWords(task.questionPrompt);
+  return {
+    scenario,
+    question,
+    reference: Math.max(candidateReadingWords(task) - scenario - question, 0),
+  };
+}
+
 function countWords(text: string): number {
   return text.split(/[\s,]+/).filter(Boolean).length;
 }
@@ -46,7 +80,10 @@ function countWords(text: string): number {
 function wordsIn(value: unknown, skipKeys?: ReadonlySet<string>): number {
   if (typeof value === 'string') return countWords(value);
   if (Array.isArray(value))
-    return value.reduce<number>((sum, item) => sum + wordsIn(item, skipKeys), 0);
+    return value.reduce<number>(
+      (sum, item) => sum + wordsIn(item, skipKeys),
+      0,
+    );
   if (value && typeof value === 'object') {
     return Object.entries(value).reduce(
       (sum, [key, item]) =>
@@ -68,7 +105,9 @@ export function candidateReadingWords(task: QuestionBankTaskContent): number {
 }
 
 function roundToStep(value: number): number {
-  return Math.round(value / TASK_BUDGET.roundingStep) * TASK_BUDGET.roundingStep;
+  return (
+    Math.round(value / TASK_BUDGET.roundingStep) * TASK_BUDGET.roundingStep
+  );
 }
 
 /** Written-answer limit that fits what is left of the budget after reading and planning. */

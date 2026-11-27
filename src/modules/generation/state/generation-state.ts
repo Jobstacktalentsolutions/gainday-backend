@@ -20,6 +20,7 @@ export interface FinalizedTask extends Omit<TaskDraft, 'taskContent'> {
    *  type for currentTaskDraft (pre-persist, no id yet). */
   questionBankId: string;
   inReview?: boolean;
+  slotIndex: number;
 }
 
 export interface CriticResult {

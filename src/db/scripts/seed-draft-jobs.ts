@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { eq } from 'drizzle-orm';
 import { jobs, employerProfiles, users } from '../schema';
+import { SKILL_LEVEL } from '../../modules/generation/task-text-rules';
 
 const EMPLOYER_EMAIL =
   process.env.SEED_EMPLOYER_EMAIL || 'enweremproper2@gmail.com';
@@ -13,7 +14,7 @@ const DRAFT_JOBS = [
   {
     title: 'Senior Financial Analyst',
     role: 'Finance' as const,
-    skillLevel: 'Senior',
+    skillLevel: SKILL_LEVEL.SENIOR,
     skillCategory: 'Financial Modeling',
     location: 'London, UK',
     employmentType: 'Full-time',
@@ -29,7 +30,7 @@ const DRAFT_JOBS = [
   {
     title: 'Enterprise Sales Executive',
     role: 'Sales' as const,
-    skillLevel: 'Mid-level',
+    skillLevel: SKILL_LEVEL.MID,
     skillCategory: 'B2B Sales',
     location: 'Remote',
     employmentType: 'Full-time',
@@ -45,7 +46,7 @@ const DRAFT_JOBS = [
   {
     title: 'Junior Accountant',
     role: 'Finance' as const,
-    skillLevel: 'Entry-level',
+    skillLevel: SKILL_LEVEL.JUNIOR,
     skillCategory: 'Bookkeeping',
     location: 'Manchester, UK',
     employmentType: 'Full-time',
@@ -61,7 +62,7 @@ const DRAFT_JOBS = [
   {
     title: 'Sales Development Representative',
     role: 'Sales' as const,
-    skillLevel: 'Entry-level',
+    skillLevel: SKILL_LEVEL.JUNIOR,
     skillCategory: 'Outbound Prospecting',
     location: 'Remote',
     employmentType: 'Full-time',
@@ -77,7 +78,7 @@ const DRAFT_JOBS = [
   {
     title: 'FP&A Manager',
     role: 'Finance' as const,
-    skillLevel: 'Senior',
+    skillLevel: SKILL_LEVEL.SENIOR,
     skillCategory: 'Financial Planning & Analysis',
     location: 'Leeds, UK',
     employmentType: 'Full-time',

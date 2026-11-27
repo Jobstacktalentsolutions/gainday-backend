@@ -47,6 +47,7 @@ import {
 } from './task-content-generator';
 import { randomUUID } from 'crypto';
 import { TaskSpecError } from './roles/role-module.interface';
+import { SKILL_LEVEL } from './task-text-rules';
 import { JobBoardCacheService } from '../jobs/job-board/job-board-cache.service';
 
 export interface GenerationResult {
@@ -216,6 +217,7 @@ export class GenerationService {
         interfaceType: task.taskContent.interfaceType,
         interfacePayload: task.taskContent.interfacePayload,
         inReview: task.inReview ?? false,
+        slotIndex: task.slotIndex,
       }),
     );
     const finalizedTasks = mappedTasks.filter(hasRequiredTaskFields);
@@ -396,7 +398,7 @@ export class GenerationService {
         description: dto.description,
         requiredSkills: dto.requiredSkills ?? [],
         role: 'Finance',
-        skillLevel: 'Unspecified',
+        skillLevel: SKILL_LEVEL.MID,
         location: 'N/A',
         employmentType: 'N/A',
         salaryRange: { min: null, max: null, currency: 'GBP' },

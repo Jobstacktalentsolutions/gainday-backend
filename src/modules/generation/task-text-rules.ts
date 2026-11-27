@@ -12,44 +12,119 @@ export const SKILL_LEVEL = {
   MID: 'Mid level',
   SENIOR: 'Senior level',
 } as const;
-export function textLimitsForSeniority(skillLevel?: string | null) {
-  switch (skillLevel) {
-    case SKILL_LEVEL.JUNIOR:
-      return { questionWords: 100, rankingDescriptionCharacters: 60 };
-    case SKILL_LEVEL.SENIOR:
-      return { questionWords: 140, rankingDescriptionCharacters: 100 };
-    default:
-      return { questionWords: 120, rankingDescriptionCharacters: 80 };
+export type SkillLevel = (typeof SKILL_LEVEL)[keyof typeof SKILL_LEVEL];
+
+/**
+ * A job saved without a level is treated as mid level. Any other unrecognised value is a data
+ * error and fails here, instead of being quietly generated at the wrong difficulty.
+ */
+export function resolveSkillLevel(skillLevel?: string | null): SkillLevel {
+  if (skillLevel === undefined || skillLevel === null) return SKILL_LEVEL.MID;
+  const level = Object.values(SKILL_LEVEL).find(
+    (known) => known === skillLevel,
+  );
+  if (!level) {
+    throw new Error(
+      `Unknown skill level "${skillLevel}". Expected one of: ${Object.values(SKILL_LEVEL).join(', ')}.`,
+    );
   }
+  return level;
 }
 
+const TEXT_LIMITS: Record<
+  SkillLevel,
+  { questionWords: number; rankingDescriptionCharacters: number }
+> = {
+  [SKILL_LEVEL.JUNIOR]: {
+    questionWords: 100,
+    rankingDescriptionCharacters: 60,
+  },
+  [SKILL_LEVEL.MID]: { questionWords: 120, rankingDescriptionCharacters: 80 },
+  [SKILL_LEVEL.SENIOR]: {
+    questionWords: 140,
+    rankingDescriptionCharacters: 100,
+  },
+};
+
+export function textLimitsForSeniority(skillLevel?: string | null) {
+  return TEXT_LIMITS[resolveSkillLevel(skillLevel)];
+}
+
+/**
+ * What makes a task harder or easier at each level. The planner, the generator and the spec-task
+ * data prompt all read this one table, so they cannot drift. Difficulty comes from what the
+ * candidate must decide, not from more material, so every level keeps the same time and size budget.
+ */
+interface DifficultyProfile {
+  label: string;
+  asks: string;
+  constraints: string;
+  stakeholders: string;
+  strongAnswer: string;
+  data: string;
+  planning: string;
+}
+
+const DIFFICULTY_PROFILES: Record<SkillLevel, DifficultyProfile> = {
+  [SKILL_LEVEL.JUNIOR]: {
+    label: 'JUNIOR / ENTRY LEVEL',
+    asks: 'apply a stated rule, policy or procedure to clear evidence.',
+    constraints:
+      '1 to 2 constraints in play. The material holds everything needed and one answer is clearly best.',
+    stakeholders:
+      'at most one, cooperative. No executive trade-offs or politics.',
+    strongAnswer: 'correct application of the rule and clear reasoning.',
+    data: 'few lines or rows, and no ambiguous item.',
+    planning:
+      'Prefer task types that apply a stated rule or procedure (classify, sequence, choose an action). Each briefDescription names the one rule or fact the task turns on.',
+  },
+  [SKILL_LEVEL.MID]: {
+    label: 'MID LEVEL',
+    asks: 'diagnose a problem or prioritise competing work from the evidence.',
+    constraints:
+      'about 3 constraints in play and one detail that does not matter. The candidate combines two sources of information.',
+    stakeholders: 'up to two, with different interests.',
+    strongAnswer: 'sound reasoning that names one trade-off.',
+    data: 'a moderate number of lines or rows, including one that does not affect the answer.',
+    planning:
+      'Prefer task types that diagnose or prioritise. Each briefDescription names the competing priorities or the detail to ignore.',
+  },
+  [SKILL_LEVEL.SENIOR]: {
+    label: 'SENIOR / LEAD LEVEL',
+    asks: 'make and defend a call between defensible options.',
+    constraints:
+      '4 or more constraints in play, some in tension. The material has a gap the candidate must notice and handle by stating an assumption.',
+    stakeholders: 'several, with pushback or consequences for the call.',
+    strongAnswer:
+      'a recommendation, the trade-off it accepts, and how the remaining risk is handled.',
+    data: 'enough lines or rows that one needs a stated assumption or judgement call.',
+    planning:
+      'Prefer judgment-heavy task types (pushback, justification, trade-off decisions). Each briefDescription names the tension or the missing information the candidate must handle.',
+  },
+};
+
 export function getSeniorityGuidance(skillLevel?: string | null): string {
-  switch (skillLevel) {
-    case SKILL_LEVEL.JUNIOR:
-      return [
-        'Target Seniority: JUNIOR / ENTRY LEVEL.',
-        '- Scope & Focus: Emphasize foundational domain literacy, standard operational procedures, and core domain metrics/tools.',
-        '- Task Structure: Ground in concrete artifacts, explicit guidance, and structured workflows rather than open-ended strategic ambiguity.',
-        '- Difficulty Calibration: Do not demand executive-level trade-offs or complex organizational politics. Candidate should demonstrate accurate procedural execution and sound fundamentals.',
-      ].join('\n');
+  const profile = DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)];
+  return [
+    `Target seniority: ${profile.label}. Apply what fits the task type.`,
+    `- The task asks the candidate to ${profile.asks}`,
+    `- Constraints and information: ${profile.constraints}`,
+    `- Stakeholders: ${profile.stakeholders}`,
+    `- A strong answer shows: ${profile.strongAnswer}`,
+    'Difficulty comes from what the candidate must decide, never from more material; stay within the size limits.',
+  ].join('\n');
+}
 
-    case SKILL_LEVEL.SENIOR:
-      return [
-        'Target Seniority: SENIOR / LEAD LEVEL.',
-        '- Scope & Focus: Assess the judgment expected of an experienced practitioner on one focused, realistic decision.',
-        '- Task Structure: Include only the context and constraints needed for that decision; avoid turning it into a large strategic project.',
-        '- Difficulty Calibration: Allow experienced candidates to demonstrate nuanced judgment within the allotted time.',
-      ].join('\n');
+/** How the planner should lean when choosing task types and briefs for this level. */
+export function getSeniorityPlanningGuidance(
+  skillLevel?: string | null,
+): string {
+  return DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)].planning;
+}
 
-    case SKILL_LEVEL.MID:
-    default:
-      return [
-        'Target Seniority: MID LEVEL.',
-        '- Scope & Focus: Assess independent execution and practical judgment in a typical responsibility for the role.',
-        '- Task Structure: Focus on one manageable scenario, including competing priorities only when relevant.',
-        '- Difficulty Calibration: Requires solid domain competence and familiarity with industry standards.',
-      ].join('\n');
-  }
+/** How complex the supplied data should be for this level, for tasks whose figures the model supplies. */
+export function getSeniorityDataGuidance(skillLevel?: string | null): string {
+  return DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)].data;
 }
 
 export function getSeniorityCriticGuidance(skillLevel?: string | null): string {

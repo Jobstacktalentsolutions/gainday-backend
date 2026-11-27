@@ -101,9 +101,14 @@ async function selectCandidateForSlot(
   }
 
   // A draft the model could not complete (invalid items, figures or limits) says nothing against the
-  // idea, so the same task is retried with the reason instead of swapping in a different task type.
+  // idea, so the same task is retried once with the reason. If that fails too, a different task type
+  // is tried, so a slot is not left empty by one type that keeps failing.
   const previousDraft = state.currentTaskDraft;
-  if (previousDraft && previousDraft.taskContent === null) {
+  if (
+    previousDraft &&
+    previousDraft.taskContent === null &&
+    state.currentAttempt === 1
+  ) {
     const sameCandidate = state.candidatePool.find(
       (c) => c.candidateId === previousDraft.candidateId,
     );

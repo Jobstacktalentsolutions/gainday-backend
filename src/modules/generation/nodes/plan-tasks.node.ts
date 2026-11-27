@@ -6,7 +6,10 @@ import {
   GenerationStateUpdate,
 } from '../state/generation-state';
 import { plannedSimulationSchema } from '../schemas/task-candidate.schema';
-import { getSeniorityGuidance } from '../task-text-rules';
+import {
+  getSeniorityGuidance,
+  getSeniorityPlanningGuidance,
+} from '../task-text-rules';
 import { RoleModuleNotConfiguredError } from '../roles/role-module.interface';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
@@ -42,6 +45,7 @@ export function buildPlanTasksPrompt(
     'Choose work aligned with the stated Category, Intent, and Problem.',
     '',
     seniorityGuidance,
+    getSeniorityPlanningGuidance(skillLevel),
     '',
     constraintRules,
   ].join('\n');
@@ -70,7 +74,11 @@ export function planTasksNode(ctx: GenerationContext) {
       .map((t) => `- ${t.key}: ${t.description}`)
       .join('\n');
 
-    const prompt = buildPlanTasksPrompt(targetCount, allowedTypeKeys.length, state.skillLevel);
+    const prompt = buildPlanTasksPrompt(
+      targetCount,
+      allowedTypeKeys.length,
+      state.skillLevel,
+    );
 
     const result = await model.invoke([
       new SystemMessage(

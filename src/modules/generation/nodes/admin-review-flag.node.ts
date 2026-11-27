@@ -81,6 +81,7 @@ export function adminReviewFlagNode(ctx: GenerationContext) {
           taskType: draft.taskType,
           taskContent: draft.taskContent,
           inReview: true,
+          slotIndex: state.currentSlotIndex,
         });
 
         logger.log(

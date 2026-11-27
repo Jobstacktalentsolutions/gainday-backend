@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  INTERACTION,
   ObjectiveComponentType,
   OpenEndedComponentType,
 } from './role-module.interface';
@@ -39,17 +40,30 @@ const classificationSchema = z.object({
 const proceduralSequencingSchema = z.object({
   steps: z
     .array(z.string())
-    .describe('Steps to be ordered. 4 to 7 steps, each a short imperative phrase of at most 12 words.'),
+    .describe(
+      'Steps to be ordered. 4 to 7 steps, each a short imperative phrase of at most 12 words.',
+    ),
   correctOrder: z
     .array(z.number())
     .describe('0-indexed positions into `steps` giving the correct order.'),
+});
+
+/** What the model writes for a sequencing task: the steps in their correct order. Code derives the answer key and shuffles. */
+const proceduralSequencingDraftSchema = z.object({
+  steps: z
+    .array(z.string())
+    .describe(
+      'The steps of the procedure in their correct order. 4 to 7 steps, each a short imperative phrase of at most 12 words.',
+    ),
 });
 
 const singleBestActionSchema = z.object({
   options: z
     .array(z.string())
     .min(2)
-    .describe('Distinct, plausible actions, one short sentence each (about 20 words at most) that names the action, not its reasoning.'),
+    .describe(
+      'Distinct, plausible actions, one short sentence each (about 20 words at most) that names the action, not its reasoning.',
+    ),
   correctOptionIndex: z
     .number()
     .describe('0-indexed position of the correct option.'),
@@ -59,7 +73,9 @@ export const multiSelectUnderConstraintSchema = z.object({
   options: z
     .array(z.string())
     .min(2)
-    .describe('Distinct actions, one short sentence each (about 15 words at most) that names the action, not its reasoning. 5 to 7 options.'),
+    .describe(
+      'Distinct actions, one short sentence each (about 15 words at most) that names the action, not its reasoning. 5 to 7 options.',
+    ),
   selectCount: z
     .number()
     .describe('How many options the candidate must select.'),
@@ -74,10 +90,14 @@ const priorityRankingSchema = z.object({
       z.object({
         label: z
           .string()
-          .describe(`Short, distinct item name, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters.`),
+          .describe(
+            `Short, distinct item name, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters.`,
+          ),
         description: z
           .string()
-          .describe('A few words that tell this item apart from the others, such as its source or time. The facts used to compare items go once in the scenario or reference material, not here.'),
+          .describe(
+            'A few words that tell this item apart from the others, such as its source or time. The facts used to compare items go once in the scenario or reference material, not here.',
+          ),
       }),
     )
     .min(2)
@@ -98,7 +118,9 @@ export const reconciliationSchema = z.object({
     .min(2),
   correctSides: z
     .array(z.string())
-    .describe('Index-aligned with `items`: the correct sideOptions value for each item.'),
+    .describe(
+      'Index-aligned with `items`: the correct sideOptions value for each item.',
+    ),
   adjustedBalance: z.number(),
   tolerance: z.number().nonnegative(),
   unit: z.string().nullable(),
@@ -133,7 +155,9 @@ export const numericTableSchema = z.object({
     .min(1),
   correctValues: z
     .array(z.array(z.number()))
-    .describe('Row-major: correctValues[row][column], aligned with rowLabels and columns.'),
+    .describe(
+      'Row-major: correctValues[row][column], aligned with rowLabels and columns.',
+    ),
 });
 
 // Customer service triage (customer service doc Section 2.6): every item has one correct bucket,
@@ -161,6 +185,15 @@ export const OBJECTIVE_COMPONENT_SCHEMAS: Record<
   NUMERIC_TABLE: numericTableSchema,
   KEYED_CLASSIFICATION: keyedClassificationSchema,
 };
+
+/** The schema the model fills in when generating a task. Stored components use OBJECTIVE_COMPONENT_SCHEMAS. */
+export function generationObjectiveSchema(
+  type: ObjectiveComponentType,
+): z.ZodTypeAny {
+  return type === INTERACTION.PROCEDURAL_SEQUENCING
+    ? proceduralSequencingDraftSchema
+    : OBJECTIVE_COMPONENT_SCHEMAS[type];
+}
 
 // What a candidate submits for each objective component, validated on submit. `null` means the
 // candidate never touched the objective part. Shapes mirror the candidate-side answer widgets.

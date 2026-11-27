@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'util';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { Embeddings } from '@langchain/core/embeddings';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -10,7 +10,6 @@ import {
   SimulationTask,
   questionBank,
   QuestionBankTaskContent,
-  generationReviewItems,
 } from '../../db/schema';
 import { EMBEDDINGS } from '../ai/ai.constants';
 import { embedTaskContent } from '../generation/utils/embedding.util';
@@ -30,28 +29,6 @@ export class SimulationsService {
       .from(simulations)
       .where(eq(simulations.jobId, jobId));
     if (!simulation) return null;
-
-    if (simulation.tasks && Array.isArray(simulation.tasks)) {
-      const pendingReviews = await this.db
-        .select({ slotIndex: generationReviewItems.slotIndex })
-        .from(generationReviewItems)
-        .where(
-          and(
-            eq(generationReviewItems.jobId, jobId),
-            eq(generationReviewItems.status, 'PENDING'),
-          ),
-        );
-
-      if (pendingReviews.length > 0) {
-        const pendingSlots = new Set(pendingReviews.map((r) => r.slotIndex));
-        simulation.tasks = simulation.tasks.map((task, index) => {
-          if (pendingSlots.has(index) || task.inReview) {
-            return { ...task, inReview: true };
-          }
-          return task;
-        });
-      }
-    }
 
     return simulation;
   }
@@ -170,9 +147,20 @@ export class SimulationsService {
       });
     }
 
+    // The saved review flag and slot come from the stored task, never from the client: a client that
+    // echoes back an old flag must not change what is under review.
+    const preservedTasks = updatedTasks.map((task) => {
+      const stored = storedTasks.get(task.id);
+      return {
+        ...task,
+        inReview: stored?.inReview ?? false,
+        slotIndex: stored?.slotIndex,
+      };
+    });
+
     const [simulation] = await this.db
       .update(simulations)
-      .set({ tasks: updatedTasks, updatedAt: new Date() })
+      .set({ tasks: preservedTasks, updatedAt: new Date() })
       .where(eq(simulations.id, simulationId))
       .returning();
 

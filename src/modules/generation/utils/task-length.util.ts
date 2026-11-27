@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 import { INTERACTION, ObjectiveComponentType } from '../roles/role-module.interface';
 import { TASK_TEXT_LIMITS, textLimitsForSeniority } from '../task-text-rules';
-import { candidateReadingWords, readingWordsCeiling, slotBudgetMinutes, writtenResponseLimit } from './task-budget.util';
+import { candidateReadingWords, readingBreakdown, readingBudget, slotBudgetMinutes, writtenResponseLimit } from './task-budget.util';
 import { InterfaceType } from '../roles/interface-type';
 
 /** Same tolerance the scenario ceiling gets: a small overshoot is not worth a regeneration. */
@@ -16,13 +16,15 @@ export function taskLengthProblems(
   objectiveType?: ObjectiveComponentType,
   skillLevel?: string | null,
   budgetMinutes: number = slotBudgetMinutes(),
+  maxScenarioWords?: number,
 ): string[] {
   const problems: string[] = [];
   const limits = textLimitsForSeniority(skillLevel);
   const readingWords = candidateReadingWords(task);
-  const readingCeiling = readingWordsCeiling(budgetMinutes);
-  if (readingWords > readingCeiling) {
-    problems.push(`The candidate must read ${readingWords} words (scenario, question, reference tabs, tables and options); cut it to at most ${readingCeiling} by removing repeated facts and detail the answer does not need.`);
+  const budget = readingBudget(budgetMinutes, limits.questionWords, maxScenarioWords);
+  if (readingWords > budget.total * BUDGET_TOLERANCE) {
+    const read = readingBreakdown(task);
+    problems.push(`The candidate must read ${readingWords} words against a limit of ${budget.total}: scenario ${read.scenario} (limit ${budget.scenario}), question ${read.question} (limit ${budget.question}), reference tabs, tables and options ${read.reference} (limit ${budget.reference}). Cut the sections over their limit by removing repeated facts and detail the answer does not need.`);
   }
   const question = task.questionPrompt.trim();
   const words = question ? question.split(/\s+/).length : 0;

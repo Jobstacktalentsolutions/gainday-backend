@@ -8,6 +8,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { and, desc, eq, getTableColumns, sql } from 'drizzle-orm';
+import { generationConfig } from '../../config/ai.config';
 import { fuzzySearch } from '../../db/fuzzy-search';
 import { DRIZZLE } from '../../db/db.constants';
 import type { DrizzleDb } from '../../db/client';
@@ -19,7 +20,6 @@ import {
   JobStatus,
   UserRole,
   submissions,
-  generationReviewItems,
 } from '../../db/schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { JobBoardCacheService } from './job-board/job-board-cache.service';
@@ -215,29 +215,7 @@ export class JobsService {
     });
     if (!job) return null;
 
-    if (job.simulation?.tasks && Array.isArray(job.simulation.tasks)) {
-      const pendingReviews = await this.db
-        .select({ slotIndex: generationReviewItems.slotIndex })
-        .from(generationReviewItems)
-        .where(
-          and(
-            eq(generationReviewItems.jobId, id),
-            eq(generationReviewItems.status, 'PENDING'),
-          ),
-        );
-
-      if (pendingReviews.length > 0) {
-        const pendingSlots = new Set(pendingReviews.map((r) => r.slotIndex));
-        job.simulation.tasks = job.simulation.tasks.map((task, index) => {
-          if (pendingSlots.has(index) || task.inReview) {
-            return { ...task, inReview: true };
-          }
-          return task;
-        });
-      }
-    }
-
-    return job;
+    return { ...job, expectedTaskCount: generationConfig.selectedTaskCount };
   }
 
   async findByEmployer(

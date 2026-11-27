@@ -84,6 +84,8 @@ Four fields are extracted from the recruiter input. The specifics of each field 
 
 The active graph calls `planTasksNode` after extraction. It asks the model to plan exactly the configured number of tasks (currently four), using the role's allowed task types, category, intent, problem, and seniority. It selects distinct task types when enough are available; otherwise it uses all available types and repeats some. Code fills missing slots when necessary.
 
+**Seniority.** The job's level (Junior, Mid level, Senior level) picks a difficulty profile in `task-text-rules.ts`: what the task asks, how many constraints and stakeholders are in play, whether the material has gaps, and what a strong answer shows. The planner uses it to lean on task types and to name each brief's difficulty lever, and the generator uses it to shape each task and, for figure-based tasks, the supplied data. Difficulty comes from what the candidate must decide, so every level keeps the same time and size budget. A job with no level is treated as mid level; any other unrecognised value fails generation. The critic's seniority guidance is deliberately lenient and was not changed.
+
 Each planned slot then goes through task generation and the critic. The previous overgeneration and ranking nodes remain in the repository but are not connected to the active graph. There is no 15-idea ranking step in the current pipeline. The plan does not require the tasks to form a connected narrative.
 
 ---

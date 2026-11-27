@@ -5,7 +5,7 @@ import { type ObjectiveComponentType } from './role-module.interface';
 const OBJECTIVE_CONTROLS: Record<ObjectiveComponentType, string> = {
   CLASSIFICATION: 'classify items into supplied buckets',
   KEYED_CLASSIFICATION: 'classify items into supplied buckets',
-  PRIORITY_RANKING: 'reorder items by priority',
+  PRIORITY_RANKING: 'reorder all supplied items by priority',
   PROCEDURAL_SEQUENCING: 'reorder supplied steps',
   SINGLE_BEST_ACTION: 'choose one supplied option',
   MULTI_SELECT_UNDER_CONSTRAINT: 'choose the specified number of supplied options',

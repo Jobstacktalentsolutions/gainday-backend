@@ -18,6 +18,18 @@ function shuffledPermutation(length: number): number[] {
   return permutation;
 }
 
+/** Fills in the answer key the model is not asked for: a sequencing task is written in its correct order. */
+export function withAnswerKey(
+  type: ObjectiveComponentType | undefined,
+  component: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (type === INTERACTION.PROCEDURAL_SEQUENCING && component) {
+    const steps = component.steps as unknown[];
+    return { ...component, correctOrder: steps.map((_, index) => index) };
+  }
+  return component;
+}
+
 /**
  * Presentation order is decided here, not by the model: items to rank and steps to order are shown in
  * the stored order, so the order the model wrote would otherwise be the one the candidate sees. A

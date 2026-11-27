@@ -22,7 +22,7 @@ export function buildCritiqueCheckPrompt(skillLevel?: string | null): string {
     '1. Relevance: confirm the task aligns with the given Category, Intent, and target Seniority / Skill Level.',
     '',
     getSeniorityCriticGuidance(skillLevel),
-    'Reject tasks whose question or scenario conflicts with the supplied evidence, policy, or answer key. Do not assume facts not supplied. Explain conflicts in reasons.',
+    'Reject tasks whose question or scenario conflicts with the supplied evidence, policy, or answer key. Do not assume facts not supplied. A gap the task asks the candidate to handle by stating an assumption is intended, not a conflict. Explain conflicts in reasons.',
     'In presentationProblems, identify substantial repeated evidence across the scenario, reference material and answer controls, or required actions unavailable in availableControls. Short labels referring to evidence are fine. Name the affected fields and preserve facts needed to answer.',
     'Candidate-visible material includes scenarioDescription, questionPrompt, interfacePayload and objective item labels and options. Answer keys, serverOnly, rubric and openEndedComponent are not visible. wordLimit is interface metadata, not an instruction in the question.',
     '',
