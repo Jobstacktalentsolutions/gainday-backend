@@ -171,13 +171,13 @@ export function getSeniorityDataGuidance(skillLevel?: string | null): string {
 /** One light line per level for the critic. It checks fit, not difficulty, so it stays lenient. */
 const CRITIC_GUIDANCE: Record<SkillLevel, string> = {
   [SKILL_LEVEL.ENTRY]:
-    "Entry level: plain everyday tasks are expected; flag one only if it has no link to the job's field.",
+    "Entry level: everyday tasks are fine.",
   [SKILL_LEVEL.JUNIOR]:
-    "Junior: foundational tasks are fine; flag one only if it has no link to the role's domain.",
+    "Junior level: foundational tasks are fine.",
   [SKILL_LEVEL.MID]:
-    'Mid level: some independent problem-solving is expected; do not ask for more.',
+    'Mid level: independent problem-solving is fine.',
   [SKILL_LEVEL.SENIOR]:
-    'Senior level: a task that lets an experienced person show judgment is expected; a focused one is fine.',
+    'Senior level: judgment-based tasks are fine.',
 };
 
 export function getSeniorityCriticGuidance(skillLevel?: string | null): string {

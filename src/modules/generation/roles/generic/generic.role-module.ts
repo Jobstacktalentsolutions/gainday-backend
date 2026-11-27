@@ -1,4 +1,8 @@
-import { getSeniorityCriticGuidance } from '../../task-text-rules';
+import { SKILL_LEVEL } from '../../../../common/skill-level';
+import {
+  getSeniorityCriticGuidance,
+  resolveSkillLevel,
+} from '../../task-text-rules';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import {
   RelevanceCheckResult,
@@ -191,10 +195,15 @@ export const GenericRoleModule: RoleModule = {
   })),
 
   criticChecks: {
-    // Un-curated domains carry more risk of vague, could-be-any-job filler than a hand-tuned
-    // module — this is an extra relevance bar on top of the generic Category/Intent check,
-    // asking the judge model to reject content that doesn't clearly require domain expertise.
+    // Un-curated domains carry more risk of could-be-any-job filler than a hand-tuned module, so
+    // this is a light extra check on top of the Category/Intent check: it flags a task with no
+    // connection to the situations the field deals with, technical or not, and nothing stricter.
     additionalRelevanceCheck: async (task, extraction, criticModel) => {
+      // An Entry task is deliberately everyday, so a "generic filler" bar would reject it by design.
+      // The main relevance check still applies.
+      if (resolveSkillLevel(extraction.skillLevel) === SKILL_LEVEL.ENTRY) {
+        return null;
+      }
       const model = withGeminiSafeStructuredOutput(
         criticModel,
         relevanceCheckSchema,
@@ -202,9 +211,9 @@ export const GenericRoleModule: RoleModule = {
 
       const result = await model.invoke([
         new SystemMessage(
-          `This task is for domain "${extraction.category}" (no pre-built template; guard against generic filler).\n\n` +
+          `This task is for domain "${extraction.category}", which has no pre-built template.\n\n` +
             getSeniorityCriticGuidance(extraction.skillLevel) +
-            `\n\nJudge strictly against the target seniority above: would someone with NO background in "${extraction.category}" write a competent answer using only general common sense? If yes, relevant=false. If it requires domain knowledge, fundamentals, or judgment specific to "${extraction.category}", relevant=true.`,
+            `\n\nSet relevant=true when the task covers a situation people in "${extraction.category}" deal with, technical or not, including the customers and business events the work affects. Set relevant=false only if it has no such connection.`,
         ),
         new HumanMessage(JSON.stringify({ extraction, task })),
       ]);

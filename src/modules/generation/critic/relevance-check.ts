@@ -15,19 +15,12 @@ import type { ObjectiveComponentType } from '../roles/role-module.interface';
 
 export function buildCritiqueCheckPrompt(skillLevel?: string | null): string {
   return [
-    'You are validating a generated job-simulation task. Perform the following checks:',
-    '',
-    // Section 1: Alignment & Seniority Relevance
-    // Confirms the task is on-target for the employer's intended domain and appropriately calibrated to the candidate's expected experience level.
-    '1. Relevance: confirm the task aligns with the given Category, Intent, and target Seniority / Skill Level.',
-    '',
-    getSeniorityCriticGuidance(skillLevel),
-    'Reject tasks whose question or scenario conflicts with the supplied evidence, policy, or answer key. Do not assume facts not supplied. A gap the task asks the candidate to handle by stating an assumption is intended, not a conflict. Explain conflicts in reasons.',
-    'In presentationProblems, identify substantial repeated evidence across the scenario, reference material and answer controls, or required actions unavailable in availableControls. Short labels referring to evidence are fine. Name the affected fields and preserve facts needed to answer.',
-    'Candidate-visible material includes scenarioDescription, questionPrompt, interfacePayload and objective item labels and options. Answer keys, serverOnly, rubric and openEndedComponent are not visible. wordLimit is interface metadata, not an instruction in the question.',
-    '',
+    'You are checking a generated job-simulation task. Be lenient: flag only clear problems.',
+    '1. Relevance: the task fits the Category, Intent and seniority.',
+    'In presentationProblems, note clearly repeated evidence across the scenario, reference material and answer controls, or actions the controls cannot do.',
+    'Candidate-visible material is scenarioDescription, questionPrompt, interfacePayload and objective item labels and options; answer keys, serverOnly, rubric, openEndedComponent and wordLimit are not.',
     `2. Candidate guidance: ${REQUIREMENT_VS_TIP_RULE}`,
-    'Treat instructions to produce, explain, format, scope, or support a deliverable with evidence as requirements, not tips. Return only clear advice that gives away the answer or tells the candidate which conclusion or tactic to choose.',
+    'Treat instructions to produce, explain, format, scope, or support a deliverable as requirements, not tips.',
   ].join('\n');
 }
 
