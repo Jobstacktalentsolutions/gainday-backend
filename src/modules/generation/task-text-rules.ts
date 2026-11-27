@@ -5,7 +5,7 @@
 export const REQUIREMENT_VS_TIP_RULE = `Candidate-facing text should state the deliverable and any needed format, evidence, scope, or tone. Do not coach the candidate toward the answer by suggesting a strategy, preferred conclusion, or specific tactic. Flag only clear answer-leading advice; when unsure, treat it as a requirement. Never state word counts or length rules — the platform UI handles those.`;
 
 export const TASK_TEXT_LIMITS = {
-  rankingLabelCharacters: 100,
+  rankingLabelCharacters: 60,
 } as const;
 export const SKILL_LEVEL = {
   JUNIOR: 'Junior',
@@ -15,11 +15,11 @@ export const SKILL_LEVEL = {
 export function textLimitsForSeniority(skillLevel?: string | null) {
   switch (skillLevel) {
     case SKILL_LEVEL.JUNIOR:
-      return { questionWords: 100, rankingDescriptionCharacters: 180 };
+      return { questionWords: 100, rankingDescriptionCharacters: 60 };
     case SKILL_LEVEL.SENIOR:
-      return { questionWords: 140, rankingDescriptionCharacters: 260 };
+      return { questionWords: 140, rankingDescriptionCharacters: 100 };
     default:
-      return { questionWords: 120, rankingDescriptionCharacters: 220 };
+      return { questionWords: 120, rankingDescriptionCharacters: 80 };
   }
 }
 

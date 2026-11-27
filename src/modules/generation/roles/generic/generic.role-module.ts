@@ -102,7 +102,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     label: 'Prioritize items',
     objectiveComponentType: 'PRIORITY_RANKING',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
-    description: 'Rank distinct role-specific requests or actions by priority and explain the top choice. Include clear signals such as impact and urgency.',
+    description: 'Rank distinct role-specific requests or actions by priority and explain the top choice. The scenario gives each item\'s signals (impact, urgency) once; the ranked items themselves are short names.',
     interfaceType: InterfaceType.TEXT_AREA,
     realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },

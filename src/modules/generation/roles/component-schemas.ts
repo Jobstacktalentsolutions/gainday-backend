@@ -39,21 +39,27 @@ const classificationSchema = z.object({
 const proceduralSequencingSchema = z.object({
   steps: z
     .array(z.string())
-    .describe('Steps to be ordered, shuffled for presentation.'),
+    .describe('Steps to be ordered, shuffled for presentation. 4 to 7 steps, each a short imperative phrase of at most 12 words.'),
   correctOrder: z
     .array(z.number())
     .describe('0-indexed positions into `steps` giving the correct order.'),
 });
 
 const singleBestActionSchema = z.object({
-  options: z.array(z.string()).min(2),
+  options: z
+    .array(z.string())
+    .min(2)
+    .describe('Distinct, plausible actions, one short sentence each (about 20 words at most) that names the action, not its reasoning.'),
   correctOptionIndex: z
     .number()
     .describe('0-indexed position of the correct option.'),
 });
 
 export const multiSelectUnderConstraintSchema = z.object({
-  options: z.array(z.string()).min(2),
+  options: z
+    .array(z.string())
+    .min(2)
+    .describe('Distinct actions, one short sentence each (about 15 words at most) that names the action, not its reasoning. 5 to 7 options.'),
   selectCount: z
     .number()
     .describe('How many options the candidate must select.'),
@@ -68,15 +74,15 @@ const priorityRankingSchema = z.object({
       z.object({
         label: z
           .string()
-        .describe(`Short, distinct item name, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters.`),
+          .describe(`Short, distinct item name, at most ${TASK_TEXT_LIMITS.rankingLabelCharacters} characters. A plain name: no rank or priority wording such as "Top 1" or "urgent".`),
         description: z
           .string()
-        .describe('Include essential comparison facts here, or a brief identifier when they are already in the scenario; do not repeat them.'),
+          .describe('A few words that tell this item apart from the others, such as its source or time. The facts used to compare items go once in the scenario or reference material, not here.'),
       }),
     )
     .min(2)
     .describe(
-      'Items to rank, in shuffled presentation order. Across the task, supply enough evidence to compare them.',
+      'Items to rank, in shuffled presentation order: exactly the items the scenario asks the candidate to rank.',
     ),
 });
 

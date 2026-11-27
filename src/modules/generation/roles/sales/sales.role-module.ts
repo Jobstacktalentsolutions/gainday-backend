@@ -89,9 +89,10 @@ const salesTaskPatternTypes: TaskPatternTypeDefinition[] = [
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
     description:
       'Candidate receives several competing messages or requests (e.g. a morning inbox) and ranks ' +
-      'them from highest to lowest priority, then explains their top choice. The items must carry ' +
-      'enough signal (deadlines, revenue at risk, stakeholder seniority) that some orderings are ' +
-      'clearly better than others — the written reasoning is what gets graded, not the order alone.',
+      'them from highest to lowest priority, then explains their top choice. The scenario must carry ' +
+      'enough signal for each item (deadlines, revenue at risk, stakeholder seniority) that some ' +
+      'orderings are clearly better than others; the ranked items are short names. The written ' +
+      'reasoning is what gets graded, not the order alone.',
     interfaceType: InterfaceType.TEXT_AREA,
     realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
   },
