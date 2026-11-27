@@ -1,4 +1,4 @@
-import { writtenResponseLimit, candidateReadingWords, slotBudgetMinutes } from './task-budget.util';
+import { writtenResponseLimit, candidateReadingWords, slotBudgetMinutes, countWords, readingBudget, hasReferenceMaterial } from './task-budget.util';
 import { taskLengthProblems } from './task-length.util';
 import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 import { InterfaceType } from '../roles/interface-type';
@@ -82,5 +82,17 @@ describe('time budget problems', () => {
     const message = taskLengthProblems(heavy, undefined, undefined, 7).join(' ');
     expect(message).toContain('scenario 420 (limit 170)');
     expect(message).toContain('question 110');
+  });
+
+  it('does not count markdown table separators or bullets as words', () => {
+    expect(countWords('| Item | Amount |\n|---|---|\n| Rent | 500 |')).toBe(4);
+    expect(countWords('- one\n- two')).toBe(2);
+  });
+
+  it('reserves a reference allowance only for tasks that show reference material', () => {
+    expect(readingBudget(7, 120, true)).toEqual({ total: 420, scenario: 120, question: 120, reference: 180 });
+    expect(readingBudget(7, 120, false)).toEqual({ total: 420, scenario: 170, question: 120, reference: 0 });
+    expect(hasReferenceMaterial([InterfaceType.TEXT_AREA])).toBe(false);
+    expect(hasReferenceMaterial([InterfaceType.TEXT_AREA, InterfaceType.CASE_FILE_TEXT_AREA])).toBe(true);
   });
 });

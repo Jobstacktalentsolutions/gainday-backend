@@ -5,7 +5,10 @@ import {
   GenerationStateUpdate,
   CriticResult,
 } from '../state/generation-state';
-import { findSimilarQuestions, findSimilarSimulationQuestions } from '../critic/novelty-check';
+import {
+  findSimilarQuestions,
+  findSimilarSimulationQuestions,
+} from '../critic/novelty-check';
 import { checkForDuplicate } from '../critic/duplicate-check';
 import { checkRelevance } from '../critic/relevance-check';
 import { embedTaskContent } from '../utils/embedding.util';
@@ -53,8 +56,17 @@ export function criticNode(ctx: GenerationContext) {
       candidate.taskContent,
     );
     const [matches, simulationMatches] = await Promise.all([
-      findSimilarQuestions(ctx.db, state.category, embedding, ctx.config.noveltyCheckTopK),
-      findSimilarSimulationQuestions(ctx.db, state.finalizedTasks.map((task) => task.questionBankId), embedding),
+      findSimilarQuestions(
+        ctx.db,
+        state.category,
+        embedding,
+        ctx.config.noveltyCheckTopK,
+      ),
+      findSimilarSimulationQuestions(
+        ctx.db,
+        state.finalizedTasks.map((task) => task.questionBankId),
+        embedding,
+      ),
     ]);
     const simulationDuplicate = checkForDuplicate(
       simulationMatches,
@@ -64,7 +76,9 @@ export function criticNode(ctx: GenerationContext) {
       matches,
       ctx.config.duplicateSimilarityThreshold,
     );
-    const duplicateResult = simulationDuplicate.isDuplicate ? simulationDuplicate : bankDuplicate;
+    const duplicateResult = simulationDuplicate.isDuplicate
+      ? simulationDuplicate
+      : bankDuplicate;
     if (duplicateResult.isDuplicate) {
       // The retry sees the matched scenario, so it can write a different situation. The scenario is
       // cut short to keep the feedback small.
@@ -88,14 +102,24 @@ export function criticNode(ctx: GenerationContext) {
     const patternDef = state.roleModule.allowedTaskPatternTypes.find(
       (p) => p.key === candidate.taskType,
     );
-    const lengthProblems = taskLengthProblems(candidate.taskContent, patternDef?.objectiveComponentType, state.skillLevel, slotBudgetMinutes(ctx.config.selectedTaskCount), patternDef?.realities?.maxStimulusWords);
+    const lengthProblems = taskLengthProblems(
+      candidate.taskContent,
+      patternDef?.objectiveComponentType,
+      state.skillLevel,
+      slotBudgetMinutes(ctx.config.selectedTaskCount),
+    );
     failureReasons.push(...lengthProblems);
-    const relevanceResult = await checkRelevance(ctx.criticModel, candidate, {
-      category: state.category,
-      intent: state.intent,
-      problem: state.problem,
-      skillLevel: state.skillLevel ?? null,
-    }, patternDef?.objectiveComponentType);
+    const relevanceResult = await checkRelevance(
+      ctx.criticModel,
+      candidate,
+      {
+        category: state.category,
+        intent: state.intent,
+        problem: state.problem,
+        skillLevel: state.skillLevel ?? null,
+      },
+      patternDef?.objectiveComponentType,
+    );
     if (!relevanceResult.relevant) {
       failureReasons.push(...relevanceResult.reasons);
     }
@@ -143,24 +167,9 @@ export function criticNode(ctx: GenerationContext) {
       }
     }
 
-    // Stimulus reading length ceiling: check against the task pattern type's realities
-    const maxStimulusWords = patternDef?.realities?.maxStimulusWords;
-    let stimulusWithinLimit = true;
-    if (maxStimulusWords && candidate.taskContent.scenarioDescription) {
-      const trimmedScenario = candidate.taskContent.scenarioDescription.trim();
-      const scenarioWords = trimmedScenario === '' ? 0 : trimmedScenario.split(/\s+/).length;
-      if (scenarioWords > Math.round(maxStimulusWords * 1.25)) {
-        stimulusWithinLimit = false;
-        failureReasons.push(
-          `Scenario description is too long (${scenarioWords} words, ceiling is ${maxStimulusWords} words). Condense the scenario to essential facts and stimulus.`,
-        );
-      }
-    }
-
     const criticResult: CriticResult = {
       passed:
         payloadValid &&
-        stimulusWithinLimit &&
         lengthProblems.length === 0 &&
         relevanceResult.presentationProblems.length === 0 &&
         tips.length === 0 &&

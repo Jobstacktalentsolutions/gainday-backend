@@ -1,6 +1,7 @@
 import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 import { DEFAULT_SIMULATION_TIME_LIMIT_MINUTES } from '../../../db/schema/simulations.schema';
 import { generationConfig } from '../../../config/ai.config';
+import { InterfaceType } from '../roles/interface-type';
 
 /**
  * A task's time is a budget. The model chooses the duration and the word limit, and the critic
@@ -14,11 +15,32 @@ export const TASK_BUDGET = {
   thinkingMinutes: 1,
   /** Candidate-facing words a slot may hold per minute, so reading leaves time to answer. */
   readingWordsPerBudgetMinute: 60,
+  /** Share of the reading budget the scenario may use when there is no reference material. */
+  scenarioShare: 0.4,
+  /** Words reserved for reference tabs, tables and data when the task has them. */
+  referenceWords: 180,
   minWordsRatio: 0.4,
   minMaxWords: 40,
   minMinWords: 20,
   roundingStep: 10,
 } as const;
+
+/** Interfaces that show the candidate reference material beside the task. */
+const REFERENCE_INTERFACES: ReadonlySet<InterfaceType> = new Set([
+  InterfaceType.CASE_FILE_TEXT_AREA,
+  InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER,
+  InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
+  InterfaceType.CSV_DATA_PANEL,
+  InterfaceType.TABLE_VIEW_WITH_CHART,
+  InterfaceType.STAGED_CHAT,
+]);
+
+/** Whether a task built on any of these interfaces gets a reference allowance. */
+export function hasReferenceMaterial(
+  interfaceTypes: readonly InterfaceType[],
+): boolean {
+  return interfaceTypes.some((type) => REFERENCE_INTERFACES.has(type));
+}
 
 /** Keys of an interface payload that are not material the candidate reads. */
 const NON_READING_PAYLOAD_KEYS = new Set([
@@ -39,27 +61,32 @@ export function readingWordsCeiling(budgetMinutes: number): number {
   return budgetMinutes * TASK_BUDGET.readingWordsPerBudgetMinute;
 }
 
-/** Share of the reading budget the scenario may use; the rest goes to the question and reference material. */
-const SCENARIO_SHARE = 0.4;
+/**
+ * Counts words the way a reader sees them: tokens with a letter or a digit. Markdown table
+ * separators, bullets and dashes are not words, so they do not count against a limit.
+ */
+export function countWords(text: string): number {
+  return text.split(/\s+/).filter((token) => /[\p{L}\p{N}]/u.test(token))
+    .length;
+}
 
-/** How the reading budget splits across the scenario, the question, and tabs, tables and options. */
+/**
+ * How the reading budget splits across the scenario, the question, and reference material. The
+ * reference share is reserved only when the task has reference material; the scenario takes what
+ * the question and reference do not need, up to its share.
+ */
 export function readingBudget(
   budgetMinutes: number,
   questionWords: number,
-  maxScenarioWords?: number,
+  hasReference: boolean,
 ) {
   const total = readingWordsCeiling(budgetMinutes);
-  const scenario = Math.min(
-    maxScenarioWords ?? total,
-    Math.round((total * SCENARIO_SHARE) / TASK_BUDGET.roundingStep) *
-      TASK_BUDGET.roundingStep,
-  );
-  return {
-    total,
-    scenario,
-    question: questionWords,
-    reference: Math.max(total - scenario - questionWords, 0),
-  };
+  const reference = hasReference ? TASK_BUDGET.referenceWords : 0;
+  const shareOfTotal =
+    Math.round((total * TASK_BUDGET.scenarioShare) / TASK_BUDGET.roundingStep) *
+    TASK_BUDGET.roundingStep;
+  const scenario = Math.min(shareOfTotal, total - questionWords - reference);
+  return { total, scenario, question: questionWords, reference };
 }
 
 /** Words in the scenario and question, and the rest of what the candidate reads as reference material. */
@@ -71,10 +98,6 @@ export function readingBreakdown(task: QuestionBankTaskContent) {
     question,
     reference: Math.max(candidateReadingWords(task) - scenario - question, 0),
   };
-}
-
-function countWords(text: string): number {
-  return text.split(/[\s,]+/).filter(Boolean).length;
 }
 
 function wordsIn(value: unknown, skipKeys?: ReadonlySet<string>): number {

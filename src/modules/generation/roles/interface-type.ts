@@ -30,7 +30,7 @@ export enum InterfaceType {
 export const writtenWordLimitSchema = z
   .object({
     min: z.number().int().nonnegative().describe('Minimum words candidate should write, about 40% of max.'),
-    max: z.number().int().positive().describe('Maximum words candidate can write in the time left: (task minutes - reading minutes - 1) x 30. Candidates read about 200 words a minute. Typically 60 to 180.'),
+    max: z.number().int().positive().describe('Maximum words candidate can write in the time left. Use a value within the range given in the instructions.'),
   })
   .describe('Written-answer limit sized to the task time.');
 

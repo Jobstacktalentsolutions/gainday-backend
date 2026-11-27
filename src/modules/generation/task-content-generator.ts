@@ -36,7 +36,12 @@ import {
 } from './task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 import { CustomerServiceTaskType } from './roles/customer-service/customer-service.role-module';
-import { readingBudget, slotBudgetMinutes } from './utils/task-budget.util';
+import {
+  hasReferenceMaterial,
+  readingBudget,
+  slotBudgetMinutes,
+  writtenResponseLimit,
+} from './utils/task-budget.util';
 import {
   shuffleObjectiveOrder,
   withAnswerKey,
@@ -58,23 +63,33 @@ material itself (emails, line items, data), never HTML, and never to list what t
 
 const TASK_SCOPE_RULE = `Keep the task to one focused piece of work. The structured answer and any written response should support the same objective. Do not add separate deliverables beyond what the task type requires.`;
 
-const READABILITY_RULE = `Make the candidate-facing material easy to scan. Put each substantive fact in one place across the scenario, reference material and answer controls; use short labels to refer to it. Keep the facts, policies and data needed to answer fairly. Use a brief placeholder, not repeated instructions.`;
+const READABILITY_RULE = `Make the candidate-facing material easy to scan. Give the candidate every fact the answer needs, each stated once and in the place it fits: the scenario, or the reference material when there is one. Use short labels to refer to material. Use a brief placeholder, not repeated instructions.`;
+
+/** Whether a pattern's interfaces show reference material, for the reading allowance. */
+const patternInterfaceTypes = (
+  def: TaskPatternTypeDefinition,
+): InterfaceType[] =>
+  def.allowedInterfaceTypes ?? (def.interfaceType ? [def.interfaceType] : []);
 
 export const TIMING_AND_LIMITS_RULE = (
-  realities: TaskPatternRealities | undefined,
   questionWords: number,
   timeBudgetMinutes: number = slotBudgetMinutes(),
+  hasReference: boolean,
 ) => {
-  const budget = readingBudget(
-    timeBudgetMinutes,
-    questionWords,
-    realities?.maxStimulusWords,
-  );
+  const budget = readingBudget(timeBudgetMinutes, questionWords, hasReference);
+  // The model picks a value in this range; the range follows from the budget, so it never does the arithmetic.
+  const written = {
+    min: writtenResponseLimit(timeBudgetMinutes, budget.total).max,
+    max: writtenResponseLimit(timeBudgetMinutes, 0).max,
+  };
+  const reference = hasReference
+    ? `reference tabs, tables and options ${budget.reference}`
+    : 'no reference material';
   return `Time and size:
-- The task budget is ${timeBudgetMinutes} minutes, reading included. Set expectedDurationMinutes to the time this task needs, at most ${timeBudgetMinutes}, and size wordLimit to fit it.
-- Words the candidate reads, at most ${budget.total} in total: scenario about ${budget.scenario}, question ${budget.question}, and reference tabs, tables and options together ${budget.reference}.
-- State the deliverable in one sentence, plus at most one constraint. No numbered or multi-part lists.
-- State each fact once, where the candidate needs it. Do not restate reference or table figures in the scenario.`;
+- The task budget is ${timeBudgetMinutes} minutes, reading included. Set expectedDurationMinutes to the time this task needs, at most ${timeBudgetMinutes}.
+- Words the candidate reads, at most ${budget.total}: scenario about ${budget.scenario}, question ${budget.question}, ${reference}.
+- For a written answer, set wordLimit.max between ${written.min} and ${written.max}, and wordLimit.min about 40% of max.
+- Ask for the deliverable in one sentence, plus at most one constraint. No numbered or multi-part lists.`;
 };
 
 export function buildTaskGenerationPromptBase(
@@ -206,7 +221,7 @@ export async function generateTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes)}\nState the work once without repeating the scenario or interface instructions.${patternTypeDef.objectiveComponentType === INTERACTION.PRIORITY_RANKING ? `\nKeep each ranking description within ${textLimitsForSeniority(skillLevel).rankingDescriptionCharacters} characters.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(patternTypeDef)))}\nState the work once without repeating the scenario or interface instructions.${patternTypeDef.objectiveComponentType === INTERACTION.PRIORITY_RANKING ? `\nKeep each ranking description within ${textLimitsForSeniority(skillLevel).rankingDescriptionCharacters} characters.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you generate must match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : '') +
         `${guidanceClause}${revisionClause(revisionNotes)}`,
@@ -301,7 +316,7 @@ async function generateFlexibleTaskContent(
   );
   const draft = await draftModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(pattern.realities, textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes)}\nDescribe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(pattern)))}\nDescribe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -474,7 +489,7 @@ async function generateSpecTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes)}${existingTask ? '' : `\nState the work once without repeating the scenario or interface instructions.`}\n\nAvailable controls: ${answerControls(patternTypeDef.interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
+      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(patternTypeDef)))}${existingTask ? '' : `\nState the work once without repeating the scenario or interface instructions.`}\n\nAvailable controls: ${answerControls(patternTypeDef.interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -595,7 +610,7 @@ export async function reviseTaskContent(
     problem,
     skillLevel,
     existingTask,
-    guidance: `Fix these problems and keep everything else. Where a problem is a word limit, rewrite or cut candidate-facing text to meet it, removing the least necessary detail first and keeping every fact the answer needs: ${revisionNotes.join(' ')}`,
+    guidance: `Fix these problems and keep everything else. Where a section is over its limit, shorten that section to its target by removing repeated or unnecessary wording first; keep every fact the answer needs: ${revisionNotes.join(' ')}`,
   });
 }
 
@@ -679,7 +694,7 @@ export async function modifyTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, textLimitsForSeniority(skillLevel).questionWords)}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, undefined, hasReferenceMaterial([existingTask.interfaceType]))}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you return must still match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : ''),
     ),
