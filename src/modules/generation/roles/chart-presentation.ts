@@ -51,7 +51,6 @@ export function materializeChartPresentation(input: ChartDataset) {
     },
     chart,
     placeholder: input.placeholder,
-    wordLimit: input.wordLimit,
   };
 }
 

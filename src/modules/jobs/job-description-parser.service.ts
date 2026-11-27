@@ -29,6 +29,8 @@ Rules:
   determine from the text.
 - Normalize enum-shaped fields (skillLevel, employmentType) to exactly one of the allowed values
   described on each field — do not return any other spelling or value.
+- skillLevel: set it only when the seniority is explicitly stated in the text. Do not infer it from
+  years of experience, responsibilities, or title, and do not default to "Mid level" — return null.
 - The rewritten description is a cleanup and reformat of the original. Keep all substantive content
   (responsibilities, requirements, context); shorten only the wording, never drop a point.
 - Omit any application instructions, CV/resume submission details, or links/methods on how to apply.

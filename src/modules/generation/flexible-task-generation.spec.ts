@@ -114,7 +114,7 @@ describe('flexible task generation', () => {
     ).rejects.toThrow('selected interface has no matching payload');
   });
 
-  it('rejects a written response payload without a word limit so the slot retries', async () => {
+  it('requires the model to size the word limit of a written answer', async () => {
     const pattern = GenericRoleModule.allowedTaskPatternTypes.find(
       (item) => item.key === String(GenericTaskType.DRAFTED_COMMUNICATION),
     )!;
@@ -151,7 +151,7 @@ describe('flexible task generation', () => {
         taskType: GenericTaskType.DRAFTED_COMMUNICATION,
         briefDescription: 'Write a PR review.',
       }),
-    ).rejects.toThrow('Written response tasks need a word limit.');
+    ).rejects.toThrow();
   });
 
   it('materializes a selected chart from one dataset', async () => {

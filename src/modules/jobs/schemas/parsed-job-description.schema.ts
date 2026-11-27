@@ -25,7 +25,7 @@ export const parsedJobDescriptionSchema = z.object({
     .enum(['Junior', 'Mid level', 'Senior level'])
     .nullable()
     .describe(
-      'Seniority level implied by the posting (years of experience, title seniority, scope of responsibility). Must be normalized to exactly one of "Junior", "Mid level", or "Senior level". Null if not determinable.',
+      'Seniority level ONLY if the posting explicitly names one (e.g. "junior", "entry-level", "mid-level", "senior", "lead", "principal"). Never infer it from conventional details',
     ),
   skillCategory: z
     .string()

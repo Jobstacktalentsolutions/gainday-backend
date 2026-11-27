@@ -3,14 +3,14 @@ import { chartDatasetSchema, materializeChartPresentation, validateChartPresenta
 import { type ObjectiveComponentType } from './role-module.interface';
 
 const OBJECTIVE_CONTROLS: Record<ObjectiveComponentType, string> = {
-  CLASSIFICATION: 'classify items into supplied buckets, with optional item-specific reasons',
-  KEYED_CLASSIFICATION: 'classify items into supplied buckets, with optional item-specific reasons',
-  PRIORITY_RANKING: 'reorder items by priority, with optional item-specific reasons',
-  PROCEDURAL_SEQUENCING: 'reorder supplied steps, with optional item-specific reasons',
+  CLASSIFICATION: 'classify items into supplied buckets',
+  KEYED_CLASSIFICATION: 'classify items into supplied buckets',
+  PRIORITY_RANKING: 'reorder items by priority',
+  PROCEDURAL_SEQUENCING: 'reorder supplied steps',
   SINGLE_BEST_ACTION: 'choose one supplied option',
   MULTI_SELECT_UNDER_CONSTRAINT: 'choose the specified number of supplied options',
   NUMERIC_INPUT: 'enter one number',
-  NUMERIC_TABLE: 'enter numbers in the supplied answer table, with optional row-specific reasons',
+  NUMERIC_TABLE: 'enter numbers in the supplied answer table',
   RECONCILIATION: 'assign a side to each item and enter an adjusted balance',
   JOURNAL_ENTRY: 'enter journal lines using the supplied references and accounts',
 };

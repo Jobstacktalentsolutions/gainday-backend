@@ -37,8 +37,8 @@ posting input, for a role in the category "${category}".
 ${roleModule.extraction.intentFramingGuidance}
 ${roleModule.extraction.expectedTaskGuidance}
 
-Intent is always required: the skills and competencies the employer expects the hire to
-demonstrate. Problem is the specific business problem the employer describes wanting this hire
+Intent is always required: the skills and competencies the posting asks the hire to demonstrate. Describe
+them even when the category does not fit the posting; never write "not applicable". Problem is the specific business problem the employer describes wanting this hire
 to help solve — extract it ONLY if it is actually stated in the input. If no business problem is
 stated, return null for problem. Never invent or infer a problem that is not present.`;
 

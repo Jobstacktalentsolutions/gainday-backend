@@ -13,7 +13,7 @@ import { taskCandidateSchema } from '../schemas/task-candidate.schema';
 import { getSeniorityGuidance } from '../task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
 import { z } from 'zod';
-import { DEFAULT_SIMULATION_TIME_LIMIT_MINUTES } from '../../../db/schema/simulations.schema';
+import { slotBudgetMinutes } from '../utils/task-budget.util';
 
 const logger = new Logger('GenerationPipeline:taskGeneration');
 
@@ -100,6 +100,21 @@ async function selectCandidateForSlot(
     return { candidate };
   }
 
+  // A draft the model could not complete (invalid items, figures or limits) says nothing against the
+  // idea, so the same task is retried with the reason instead of swapping in a different task type.
+  const previousDraft = state.currentTaskDraft;
+  if (previousDraft && previousDraft.taskContent === null) {
+    const sameCandidate = state.candidatePool.find(
+      (c) => c.candidateId === previousDraft.candidateId,
+    );
+    if (sameCandidate) {
+      logger.log(
+        `Slot ${state.currentSlotIndex}: retrying candidate ${sameCandidate.candidateId} with the validation reason`,
+      );
+      return { candidate: sameCandidate };
+    }
+  }
+
   logger.log(
     `Slot ${state.currentSlotIndex}: generating a fresh replacement candidate`,
   );
@@ -140,7 +155,7 @@ export function taskGenerationNode(ctx: GenerationContext) {
         intent: state.intent,
         problem: state.problem,
         skillLevel: state.skillLevel,
-        timeBudgetMinutes: DEFAULT_SIMULATION_TIME_LIMIT_MINUTES / ctx.config.selectedTaskCount,
+        timeBudgetMinutes: slotBudgetMinutes(ctx.config.selectedTaskCount),
         taskType: candidate.taskType,
         briefDescription: candidate.briefDescription,
         revisionNotes: revisionNotesFor(state),
@@ -156,9 +171,7 @@ export function taskGenerationNode(ctx: GenerationContext) {
           taskType: candidate.taskType,
           taskContent: null,
         },
-        draftProblems: [
-          `The figures do not form a valid task: ${err.message}.`,
-        ],
+        draftProblems: [`The draft is not a valid task: ${err.message}.`],
         ...(newCandidatePool ? { candidatePool: newCandidatePool } : {}),
       };
     }

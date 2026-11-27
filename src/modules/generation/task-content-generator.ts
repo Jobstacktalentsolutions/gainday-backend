@@ -34,6 +34,11 @@ import {
 } from './task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 import { CustomerServiceTaskType } from './roles/customer-service/customer-service.role-module';
+import {
+  readingWordsCeiling,
+  slotBudgetMinutes,
+} from './utils/task-budget.util';
+import { InterfaceType, withWrittenWordLimit } from './roles/interface-type';
 
 /**
  * What the candidate reads must not give them tips. Shared by the generate and modify prompts so the
@@ -52,16 +57,24 @@ const TASK_SCOPE_RULE = `Keep the task to one focused piece of work. The structu
 
 const READABILITY_RULE = `Make the candidate-facing material easy to scan. Put each substantive fact in one place across the scenario, reference material and answer controls; use short labels to refer to it. Keep the facts, policies and data needed to answer fairly. Use a brief placeholder, not repeated instructions.`;
 
+/** Share of the reading budget the scenario may use; the rest goes to the question and reference material. */
+const SCENARIO_SHARE = 0.4;
+
 export const TIMING_AND_LIMITS_RULE = (
-  realities?: TaskPatternRealities,
-  timeBudgetMinutes?: number,
-  includePayload = true,
+  realities: TaskPatternRealities | undefined,
+  questionWords: number,
+  timeBudgetMinutes: number = slotBudgetMinutes(),
 ) => {
-  const maxStimulus = realities?.maxStimulusWords ?? 250;
-  const defaultDuration = realities?.defaultDurationMinutes ?? 8;
-  return `Simulation Timing & Limits:
-- Set expectedDurationMinutes based on depth (guideline: ~${timeBudgetMinutes ?? defaultDuration} mins, allowed range: 3-15).
-- Keep scenarioDescription concise: strictly facts, situation, and stimulus (hard ceiling: ${maxStimulus} words).${includePayload ? '\n- In interfacePayload, set wordLimit: { min, max } realistic for the allocated time (or null if purely objective).' : ''}`;
+  const ceiling = readingWordsCeiling(timeBudgetMinutes);
+  const scenarioWords = Math.min(
+    realities?.maxStimulusWords ?? ceiling,
+    Math.round((ceiling * SCENARIO_SHARE) / 10) * 10,
+  );
+  return `Time and size:
+- The task budget is ${timeBudgetMinutes} minutes, reading included. Set expectedDurationMinutes to the time this task needs, at most ${timeBudgetMinutes}, and size wordLimit to fit it.
+- Words the candidate reads, at most ${ceiling} in total: scenario ${scenarioWords}, question ${questionWords}, and reference tabs, tables and options together ${ceiling - scenarioWords - questionWords}.
+- Ask for one deliverable with at most 3 requirements, in plain sentences, not a numbered multi-part list.
+- State each fact once, where the candidate needs it. Do not restate reference or table figures in the scenario.`;
 };
 
 export function buildTaskGenerationPromptBase(
@@ -168,7 +181,9 @@ export async function generateTaskContent(
     ? patternTypeDef.allowedInterfaceTypes[0]
     : patternTypeDef.interfaceType;
   const presentation = presentationCapability(interfaceType);
-  const interfacePayloadSchema = presentation.inputSchema;
+  const interfacePayloadSchema = patternTypeDef.openEndedComponentType
+    ? withWrittenWordLimit(presentation.inputSchema)
+    : presentation.inputSchema;
   const objectiveComponentSchema = patternTypeDef.objectiveComponentType
     ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
     : null;
@@ -191,7 +206,7 @@ export async function generateTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}\nKeep questionPrompt within ${textLimitsForSeniority(skillLevel).questionWords} words; state the work once without repeating the scenario or interface instructions.${patternTypeDef.objectiveComponentType === INTERACTION.PRIORITY_RANKING ? `\nKeep each ranking description within ${textLimitsForSeniority(skillLevel).rankingDescriptionCharacters} characters.` : ''}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes)}\nState the work once without repeating the scenario or interface instructions.${patternTypeDef.objectiveComponentType === INTERACTION.PRIORITY_RANKING ? `\nKeep each ranking description within ${textLimitsForSeniority(skillLevel).rankingDescriptionCharacters} characters.` : ''}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you generate must match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : '') +
         `${guidanceClause}${revisionClause(revisionNotes)}`,
@@ -233,10 +248,7 @@ export async function generateTaskContent(
   return {
     taskType,
     title: result.title,
-    expectedDurationMinutes:
-      result.expectedDurationMinutes ??
-      patternTypeDef.realities?.defaultDurationMinutes ??
-      8,
+    expectedDurationMinutes: result.expectedDurationMinutes,
     scenarioDescription: result.scenarioDescription,
     questionPrompt: result.questionPrompt,
     objectiveComponent:
@@ -283,7 +295,7 @@ async function generateFlexibleTaskContent(
   );
   const draft = await draftModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(pattern.realities, timeBudgetMinutes, false)}\nKeep questionPrompt within ${textLimitsForSeniority(skillLevel).questionWords} words. Describe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(pattern.realities, textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes)}\nDescribe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -300,7 +312,11 @@ async function generateFlexibleTaskContent(
   // the chosen payload against its own schema after structured output has been parsed.
   const payloadSchemas: Record<string, z.ZodTypeAny> = {};
   for (const type of allowedInterfaces)
-    payloadSchemas[type] = presentationCapability(type).inputSchema.nullable();
+    payloadSchemas[type] = (
+      pattern.openEndedComponentType
+        ? withWrittenWordLimit(presentationCapability(type).inputSchema)
+        : presentationCapability(type).inputSchema
+    ).nullable();
   const selectionSchema = z.object({
     interfaceType: z.enum(allowedInterfaces),
     scenarioDescription: z.string(),
@@ -312,7 +328,7 @@ async function generateFlexibleTaskContent(
     selectionSchema,
   ).invoke([
     new SystemMessage(
-      `Choose the interface that best supports the task's actual answer and reference needs. ${allowedInterfaces.map((type) => `${type}: ${answerControls(type, pattern.objectiveComponentType)}${presentationCapability(type).guidance ? ` ${presentationCapability(type).guidance}` : ''}`).join('\n')}\nPopulate only the selected payload; set every other payload to null. Set its wordLimit to match the task's depth and allotted time, or null for a purely objective task. Preserve all facts, evidence, answer options, and task requirements. Put reference material in the selected interface when supported, otherwise include it in scenarioDescription. Adjust scenarioDescription and questionPrompt only to match the chosen controls. Do not ask for unavailable controls.`,
+      `Choose the interface that best supports the task's actual answer and reference needs. ${allowedInterfaces.map((type) => `${type}: ${answerControls(type, pattern.objectiveComponentType)}${presentationCapability(type).guidance ? ` ${presentationCapability(type).guidance}` : ''}`).join('\n')}\nPopulate only the selected payload; set every other payload to null. Set wordLimit for every written answer, matched to the task's depth and allotted time. Use null only for an objective-only task. Preserve all facts, evidence, answer options, and task requirements. Put reference material in the selected interface when supported, otherwise include it in scenarioDescription. Adjust scenarioDescription and questionPrompt only to match the chosen controls. Do not ask for unavailable controls.`,
     ),
     new HumanMessage(JSON.stringify({ category, intent, task: draft })),
   ]);
@@ -324,13 +340,6 @@ async function generateFlexibleTaskContent(
   }
   const parsedPayload: unknown =
     presentation.inputSchema.parse(selectedPayload);
-  // Open-ended tasks are written responses, so they need a word limit. Only objective tasks may omit it.
-  if (
-    !pattern.objectiveComponentType &&
-    (parsedPayload as { wordLimit?: unknown }).wordLimit == null
-  ) {
-    throw new TaskSpecError('Written response tasks need a word limit.');
-  }
   const interfacePayload = presentation.materialize
     ? presentation.materialize(parsedPayload)
     : (parsedPayload as Record<string, unknown>);
@@ -432,7 +441,13 @@ async function generateSpecTaskContent(
   const openEndedComponentSchema = patternTypeDef.openEndedComponentType
     ? OPEN_ENDED_COMPONENT_SCHEMAS[patternTypeDef.openEndedComponentType]
     : null;
-  const schema = taskSpecSchema(spec.dataSchema, openEndedComponentSchema);
+  // A staged chat limits each reply through its own data, not one written answer.
+  const schema = taskSpecSchema(
+    spec.dataSchema,
+    openEndedComponentSchema,
+    Boolean(openEndedComponentSchema) &&
+      patternTypeDef.interfaceType !== InterfaceType.STAGED_CHAT,
+  );
   const structuredModel = withGeminiSafeStructuredOutput(model, schema);
 
   const basePrompt = existingTask
@@ -448,7 +463,7 @@ async function generateSpecTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, timeBudgetMinutes)}${existingTask ? '' : `\nKeep questionPrompt within ${textLimitsForSeniority(skillLevel).questionWords} words; state the work once without repeating the scenario or interface instructions.`}${timeBudgetMinutes ? `\nDesign the complete task, including reading and answering, to take about ${timeBudgetMinutes} minutes.` : ''}\n\nAvailable controls: ${answerControls(patternTypeDef.interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
+      `${basePrompt}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes)}${existingTask ? '' : `\nState the work once without repeating the scenario or interface instructions.`}\n\nAvailable controls: ${answerControls(patternTypeDef.interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${patternTypeDef.interfaceType}".${guidanceClause}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -464,19 +479,12 @@ async function generateSpecTaskContent(
   const derived = spec.materialize(result.data);
   const businessProblemDerived =
     problem === null ? false : result.businessProblemDerived;
-
-  const wordLimit =
-    (result as { wordLimit?: { min: number; max: number } | null }).wordLimit ??
-    (derived.interfacePayload as Record<string, unknown>)?.wordLimit ??
-    undefined;
+  const wordLimit = result.wordLimit ?? derived.interfacePayload.wordLimit;
 
   return {
     taskType: patternTypeDef.key,
     title: result.title,
-    expectedDurationMinutes:
-      result.expectedDurationMinutes ??
-      patternTypeDef.realities?.defaultDurationMinutes ??
-      8,
+    expectedDurationMinutes: result.expectedDurationMinutes,
     scenarioDescription:
       patternTypeDef.key === CustomerServiceTaskType.TICKET_TRIAGE
         ? 'Review the support queue and apply the triage guideline to decide what to do first and how to handle the remaining tickets.'
@@ -638,7 +646,9 @@ export async function modifyTaskContent(
   }
   const interfaceType = existingTask.interfaceType;
   const presentation = presentationCapability(interfaceType);
-  const interfacePayloadSchema = presentation.inputSchema;
+  const interfacePayloadSchema = patternTypeDef.openEndedComponentType
+    ? withWrittenWordLimit(presentation.inputSchema)
+    : presentation.inputSchema;
   const objectiveComponentSchema = patternTypeDef.objectiveComponentType
     ? OBJECTIVE_COMPONENT_SCHEMAS[patternTypeDef.objectiveComponentType]
     : null;
@@ -658,7 +668,7 @@ export async function modifyTaskContent(
 
   const result = await structuredModel.invoke([
     new SystemMessage(
-      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities)}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Ask candidates to use only these controls.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
+      `${TASK_MODIFICATION_PROMPT_BASE}\n\n${TIMING_AND_LIMITS_RULE(patternTypeDef.realities, textLimitsForSeniority(skillLevel).questionWords)}\n\nAvailable controls: ${answerControls(interfaceType, patternTypeDef.objectiveComponentType)} Require only actions these controls support, and do not describe the controls in the text.\n\nThis task's interfaceType is "${interfaceType}" — the ` +
         `interfacePayload you return must still match that render mode.` +
         (presentation.guidance ? ` ${presentation.guidance}` : ''),
     ),
@@ -695,11 +705,7 @@ export async function modifyTaskContent(
   return {
     taskType: existingTask.taskType,
     title: result.title,
-    expectedDurationMinutes:
-      result.expectedDurationMinutes ??
-      existingTask.expectedDurationMinutes ??
-      patternTypeDef.realities?.defaultDurationMinutes ??
-      8,
+    expectedDurationMinutes: result.expectedDurationMinutes,
     scenarioDescription: result.scenarioDescription,
     questionPrompt: result.questionPrompt,
     objectiveComponent:

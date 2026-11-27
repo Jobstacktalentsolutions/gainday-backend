@@ -27,10 +27,10 @@ the outputs. Do not decide from the job title or from a single word in the posti
 "Customer Success Manager" can describe support work or sales work, and only the described work tells them
 apart.
 
-Supported top-level roles: ${supported}. Use one of these when the work fits it. If the work fits none of
-them, name its domain in the posting's own terms (2-4 words). Add the sub-role after " > " when the work
-makes a specific one clear, e.g. "Role > Sub-role". Do not force the work into a role it does not
-fit, and do not favour any role.`;
+Supported top-level roles: ${supported}. Use one of these when the work fits it. If none of them fits the
+work, return the work's own domain in the posting's terms (2-4 words). Never choose a supported role because
+it is the closest match. Add the sub-role after " > " when the work makes a specific one clear, e.g.
+"Role > Sub-role". Do not favour any role.`;
 }
 
 export interface InferRoleInput {

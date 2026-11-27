@@ -13,6 +13,7 @@ import { findCsvProblem } from '../utils/csv.util';
 import { InterfaceType } from '../roles/interface-type';
 import { GeneratedTaskCandidate } from '../roles/role-module.interface';
 import { taskLengthProblems } from '../utils/task-length.util';
+import { slotBudgetMinutes } from '../utils/task-budget.util';
 
 const logger = new Logger('GenerationPipeline:critic');
 
@@ -87,7 +88,7 @@ export function criticNode(ctx: GenerationContext) {
     const patternDef = state.roleModule.allowedTaskPatternTypes.find(
       (p) => p.key === candidate.taskType,
     );
-    const lengthProblems = taskLengthProblems(candidate.taskContent, patternDef?.objectiveComponentType, state.skillLevel);
+    const lengthProblems = taskLengthProblems(candidate.taskContent, patternDef?.objectiveComponentType, state.skillLevel, slotBudgetMinutes(ctx.config.selectedTaskCount));
     failureReasons.push(...lengthProblems);
     const relevanceResult = await checkRelevance(ctx.criticModel, candidate, {
       category: state.category,

@@ -26,24 +26,23 @@ export enum InterfaceType {
   STAGED_CHAT = 'STAGED_CHAT',
 }
 
-export const wordLimitSchema = z
+/** Required whenever the task has a written answer: the model must size it, not skip it. */
+export const writtenWordLimitSchema = z
   .object({
-    min: z
-      .number()
-      .int()
-      .nonnegative()
-      .describe('Minimum words candidate should write.'),
-    max: z
-      .number()
-      .int()
-      .positive()
-      .describe('Maximum words candidate should write.'),
+    min: z.number().int().nonnegative().describe('Minimum words candidate should write, about 40% of max.'),
+    max: z.number().int().positive().describe('Maximum words candidate can write in the time left: (task minutes - reading minutes - 1) x 30. Candidates read about 200 words a minute. Typically 60 to 180.'),
   })
+  .describe('Written-answer limit sized to the task time.');
+
+export const wordLimitSchema = writtenWordLimitSchema
   .nullable()
   .optional()
-  .describe(
-    'Candidate written response limit calibrated to task depth and allocated time, or null if strictly objective.',
-  );
+  .describe('Null only when the task has no written answer.');
+
+/** The model-facing payload schema with a mandatory word limit, for tasks that have a written answer. */
+export function withWrittenWordLimit(schema: z.ZodTypeAny): z.ZodTypeAny {
+  return schema instanceof z.ZodObject ? schema.extend({ wordLimit: writtenWordLimitSchema }) : schema;
+}
 
 // z.literal() compiles to JSON-Schema `const`, which Gemini's schema parser rejects
 // ("Unknown name 'const'... Cannot find field"). z.enum([x]) with one value compiles to
@@ -136,8 +135,8 @@ const tableViewWithChartSchema = z.object({
 });
 
 // Customer service (customer service doc Section 4): read-only reference tabs the candidate works
-// from (customer record, ticket, policy, queue), then a written answer. `wordLimit` sets the
-// length the task asks for; null keeps the default field limits.
+// from (customer record, ticket, policy, queue), then a written answer. the platform sets the
+// written-answer word limit after generation.
 const caseFileTextAreaSchema = z.object({
   interfaceType: z.enum([InterfaceType.CASE_FILE_TEXT_AREA]),
   caseFile: z.object({
@@ -150,8 +149,8 @@ const caseFileTextAreaSchema = z.object({
       )
       .min(1),
   }),
-  wordLimit: wordLimitSchema,
   placeholder: z.string().nullable(),
+  wordLimit: wordLimitSchema,
 });
 
 const caseFileRichTextComposerSchema = caseFileTextAreaSchema.extend({
