@@ -44,10 +44,6 @@ export function taskLengthProblems(
     problems.push(
       `The candidate must read ${readingWords} words against a limit of ${budget.total}: scenario ${read.scenario} (limit ${budget.scenario}), question ${read.question} (limit ${budget.question}), reference tabs, tables and options ${read.reference} (limit ${budget.reference}). Shorten each section over its limit to that limit by removing repeated or unnecessary wording first.`,
     );
-  } else if (read.scenario > budget.scenario * BUDGET_TOLERANCE) {
-    problems.push(
-      `The scenario is ${read.scenario} words; shorten it to about ${budget.scenario} by removing repeated or unnecessary wording. Keep every fact the answer needs.`,
-    );
   }
 
   const question = countWords(task.questionPrompt);

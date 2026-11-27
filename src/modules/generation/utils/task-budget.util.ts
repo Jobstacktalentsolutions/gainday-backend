@@ -17,7 +17,7 @@ export const TASK_BUDGET = {
   /** Candidate-facing words a slot may hold per minute, so reading leaves time to answer. */
   readingWordsPerBudgetMinute: 60,
   /** Share of the reading budget the scenario may use when there is no reference material. */
-  scenarioShare: 0.4,
+  scenarioShare: 0.5,
   /** Words reserved for reference tabs, tables and data when the task has them. */
   referenceWords: 180,
   minWordsRatio: 0.4,

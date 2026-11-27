@@ -80,13 +80,13 @@ describe('time budget problems', () => {
     expect(taskLengthProblems(slightly, undefined, undefined, 7).join(' ')).not.toContain('must read');
     const heavy = task({ scenarioDescription: words(420), questionPrompt: words(110) });
     const message = taskLengthProblems(heavy, undefined, undefined, 7).join(' ');
-    expect(message).toContain('scenario 420 (limit 170)');
+    expect(message).toContain('scenario 420 (limit 210)');
     expect(message).toContain('question 110');
   });
 
   it('reserves a reference allowance only for tasks that show reference material', () => {
     expect(readingBudget(7, 120, true)).toEqual({ total: 420, scenario: 120, question: 120, reference: 180 });
-    expect(readingBudget(7, 120, false)).toEqual({ total: 420, scenario: 170, question: 120, reference: 0 });
+    expect(readingBudget(7, 120, false)).toEqual({ total: 420, scenario: 210, question: 120, reference: 0 });
     expect(hasReferenceMaterial([InterfaceType.TEXT_AREA])).toBe(false);
     expect(hasReferenceMaterial([InterfaceType.TEXT_AREA, InterfaceType.CASE_FILE_TEXT_AREA])).toBe(true);
   });
