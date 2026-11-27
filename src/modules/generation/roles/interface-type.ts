@@ -22,6 +22,7 @@ export enum InterfaceType {
   CSV_DATA_PANEL = 'CSV_DATA_PANEL',
   TABLE_VIEW_WITH_CHART = 'TABLE_VIEW_WITH_CHART',
   CASE_FILE_TEXT_AREA = 'CASE_FILE_TEXT_AREA',
+  CASE_FILE_RICH_TEXT_COMPOSER = 'CASE_FILE_RICH_TEXT_COMPOSER',
   STAGED_CHAT = 'STAGED_CHAT',
 }
 
@@ -153,6 +154,10 @@ const caseFileTextAreaSchema = z.object({
   placeholder: z.string().nullable(),
 });
 
+const caseFileRichTextComposerSchema = caseFileTextAreaSchema.extend({
+  interfaceType: z.enum([InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER]),
+});
+
 // Staged chat (customer service doc Section 2.8): the candidate-visible part only. The scripted
 // customer messages, delays, checkpoints and branches are server-only and live on the question-bank
 // row, so this schema is strict: an extra key, such as a message, is rejected rather than stripped.
@@ -192,6 +197,7 @@ export const INTERFACE_SCHEMAS: Record<InterfaceType, z.ZodTypeAny> = {
   [InterfaceType.CSV_DATA_PANEL]: csvDataPanelSchema,
   [InterfaceType.TABLE_VIEW_WITH_CHART]: tableViewWithChartSchema,
   [InterfaceType.CASE_FILE_TEXT_AREA]: caseFileTextAreaSchema,
+  [InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER]: caseFileRichTextComposerSchema,
   [InterfaceType.STAGED_CHAT]: stagedChatSchema,
 };
 
@@ -210,6 +216,7 @@ export const SAVED_INTERFACE_SCHEMAS: Record<InterfaceType, z.ZodTypeAny> = {
   [InterfaceType.CSV_DATA_PANEL]: csvDataPanelSchema.extend({ wordLimit: optionalSavedWordLimit }),
   [InterfaceType.TABLE_VIEW_WITH_CHART]: tableViewWithChartSchema.extend({ wordLimit: optionalSavedWordLimit }),
   [InterfaceType.CASE_FILE_TEXT_AREA]: caseFileTextAreaSchema.extend({ wordLimit: optionalSavedWordLimit }),
+  [InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER]: caseFileRichTextComposerSchema.extend({ wordLimit: optionalSavedWordLimit }),
   [InterfaceType.STAGED_CHAT]: stagedChatSchema.extend({ wordLimit: savedWordLimitSchema }),
 };
 

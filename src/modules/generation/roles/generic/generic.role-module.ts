@@ -141,11 +141,13 @@ const genericInterfaces: [InterfaceType, ...InterfaceType[]] = [
   InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
   InterfaceType.CSV_DATA_PANEL,
   InterfaceType.CASE_FILE_TEXT_AREA,
+  InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER,
   InterfaceType.TABLE_VIEW_WITH_CHART,
 ];
 const interactionInterfaces: [InterfaceType, ...InterfaceType[]] = [
   InterfaceType.TEXT_AREA,
   InterfaceType.CASE_FILE_TEXT_AREA,
+  InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER,
   InterfaceType.TABLE_VIEW_RESPONSE_PANEL,
 ];
 

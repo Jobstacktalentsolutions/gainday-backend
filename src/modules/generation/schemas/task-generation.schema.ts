@@ -41,3 +41,29 @@ export const taskGenerationSchema = (
     ),
   });
 };
+
+/** Content and presentation requirements for tasks whose interface is chosen afterwards. */
+export const flexibleTaskDraftSchema = (
+  allowedTypeKeys: [string, ...string[]],
+  objectiveComponentSchema: z.ZodTypeAny | null,
+  openEndedComponentSchema: z.ZodTypeAny | null,
+) =>
+  taskGenerationSchema(
+    allowedTypeKeys,
+    z.null(),
+    objectiveComponentSchema,
+    openEndedComponentSchema,
+  )
+    .omit({ interfacePayload: true })
+    .extend({
+      presentationNeeds: z
+        .string()
+        .describe(
+          'Describe the answer format and reference materials needed to complete this task; do not name an interface.',
+        ),
+      referenceMaterial: z
+        .string()
+        .describe(
+          'All supporting evidence, data, and artifacts needed for this task. Empty if none. Keep facts consistent with the scenario and answer key.',
+        ),
+    });

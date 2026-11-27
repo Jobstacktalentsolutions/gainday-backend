@@ -6,5 +6,5 @@ export function withCaseFileOption(pattern: TaskPatternTypeDefinition): TaskPatt
   if (pattern.spec || (pattern.interfaceType !== InterfaceType.TEXT_AREA && pattern.interfaceType !== InterfaceType.RICH_TEXT_COMPOSER)) {
     return pattern;
   }
-  return { ...pattern, allowedInterfaceTypes: [pattern.interfaceType, InterfaceType.CASE_FILE_TEXT_AREA] };
+  return { ...pattern, allowedInterfaceTypes: [pattern.interfaceType, InterfaceType.CASE_FILE_TEXT_AREA, InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER] };
 }

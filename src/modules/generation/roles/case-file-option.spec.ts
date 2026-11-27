@@ -27,4 +27,17 @@ describe('case files in dedicated roles', () => {
     expect(SalesRoleModule.allowedTaskPatternTypes.find((p) => p.key === SalesTaskType.PIPELINE_PRIORITIZATION)?.interfaceType).toBe(InterfaceType.TABLE_VIEW_RESPONSE_PANEL);
     expect(CustomerServiceRoleModule.allowedTaskPatternTypes.some((p) => p.interfaceType === InterfaceType.CASE_FILE_TEXT_AREA)).toBe(true);
   });
+
+  it('accepts a formatted case-file answer and rejects a mismatched payload', () => {
+    const task = {
+      id: 'task', questionBankId: null, taskType: SalesTaskType.COLD_OUTREACH_EMAIL,
+      category: 'Sales', title: 'Outreach', scenarioDescription: 'Prepare outreach.',
+      questionPrompt: 'Write an email.', businessProblemDerived: false,
+      interfaceType: InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER,
+      interfacePayload: { interfaceType: InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER, caseFile: { tabs: [{ label: 'Account', content: 'Account notes.' }] }, placeholder: null },
+      openEndedComponent: { recipient: 'Prospect', goal: 'Arrange a meeting' },
+    };
+    expect(validateSimulationTasks([task], new RoleRegistry())[0].interfaceType).toBe(InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER);
+    expect(() => validateSimulationTasks([{ ...task, interfacePayload: { ...task.interfacePayload, interfaceType: InterfaceType.TEXT_AREA } }], new RoleRegistry())).toThrow();
+  });
 });

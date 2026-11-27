@@ -28,6 +28,7 @@ export const PRESENTATION_CAPABILITIES = {
   [InterfaceType.TABLE_VIEW_RESPONSE_PANEL]: { description: 'a read-only data table and a written response field' },
   [InterfaceType.CSV_DATA_PANEL]: { description: 'a read-only downloadable data table and a written response field' },
   [InterfaceType.CASE_FILE_TEXT_AREA]: { description: 'read-only reference tabs and a written response field' },
+  [InterfaceType.CASE_FILE_RICH_TEXT_COMPOSER]: { description: 'read-only reference tabs and a formatted written response editor supporting headings, lists, links and tables' },
   [InterfaceType.STAGED_CHAT]: { description: 'a staged conversation with reply fields and read-only reference tabs; no separate email or log editor' },
   [InterfaceType.TABLE_VIEW_WITH_CHART]: {
     description: 'a read-only chart and table with a written response field',

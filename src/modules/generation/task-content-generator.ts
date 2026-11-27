@@ -2,9 +2,18 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
-import { taskGenerationSchema } from './schemas/task-generation.schema';
-import { answerControls, presentationCapability } from './roles/presentation-capabilities';
-import { validateInteraction, validateInteractionPresentation } from './roles/interaction-validation';
+import {
+  flexibleTaskDraftSchema,
+  taskGenerationSchema,
+} from './schemas/task-generation.schema';
+import {
+  answerControls,
+  presentationCapability,
+} from './roles/presentation-capabilities';
+import {
+  validateInteraction,
+  validateInteractionPresentation,
+} from './roles/interaction-validation';
 import {
   OBJECTIVE_COMPONENT_SCHEMAS,
   OPEN_ENDED_COMPONENT_SCHEMAS,
@@ -14,10 +23,15 @@ import {
   TaskPatternTypeDefinition,
   TaskPatternRealities,
   TaskSpecTemplate,
+  TaskSpecError,
   INTERACTION,
 } from './roles/role-module.interface';
 import { taskSpecSchema } from './schemas/task-spec.schema';
-import { REQUIREMENT_VS_TIP_RULE, textLimitsForSeniority, getSeniorityGuidance } from './task-text-rules';
+import {
+  REQUIREMENT_VS_TIP_RULE,
+  textLimitsForSeniority,
+  getSeniorityGuidance,
+} from './task-text-rules';
 import { withGeminiSafeStructuredOutput } from '../ai/gemini-structured-output.util';
 import { CustomerServiceTaskType } from './roles/customer-service/customer-service.role-module';
 
@@ -38,31 +52,36 @@ const TASK_SCOPE_RULE = `Keep the task to one focused piece of work. The structu
 
 const READABILITY_RULE = `Make the candidate-facing material easy to scan. Put each substantive fact in one place across the scenario, reference material and answer controls; use short labels to refer to it. Keep the facts, policies and data needed to answer fairly. Use a brief placeholder, not repeated instructions.`;
 
-export const TIMING_AND_LIMITS_RULE = (realities?: TaskPatternRealities, timeBudgetMinutes?: number) => {
+export const TIMING_AND_LIMITS_RULE = (
+  realities?: TaskPatternRealities,
+  timeBudgetMinutes?: number,
+  includePayload = true,
+) => {
   const maxStimulus = realities?.maxStimulusWords ?? 250;
   const defaultDuration = realities?.defaultDurationMinutes ?? 8;
   return `Simulation Timing & Limits:
 - Set expectedDurationMinutes based on depth (guideline: ~${timeBudgetMinutes ?? defaultDuration} mins, allowed range: 3-15).
-- Keep scenarioDescription concise: strictly facts, situation, and stimulus (hard ceiling: ${maxStimulus} words).
-- In interfacePayload, set wordLimit: { min, max } realistic for the allocated time (or null if purely objective).`;
+- Keep scenarioDescription concise: strictly facts, situation, and stimulus (hard ceiling: ${maxStimulus} words).${includePayload ? '\n- In interfacePayload, set wordLimit: { min, max } realistic for the allocated time (or null if purely objective).' : ''}`;
 };
 
-export function buildTaskGenerationPromptBase(skillLevel?: string | null): string {
+export function buildTaskGenerationPromptBase(
+  skillLevel?: string | null,
+): string {
   return [
-    "Generate the full content for one job-simulation task,",
+    'Generate the full content for one job-simulation task,',
     "matching the given candidate's taskType. Produce a scenario and the task components appropriate",
-    "to that taskType. Focus on one manageable piece of work that assesses relevant role knowledge or judgment.",
-    "",
+    'to that taskType. Focus on one manageable piece of work that assesses relevant role knowledge or judgment.',
+    '',
     getSeniorityGuidance(skillLevel),
-    "",
+    '',
     TASK_SCOPE_RULE,
-    "",
+    '',
     READABILITY_RULE,
-    "",
+    '',
     CANDIDATE_FACING_TEXT_RULES,
-    "",
+    '',
     MARKDOWN_RULES,
-  ].join("\n");
+  ].join('\n');
 }
 
 export interface GenerateTaskContentParams {
@@ -139,16 +158,14 @@ export async function generateTaskContent(
       timeBudgetMinutes,
     });
   }
+  if (
+    patternTypeDef.allowedInterfaceTypes &&
+    patternTypeDef.allowedInterfaceTypes.length > 1
+  ) {
+    return generateFlexibleTaskContent(params, patternTypeDef);
+  }
   const interfaceType = patternTypeDef.allowedInterfaceTypes
-    ? (await withGeminiSafeStructuredOutput(
-        model,
-        z.object({ interfaceType: z.enum(patternTypeDef.allowedInterfaceTypes) }),
-      ).invoke([
-        new SystemMessage(
-          `Choose the best interface for this task based on the work, not variety: ${patternTypeDef.allowedInterfaceTypes.map((type) => `${type}: ${presentationCapability(type).description}`).join('; ')}.`,
-        ),
-        new HumanMessage(JSON.stringify({ category, intent, problem, taskType, briefDescription, guidance })),
-      ])).interfaceType
+    ? patternTypeDef.allowedInterfaceTypes[0]
     : patternTypeDef.interfaceType;
   const presentation = presentationCapability(interfaceType);
   const interfacePayloadSchema = presentation.inputSchema;
@@ -199,10 +216,18 @@ export async function generateTaskContent(
 
   const interfacePayload = presentation.materialize
     ? presentation.materialize(result.interfacePayload)
-    : result.interfacePayload as Record<string, unknown>;
+    : (result.interfacePayload as Record<string, unknown>);
   if (patternTypeDef.validateInteraction) {
-    validateInteraction(patternTypeDef.objectiveComponentType, result.objectiveComponent);
-    validateInteractionPresentation(patternTypeDef.objectiveComponentType, result.objectiveComponent, interfaceType, interfacePayload);
+    validateInteraction(
+      patternTypeDef.objectiveComponentType,
+      result.objectiveComponent,
+    );
+    validateInteractionPresentation(
+      patternTypeDef.objectiveComponentType,
+      result.objectiveComponent,
+      interfaceType,
+      interfacePayload,
+    );
   }
 
   return {
@@ -226,24 +251,136 @@ export async function generateTaskContent(
   };
 }
 
+/** Generate the work first, then choose and populate a compatible presentation. */
+async function generateFlexibleTaskContent(
+  params: GenerateTaskContentParams,
+  pattern: TaskPatternTypeDefinition,
+): Promise<QuestionBankTaskContent> {
+  const {
+    model,
+    category,
+    intent,
+    problem,
+    skillLevel,
+    taskType,
+    briefDescription,
+    guidance,
+    revisionNotes,
+    timeBudgetMinutes,
+  } = params;
+  const allowedInterfaces = pattern.allowedInterfaceTypes;
+  if (!allowedInterfaces)
+    throw new Error('Flexible task requires allowed interfaces');
+  const objectiveSchema = pattern.objectiveComponentType
+    ? OBJECTIVE_COMPONENT_SCHEMAS[pattern.objectiveComponentType]
+    : null;
+  const openEndedSchema = pattern.openEndedComponentType
+    ? OPEN_ENDED_COMPONENT_SCHEMAS[pattern.openEndedComponentType]
+    : null;
+  const draftModel = withGeminiSafeStructuredOutput(
+    model,
+    flexibleTaskDraftSchema([taskType], objectiveSchema, openEndedSchema),
+  );
+  const draft = await draftModel.invoke([
+    new SystemMessage(
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(pattern.realities, timeBudgetMinutes, false)}\nKeep questionPrompt within ${textLimitsForSeniority(skillLevel).questionWords} words. Describe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
+    ),
+    new HumanMessage(
+      JSON.stringify({
+        category,
+        intent,
+        problem,
+        skillLevel: skillLevel ?? null,
+        candidate: { taskType, briefDescription },
+      }),
+    ),
+  ]);
+
+  // A fixed object of nullable payloads avoids provider-specific discriminated unions. Validate
+  // the chosen payload against its own schema after structured output has been parsed.
+  const payloadSchemas: Record<string, z.ZodTypeAny> = {};
+  for (const type of allowedInterfaces)
+    payloadSchemas[type] = presentationCapability(type).inputSchema.nullable();
+  const selectionSchema = z.object({
+    interfaceType: z.enum(allowedInterfaces),
+    scenarioDescription: z.string(),
+    questionPrompt: z.string(),
+    payloads: z.object(payloadSchemas),
+  });
+  const selection = await withGeminiSafeStructuredOutput(
+    model,
+    selectionSchema,
+  ).invoke([
+    new SystemMessage(
+      `Choose the interface that best supports the task's actual answer and reference needs. ${allowedInterfaces.map((type) => `${type}: ${answerControls(type, pattern.objectiveComponentType)}${presentationCapability(type).guidance ? ` ${presentationCapability(type).guidance}` : ''}`).join('\n')}\nPopulate only the selected payload; set every other payload to null. Set its wordLimit to match the task's depth and allotted time, or null for a purely objective task. Preserve all facts, evidence, answer options, and task requirements. Put reference material in the selected interface when supported, otherwise include it in scenarioDescription. Adjust scenarioDescription and questionPrompt only to match the chosen controls. Do not ask for unavailable controls.`,
+    ),
+    new HumanMessage(JSON.stringify({ category, intent, task: draft })),
+  ]);
+  const interfaceType = selection.interfaceType;
+  const presentation = presentationCapability(interfaceType);
+  const selectedPayload: unknown = selection.payloads[interfaceType];
+  if (selectedPayload === null || selectedPayload === undefined) {
+    throw new TaskSpecError('The selected interface has no matching payload.');
+  }
+  const parsedPayload: unknown =
+    presentation.inputSchema.parse(selectedPayload);
+  // Open-ended tasks are written responses, so they need a word limit. Only objective tasks may omit it.
+  if (
+    !pattern.objectiveComponentType &&
+    (parsedPayload as { wordLimit?: unknown }).wordLimit == null
+  ) {
+    throw new TaskSpecError('Written response tasks need a word limit.');
+  }
+  const interfacePayload = presentation.materialize
+    ? presentation.materialize(parsedPayload)
+    : (parsedPayload as Record<string, unknown>);
+  if (pattern.validateInteraction) {
+    validateInteraction(
+      pattern.objectiveComponentType,
+      draft.objectiveComponent,
+    );
+    validateInteractionPresentation(
+      pattern.objectiveComponentType,
+      draft.objectiveComponent,
+      interfaceType,
+      interfacePayload,
+    );
+  }
+  return {
+    taskType,
+    title: draft.title,
+    expectedDurationMinutes: draft.expectedDurationMinutes,
+    scenarioDescription: selection.scenarioDescription,
+    questionPrompt: selection.questionPrompt,
+    objectiveComponent:
+      (draft.objectiveComponent as Record<string, unknown> | null) ?? undefined,
+    openEndedComponent:
+      (draft.openEndedComponent as Record<string, unknown> | null) ?? undefined,
+    businessProblemDerived:
+      problem === null ? false : draft.businessProblemDerived,
+    interfaceType,
+    interfacePayload,
+  };
+}
+
 export function buildSpecTaskPromptBase(skillLevel?: string | null): string {
   return [
-    "Generate one job-simulation task. Put every figure the candidate needs into",
-    "`data` as raw inputs: the system derives every total, balance, variance, margin and answer from them,",
-    "and draws the data table. In scenarioDescription and questionPrompt, state no number at all — the",
-    "table shows every figure.",
-    "Keep the scenario and question consistent with the supplied data and the case, policy and answer controls derived from it. Do not invent policy terms, transactions or requirements outside those inputs.",
-    "",
+    'Generate one job-simulation task. Put every figure the candidate needs into',
+    '`data` as raw inputs: the system derives every total, balance, variance, margin and answer from them,',
+    'and draws the data table. In scenarioDescription and questionPrompt, state no number at all — the',
+    'table shows every figure.',
+    'Keep the scenario and question consistent with the supplied data and the case, policy and answer controls derived from it. Do not invent policy terms, transactions or requirements outside those inputs.',
+    '',
     getSeniorityGuidance(skillLevel),
-    "",
+    '',
     TASK_SCOPE_RULE,
-    "",
+    '',
     READABILITY_RULE,
-    "",
+    '',
     CANDIDATE_FACING_TEXT_RULES,
-    "",
+    '',
     MARKDOWN_RULES,
-  ].join("\n");
+  ].join('\n');
 }
 
 const SPEC_TASK_MODIFICATION_PROMPT_BASE = `You are given an existing task and an employer's requested change.
@@ -299,7 +436,11 @@ async function generateSpecTaskContent(
   const structuredModel = withGeminiSafeStructuredOutput(model, schema);
 
   const basePrompt = existingTask
-    ? [SPEC_TASK_MODIFICATION_PROMPT_BASE, "", getSeniorityGuidance(skillLevel)].join("\n")
+    ? [
+        SPEC_TASK_MODIFICATION_PROMPT_BASE,
+        '',
+        getSeniorityGuidance(skillLevel),
+      ].join('\n')
     : buildSpecTaskPromptBase(skillLevel);
   const guidanceClause = guidance
     ? `\n\nThe employer's direction for this task: ${guidance}`
@@ -336,12 +477,14 @@ async function generateSpecTaskContent(
       result.expectedDurationMinutes ??
       patternTypeDef.realities?.defaultDurationMinutes ??
       8,
-    scenarioDescription: patternTypeDef.key === CustomerServiceTaskType.TICKET_TRIAGE
-      ? 'Review the support queue and apply the triage guideline to decide what to do first and how to handle the remaining tickets.'
-      : result.scenarioDescription,
-    questionPrompt: patternTypeDef.key === CustomerServiceTaskType.TICKET_TRIAGE
-      ? 'Use the triage guideline to select an action for every ticket. Explain why you chose the first ticket and how you will handle the others.'
-      : result.questionPrompt,
+    scenarioDescription:
+      patternTypeDef.key === CustomerServiceTaskType.TICKET_TRIAGE
+        ? 'Review the support queue and apply the triage guideline to decide what to do first and how to handle the remaining tickets.'
+        : result.scenarioDescription,
+    questionPrompt:
+      patternTypeDef.key === CustomerServiceTaskType.TICKET_TRIAGE
+        ? 'Use the triage guideline to select an action for every ticket. Explain why you chose the first ticket and how you will handle the others.'
+        : result.questionPrompt,
     objectiveComponent: derived.objectiveComponent,
     openEndedComponent: result.openEndedComponent
       ? result.openEndedComponent
@@ -389,10 +532,23 @@ export interface ReviseTaskContentParams {
  * only what those reasons name. Its output is then checked by code again, so the model never judges its
  * own repair: figure and spec checks are deterministic, and the critic reruns on the result.
  */
-export async function reviseTaskContent(params: ReviseTaskContentParams): Promise<QuestionBankTaskContent> {
-  const { model, roleModule, category, intent, problem, skillLevel, existingTask, revisionNotes } = params;
+export async function reviseTaskContent(
+  params: ReviseTaskContentParams,
+): Promise<QuestionBankTaskContent> {
+  const {
+    model,
+    roleModule,
+    category,
+    intent,
+    problem,
+    skillLevel,
+    existingTask,
+    revisionNotes,
+  } = params;
 
-  const patternTypeDef = roleModule.allowedTaskPatternTypes.find((t) => t.key === existingTask.taskType);
+  const patternTypeDef = roleModule.allowedTaskPatternTypes.find(
+    (t) => t.key === existingTask.taskType,
+  );
   if (!patternTypeDef) {
     throw new Error(
       `No task-pattern-type definition found for taskType "${existingTask.taskType}" in role module for category "${category}"`,
@@ -522,10 +678,18 @@ export async function modifyTaskContent(
 
   const interfacePayload = presentation.materialize
     ? presentation.materialize(result.interfacePayload)
-    : result.interfacePayload as Record<string, unknown>;
+    : (result.interfacePayload as Record<string, unknown>);
   if (patternTypeDef.validateInteraction) {
-    validateInteraction(patternTypeDef.objectiveComponentType, result.objectiveComponent);
-    validateInteractionPresentation(patternTypeDef.objectiveComponentType, result.objectiveComponent, interfaceType, interfacePayload);
+    validateInteraction(
+      patternTypeDef.objectiveComponentType,
+      result.objectiveComponent,
+    );
+    validateInteractionPresentation(
+      patternTypeDef.objectiveComponentType,
+      result.objectiveComponent,
+      interfaceType,
+      interfacePayload,
+    );
   }
 
   return {
