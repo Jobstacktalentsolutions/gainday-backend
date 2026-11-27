@@ -6,10 +6,7 @@ import {
   GenerationStateUpdate,
 } from '../state/generation-state';
 import { plannedSimulationSchema } from '../schemas/task-candidate.schema';
-import {
-  getSeniorityGuidance,
-  getSeniorityPlanningGuidance,
-} from '../task-text-rules';
+import { getSeniorityPlanningGuidance } from '../task-text-rules';
 import { RoleModuleNotConfiguredError } from '../roles/role-module.interface';
 import { TaskCandidateRecord } from '../../../db/schema/job-extractions.schema';
 import { withGeminiSafeStructuredOutput } from '../../ai/gemini-structured-output.util';
@@ -37,14 +34,11 @@ export function buildPlanTasksPrompt(
 2. Each candidateId must be unique ("cand-1", "cand-2", ...).
 3. Do not invent new task types.`;
 
-  const seniorityGuidance = getSeniorityGuidance(skillLevel);
-
   return [
     `Plan exactly ${targetCount} realistic on-the-job simulation tasks for this role.`,
     `Together the tasks must fit in ${DEFAULT_SIMULATION_TIME_LIMIT_MINUTES} minutes, including reading and answering. Keep each focused on a manageable piece of work.`,
     'Choose work aligned with the stated Category, Intent, and Problem.',
     '',
-    seniorityGuidance,
     getSeniorityPlanningGuidance(skillLevel),
     '',
     constraintRules,

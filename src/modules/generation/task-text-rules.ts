@@ -115,11 +115,18 @@ export function getSeniorityGuidance(skillLevel?: string | null): string {
   ].join('\n');
 }
 
-/** How the planner should lean when choosing task types and briefs for this level. */
+/**
+ * What the planner needs at this level: what a task asks of the candidate and which task types to lean
+ * on. The rest of the profile shapes how a single task is written, so only the generator reads it.
+ */
 export function getSeniorityPlanningGuidance(
   skillLevel?: string | null,
 ): string {
-  return DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)].planning;
+  const profile = DIFFICULTY_PROFILES[resolveSkillLevel(skillLevel)];
+  return [
+    `Target seniority: ${profile.label}. A task at this level asks the candidate to ${profile.asks}`,
+    profile.planning,
+  ].join('\n');
 }
 
 /** How complex the supplied data should be for this level, for tasks whose figures the model supplies. */

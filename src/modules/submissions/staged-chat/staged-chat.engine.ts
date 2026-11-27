@@ -1,4 +1,5 @@
 import type { StagedChatServerData } from '../../generation/roles/customer-service/staged-chat/staged-script';
+import { countWords } from '../../../utils/word-count.util';
 
 // Pure rules for a staged chat: which turn is next, which customer message is released, whether a
 // reply is accepted, and what the transcript looks like for grading. No database access here.
@@ -47,15 +48,10 @@ export function releasedMessage(
   return { message: branch.replacementMessage, typingDelayMs: scripted.typingDelayMs };
 }
 
-export function wordCount(text: string): number {
-  const trimmed = text.trim();
-  return trimmed === '' ? 0 : trimmed.split(/\s+/).length;
-}
-
 /** Why a reply cannot be stored, or null when it can. */
 export function replyProblem(text: string, wordLimit: { max: number }): 'EMPTY' | 'TOO_LONG' | null {
   if (text.trim() === '') return 'EMPTY';
-  if (wordCount(text) > wordLimit.max) return 'TOO_LONG';
+  if (countWords(text) > wordLimit.max) return 'TOO_LONG';
   return null;
 }
 

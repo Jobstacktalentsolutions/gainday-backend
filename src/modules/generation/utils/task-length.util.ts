@@ -8,13 +8,13 @@ import { InterfaceType } from '../roles/interface-type';
 import { TASK_TEXT_LIMITS, textLimitsForSeniority } from '../task-text-rules';
 import {
   candidateReadingWords,
-  countWords,
   hasReferenceMaterial,
   readingBreakdown,
   readingBudget,
   slotBudgetMinutes,
   writtenResponseLimit,
 } from './task-budget.util';
+import { countWords } from '../../../utils/word-count.util';
 
 /** A small overshoot is not worth a regeneration. Applies to every section and to the total. */
 const BUDGET_TOLERANCE = 1.25;

@@ -2,6 +2,7 @@ import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema
 import { DEFAULT_SIMULATION_TIME_LIMIT_MINUTES } from '../../../db/schema/simulations.schema';
 import { generationConfig } from '../../../config/ai.config';
 import { InterfaceType } from '../roles/interface-type';
+import { countWords } from '../../../utils/word-count.util';
 
 /**
  * A task's time is a budget. The model chooses the duration and the word limit, and the critic
@@ -59,15 +60,6 @@ export function slotBudgetMinutes(
 
 export function readingWordsCeiling(budgetMinutes: number): number {
   return budgetMinutes * TASK_BUDGET.readingWordsPerBudgetMinute;
-}
-
-/**
- * Counts words the way a reader sees them: tokens with a letter or a digit. Markdown table
- * separators, bullets and dashes are not words, so they do not count against a limit.
- */
-export function countWords(text: string): number {
-  return text.split(/\s+/).filter((token) => /[\p{L}\p{N}]/u.test(token))
-    .length;
 }
 
 /**

@@ -9,7 +9,7 @@ export const taskCandidateSchema = (allowedTypeKeys: [string, ...string[]]) =>
     briefDescription: z
       .string()
       .describe(
-        'A short (1-2 sentence) summary of what this candidate task would test.',
+        'A short (1-2 sentence) summary of what this task would test, and the difficulty lever for the target seniority: the constraint, stakeholder or gap the candidate must handle.',
       ),
   });
 

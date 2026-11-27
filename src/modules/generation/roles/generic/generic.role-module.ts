@@ -1,5 +1,4 @@
 import { getSeniorityCriticGuidance } from '../../task-text-rules';
-import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import {
   RelevanceCheckResult,
@@ -51,7 +50,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'Justify, in writing, a decision or course of action already made in the scenario.',
     interfaceType: InterfaceType.TEXT_AREA,
-    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
+    realities: { defaultDurationMinutes: 7 },
   },
   {
     key: GenericTaskType.DRAFTED_COMMUNICATION,
@@ -59,7 +58,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     openEndedComponentType: 'DRAFTED_COMMUNICATION',
     description: 'Draft a message, summary, or deliverable to a stakeholder.',
     interfaceType: InterfaceType.RICH_TEXT_COMPOSER,
-    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
+    realities: { defaultDurationMinutes: 7 },
   },
   {
     key: GenericTaskType.INTERPRETATION_ANALYSIS,
@@ -68,7 +67,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'Interpret or analyze a situation and supporting evidence in writing.',
     interfaceType: InterfaceType.TEXT_AREA,
-    realities: { maxStimulusWords: 300, defaultDurationMinutes: 8 },
+    realities: { defaultDurationMinutes: 8 },
   },
   {
     key: GenericTaskType.DATA_INTERPRETATION,
@@ -77,7 +76,7 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'Interpret a small data set, such as a log, report extract or set of measurements, in writing. Only for roles whose work involves reading such data.',
     interfaceType: InterfaceType.CSV_DATA_PANEL,
-    realities: { maxStimulusWords: 300, defaultDurationMinutes: 9 },
+    realities: { defaultDurationMinutes: 9 },
   },
   {
     key: GenericTaskType.STAKEHOLDER_PUSHBACK_RESPONSE,
@@ -86,52 +85,57 @@ const genericTaskPatternTypes: TaskPatternTypeDefinition[] = [
     description:
       'Respond, in writing, to a stakeholder raising pushback or an objection.',
     interfaceType: InterfaceType.TEXT_AREA,
-    realities: { maxStimulusWords: 200, defaultDurationMinutes: 6 },
+    realities: { defaultDurationMinutes: 6 },
   },
   {
     key: GenericTaskType.CLASSIFY_ITEMS,
     label: 'Classify items',
     objectiveComponentType: 'CLASSIFICATION',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
-    description: 'Group distinct role-specific items into meaningful categories, then justify the choices. Provide enough evidence for the classifications.',
+    description:
+      'Group distinct role-specific items into meaningful categories, then justify the choices. Provide enough evidence for the classifications.',
     interfaceType: InterfaceType.TEXT_AREA,
-    realities: { maxStimulusWords: 250, defaultDurationMinutes: 8 },
+    realities: { defaultDurationMinutes: 8 },
   },
   {
     key: GenericTaskType.PRIORITIZE_ITEMS,
     label: 'Prioritize items',
     objectiveComponentType: 'PRIORITY_RANKING',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
-    description: 'Rank distinct role-specific requests or actions by priority and explain the top choice. The scenario gives each item\'s signals (impact, urgency) once; the ranked items themselves are short names.',
+    description:
+      "Rank distinct role-specific requests or actions by priority and explain the top choice. The scenario gives each item's signals (impact, urgency) once; the ranked items themselves are short names.",
     interfaceType: InterfaceType.TEXT_AREA,
-    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
+    realities: { defaultDurationMinutes: 7 },
   },
   {
     key: GenericTaskType.SEQUENCE_STEPS,
     label: 'Sequence steps',
     objectiveComponentType: 'PROCEDURAL_SEQUENCING',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
-    description: 'Arrange the steps of a role-specific procedure into the correct order and explain a key dependency.',
+    description:
+      'Arrange the steps of a role-specific procedure into the correct order and explain a key dependency.',
     interfaceType: InterfaceType.TEXT_AREA,
-    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
+    realities: { defaultDurationMinutes: 7 },
   },
   {
     key: GenericTaskType.CHOOSE_ACTION,
     label: 'Choose an action',
     objectiveComponentType: 'SINGLE_BEST_ACTION',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
-    description: 'Choose the best action in a role-specific situation and explain the decision. Give one clearly defensible best option.',
+    description:
+      'Choose the best action in a role-specific situation and explain the decision. Give one clearly defensible best option.',
     interfaceType: InterfaceType.TEXT_AREA,
-    realities: { maxStimulusWords: 250, defaultDurationMinutes: 6 },
+    realities: { defaultDurationMinutes: 6 },
   },
   {
     key: GenericTaskType.SELECT_ACTIONS,
     label: 'Select actions',
     objectiveComponentType: 'MULTI_SELECT_UNDER_CONSTRAINT',
     openEndedComponentType: 'WRITTEN_JUSTIFICATION',
-    description: 'Select a fixed number of appropriate actions from distinct alternatives and explain the choices. Make the correct set unambiguous from the evidence.',
+    description:
+      'Select a fixed number of appropriate actions from distinct alternatives and explain the choices. Make the correct set unambiguous from the evidence.',
     interfaceType: InterfaceType.TEXT_AREA,
-    realities: { maxStimulusWords: 250, defaultDurationMinutes: 7 },
+    realities: { defaultDurationMinutes: 7 },
   },
 ];
 

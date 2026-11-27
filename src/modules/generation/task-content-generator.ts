@@ -22,7 +22,6 @@ import {
 import {
   RoleModule,
   TaskPatternTypeDefinition,
-  TaskPatternRealities,
   TaskSpecTemplate,
   TaskSpecError,
   INTERACTION,

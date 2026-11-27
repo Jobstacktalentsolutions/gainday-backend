@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { QuestionBankTaskContent, TaskRubric } from '../../../db/schema/question-bank.schema';
+import {
+  QuestionBankTaskContent,
+  TaskRubric,
+} from '../../../db/schema/question-bank.schema';
 import { InterfaceType } from './interface-type';
 import { RoleCategory } from './role-category.enum';
 
@@ -59,8 +62,6 @@ export interface TaskSpecTemplate {
 }
 
 export interface TaskPatternRealities {
-  /** Maximum stimulus reading word count for this task type. Prevents storybooks. */
-  maxStimulusWords: number;
   /** Baseline duration guideline in minutes for this task type within the overall simulation budget. */
   defaultDurationMinutes: number;
 }
