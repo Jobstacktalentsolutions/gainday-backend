@@ -16,6 +16,7 @@ import { findCsvProblem } from '../utils/csv.util';
 import { InterfaceType } from '../roles/interface-type';
 import { GeneratedTaskCandidate } from '../roles/role-module.interface';
 import { taskLengthProblems } from '../utils/task-length.util';
+import { questionRepeatsItems } from '../utils/objective-instruction.util';
 import { slotBudgetMinutes } from '../utils/task-budget.util';
 
 const logger = new Logger('GenerationPipeline:critic');
@@ -102,13 +103,19 @@ export function criticNode(ctx: GenerationContext) {
     const patternDef = state.roleModule.allowedTaskPatternTypes.find(
       (p) => p.key === candidate.taskType,
     );
-    const lengthProblems = taskLengthProblems(
-      candidate.taskContent,
-      patternDef?.objectiveComponentType,
-      state.skillLevel,
-      slotBudgetMinutes(ctx.config.selectedTaskCount),
-    );
-    failureReasons.push(...lengthProblems);
+    const codeProblems = [
+      ...taskLengthProblems(
+        candidate.taskContent,
+        patternDef?.objectiveComponentType,
+        state.skillLevel,
+        slotBudgetMinutes(ctx.config.selectedTaskCount),
+      ),
+      ...questionRepeatsItems(
+        candidate.taskContent.questionPrompt,
+        candidate.taskContent.objectiveComponent,
+      ),
+    ];
+    failureReasons.push(...codeProblems);
     const relevanceResult = await checkRelevance(
       ctx.criticModel,
       candidate,
@@ -170,7 +177,7 @@ export function criticNode(ctx: GenerationContext) {
     const criticResult: CriticResult = {
       passed:
         payloadValid &&
-        lengthProblems.length === 0 &&
+        codeProblems.length === 0 &&
         relevanceResult.presentationProblems.length === 0 &&
         tips.length === 0 &&
         !duplicateResult.isDuplicate &&

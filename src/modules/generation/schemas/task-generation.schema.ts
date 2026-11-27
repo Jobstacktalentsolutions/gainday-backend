@@ -4,11 +4,23 @@ import { z } from 'zod';
 // grading-time concern, not a generation-time one. See src/modules/grading/README.md and
 // ANCHOR_ARCHITECTURE.md for the full design (prompt text, schema shape, and why).
 
+/**
+ * What the model writes in questionPrompt. When the platform starts the question with an answer control's
+ * instruction, the model writes only what follows it; otherwise it writes the whole deliverable.
+ */
+export const questionPromptDescription = (controlInstruction = '') =>
+  `GitHub-flavored Markdown. ${
+    controlInstruction
+      ? `The written part of the question only, in one sentence. The platform puts "${controlInstruction}" before it, so do not state or repeat that.`
+      : 'The requirements of the deliverable only: the deliverable in one sentence, plus at most one constraint.'
+  } Never state word counts, limits, or length rules; the platform shows the word limit. No tips: approach advice, example tactics, or what a good answer does.`;
+
 export const taskGenerationSchema = (
   allowedTypeKeys: [string, ...string[]],
   interfacePayloadSchema: z.ZodTypeAny,
   objectiveComponentSchema: z.ZodTypeAny | null,
   openEndedComponentSchema: z.ZodTypeAny | null,
+  controlInstruction?: string,
 ) => {
   return z.object({
     taskType: z.enum(allowedTypeKeys),
@@ -26,9 +38,7 @@ export const taskGenerationSchema = (
     // with the schema the model fills in, and this is the field where it gets broken.
     questionPrompt: z
       .string()
-      .describe(
-        'GitHub-flavored Markdown. The requirements of the deliverable only: the deliverable in one sentence, plus at most one constraint. Never state word counts, limits, or length rules; the platform shows the word limit. No tips: approach advice, example tactics, or what a good answer does.',
-      ),
+      .describe(questionPromptDescription(controlInstruction)),
     businessProblemDerived: z.boolean(),
     objectiveComponent: objectiveComponentSchema
       ? objectiveComponentSchema
@@ -47,12 +57,14 @@ export const flexibleTaskDraftSchema = (
   allowedTypeKeys: [string, ...string[]],
   objectiveComponentSchema: z.ZodTypeAny | null,
   openEndedComponentSchema: z.ZodTypeAny | null,
+  controlInstruction?: string,
 ) =>
   taskGenerationSchema(
     allowedTypeKeys,
     z.null(),
     objectiveComponentSchema,
     openEndedComponentSchema,
+    controlInstruction,
   )
     .omit({ interfacePayload: true })
     .extend({

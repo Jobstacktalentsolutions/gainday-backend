@@ -18,9 +18,9 @@ import type { ObjectiveComponentType } from '../roles/role-module.interface';
 
 export function buildCritiqueCheckPrompt(skillLevel?: string | null): string {
   return [
-    'You are checking a generated job-simulation task. Be lenient: flag only clear problems.',
-    '1. Relevance: the task fits the Category, Intent and seniority.',
-    'In presentationProblems, always report, with no leniency: (a) questionPrompt or scenarioDescription lists, letters or numbers the items of an answer control; (b) questionPrompt asks the candidate to type, enter or write those items; (c) reference material repeats the items or steps. Also report actions the controls cannot do.',
+    'You are checking a generated job-simulation task.',
+    '1. Relevance: the task fits the Category, Intent and seniority. Flag only clear mismatches.',
+    'In presentationProblems: the platform shows each answer control with its own items, so the candidate works on them through that control. Report every place the question, scenario or reference material lists, letters or numbers those items, or asks the candidate to type or enter them. Also report clearly repeated evidence and actions the controls cannot do.',
     'Candidate-visible material is scenarioDescription, questionPrompt, interfacePayload and objective item labels and options; answer keys, serverOnly, rubric, openEndedComponent and wordLimit are not.',
     `2. Candidate guidance: ${REQUIREMENT_VS_TIP_RULE}`,
     'Treat instructions to produce, explain, format, scope, or support a deliverable as requirements, not tips.',

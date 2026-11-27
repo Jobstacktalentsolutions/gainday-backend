@@ -5,6 +5,7 @@ import { QuestionBankTaskContent } from '../../db/schema/question-bank.schema';
 import {
   flexibleTaskDraftSchema,
   taskGenerationSchema,
+  questionPromptDescription,
 } from './schemas/task-generation.schema';
 import {
   answerControls,
@@ -27,6 +28,11 @@ import {
   INTERACTION,
   type ObjectiveComponentType,
 } from './roles/role-module.interface';
+import {
+  objectiveInstruction,
+  withObjectiveInstruction,
+  withoutObjectiveInstruction,
+} from './utils/objective-instruction.util';
 import { taskSpecSchema } from './schemas/task-spec.schema';
 import {
   REQUIREMENT_VS_TIP_RULE,
@@ -60,13 +66,17 @@ const CANDIDATE_FACING_TEXT_RULES = `Candidate-facing fields (scenarioDescriptio
 ${REQUIREMENT_VS_TIP_RULE}`;
 
 /**
- * The structured answer is its own control, built from objectiveComponent. Without this the model lists the
- * items in the question and fills objectiveComponent with instructions about how to answer.
+ * The platform starts the question with the answer control's instruction (see objective-instruction.util), so the
+ * model writes only the written part. Without this it lists the items in the question and fills objectiveComponent
+ * with instructions about how to answer.
  */
-function structuredAnswerRule(objectiveType?: ObjectiveComponentType): string {
-  return objectiveType
+function structuredAnswerRule(
+  objectiveType?: ObjectiveComponentType,
+  fields = 'questionPrompt',
+): string {
+  return objectiveInstruction(objectiveType)
     ? `
-The platform shows the structured answer as its own control, built from objectiveComponent, and the written answer covers only the written part. objectiveComponent holds only the real items, one entry each written out in full, never a letter or label that points elsewhere. The question refers to them ("the steps", "the options") without listing, lettering or numbering them, and never asks the candidate to type them.`
+The platform shows the structured answer as its own control, built from objectiveComponent, and starts the question with that control's instruction. Write ${fields} for the written part only, never listing the items or asking the candidate to enter them. objectiveComponent holds the real items, one entry each written out in full.`
     : '';
 }
 
@@ -223,6 +233,7 @@ export async function generateTaskContent(
     interfacePayloadSchema,
     objectiveComponentSchema,
     openEndedComponentSchema,
+    objectiveInstruction(patternTypeDef.objectiveComponentType),
   );
   const structuredModel = withGeminiSafeStructuredOutput(model, schema);
 
@@ -282,7 +293,10 @@ export async function generateTaskContent(
     title: result.title,
     expectedDurationMinutes: result.expectedDurationMinutes,
     scenarioDescription: result.scenarioDescription,
-    questionPrompt: result.questionPrompt,
+    questionPrompt: withObjectiveInstruction(
+      patternTypeDef.objectiveComponentType,
+      result.questionPrompt,
+    ),
     objectiveComponent:
       shuffleObjectiveOrder(
         patternTypeDef.objectiveComponentType,
@@ -325,11 +339,16 @@ async function generateFlexibleTaskContent(
     : null;
   const draftModel = withGeminiSafeStructuredOutput(
     model,
-    flexibleTaskDraftSchema([taskType], objectiveSchema, openEndedSchema),
+    flexibleTaskDraftSchema(
+      [taskType],
+      objectiveSchema,
+      openEndedSchema,
+      objectiveInstruction(pattern.objectiveComponentType),
+    ),
   );
   const draft = await draftModel.invoke([
     new SystemMessage(
-      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(pattern)))}\nDescribe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${structuredAnswerRule(pattern.objectiveComponentType)}${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
+      `${buildTaskGenerationPromptBase(skillLevel)}\n\n${TIMING_AND_LIMITS_RULE(textLimitsForSeniority(skillLevel).questionWords, timeBudgetMinutes, hasReferenceMaterial(patternInterfaceTypes(pattern)))}\nDescribe the work and its evidence before selecting a presentation. Put supporting artifacts and data in referenceMaterial, and describe the required answer format and reference needs in presentationNeeds. Do not mention controls that have not been selected.${structuredAnswerRule(pattern.objectiveComponentType, 'questionPrompt and presentationNeeds')}${guidance ? `\nEmployer direction: ${guidance}` : ''}${revisionClause(revisionNotes)}`,
     ),
     new HumanMessage(
       JSON.stringify({
@@ -354,7 +373,13 @@ async function generateFlexibleTaskContent(
   const selectionSchema = z.object({
     interfaceType: z.enum(allowedInterfaces),
     scenarioDescription: z.string(),
-    questionPrompt: z.string(),
+    questionPrompt: z
+      .string()
+      .describe(
+        questionPromptDescription(
+          objectiveInstruction(pattern.objectiveComponentType),
+        ),
+      ),
     payloads: z.object(payloadSchemas),
   });
   const selection = await withGeminiSafeStructuredOutput(
@@ -396,7 +421,10 @@ async function generateFlexibleTaskContent(
     title: draft.title,
     expectedDurationMinutes: draft.expectedDurationMinutes,
     scenarioDescription: selection.scenarioDescription,
-    questionPrompt: selection.questionPrompt,
+    questionPrompt: withObjectiveInstruction(
+      pattern.objectiveComponentType,
+      selection.questionPrompt,
+    ),
     objectiveComponent:
       shuffleObjectiveOrder(
         pattern.objectiveComponentType,
@@ -703,6 +731,7 @@ export async function modifyTaskContent(
     interfacePayloadSchema,
     objectiveComponentSchema,
     openEndedComponentSchema,
+    objectiveInstruction(patternTypeDef.objectiveComponentType),
   );
   const structuredModel = withGeminiSafeStructuredOutput(model, schema);
 
@@ -717,7 +746,13 @@ export async function modifyTaskContent(
         category,
         intent,
         problem,
-        existingTask,
+        existingTask: {
+          ...existingTask,
+          questionPrompt: withoutObjectiveInstruction(
+            patternTypeDef.objectiveComponentType,
+            existingTask.questionPrompt,
+          ),
+        },
         requestedChange: guidance,
       }),
     ),
@@ -747,7 +782,10 @@ export async function modifyTaskContent(
     title: result.title,
     expectedDurationMinutes: result.expectedDurationMinutes,
     scenarioDescription: result.scenarioDescription,
-    questionPrompt: result.questionPrompt,
+    questionPrompt: withObjectiveInstruction(
+      patternTypeDef.objectiveComponentType,
+      result.questionPrompt,
+    ),
     objectiveComponent:
       (result.objectiveComponent as Record<string, unknown> | null) ??
       undefined,
