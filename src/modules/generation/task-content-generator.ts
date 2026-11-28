@@ -35,7 +35,6 @@ import {
 } from './utils/objective-instruction.util';
 import { taskSpecSchema } from './schemas/task-spec.schema';
 import {
-  REQUIREMENT_VS_TIP_RULE,
   textLimitsForSeniority,
   getSeniorityGuidance,
   getSeniorityDataGuidance,
@@ -62,8 +61,7 @@ import { InterfaceType, withWrittenWordLimit } from './roles/interface-type';
  */
 const CANDIDATE_FACING_TEXT_RULES = `Candidate-facing fields (scenarioDescription, questionPrompt, interfacePayload):
 - scenarioDescription: strictly the situation, facts, and stimulus.
-- questionPrompt: deliverables and requirements only.
-${REQUIREMENT_VS_TIP_RULE}`;
+- questionPrompt: the deliverable, as concisely as possible, in one or two lines.`;
 
 /**
  * The platform starts the question with the answer control's instruction (see objective-instruction.util), so the
@@ -76,7 +74,7 @@ function structuredAnswerRule(
 ): string {
   return objectiveInstruction(objectiveType)
     ? `
-The platform shows the structured answer as its own control, built from objectiveComponent, and starts the question with that control's instruction. Write ${fields} for the written part only, never listing the items or asking the candidate to enter them. objectiveComponent holds the real items, one entry each written out in full.`
+The platform shows the items in objectiveComponent as a control the candidate works on, and starts the question with the control's instruction. objectiveComponent holds the things the candidate works on, such as the real leads, steps or options, each written out in full, and never the candidate's answer, a rank or a deliverable. Write ${fields} for the written part only, never listing the items or asking the candidate to enter them.`
     : '';
 }
 
@@ -111,7 +109,7 @@ export const TIMING_AND_LIMITS_RULE = (
 - The task budget is ${timeBudgetMinutes} minutes, reading included. Set expectedDurationMinutes to the time this task needs, at most ${timeBudgetMinutes}.
 - Words the candidate reads, at most ${budget.total}: scenario about ${budget.scenario}, question ${budget.question}, ${reference}.
 - For a written answer, set wordLimit.max between ${written.min} and ${written.max}, and wordLimit.min about 40% of max.
-- Ask for the deliverable in one sentence, plus at most one constraint. No numbered or multi-part lists.`;
+- Ask for the deliverable in one or two lines. No numbered or multi-part lists.`;
 };
 
 export function buildTaskGenerationPromptBase(

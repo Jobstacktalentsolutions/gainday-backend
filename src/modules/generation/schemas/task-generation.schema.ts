@@ -12,7 +12,7 @@ export const questionPromptDescription = (controlInstruction = '') =>
   `GitHub-flavored Markdown. ${
     controlInstruction
       ? `The written part of the question only, in one sentence. The platform puts "${controlInstruction}" before it, so do not state or repeat that.`
-      : 'The requirements of the deliverable only: the deliverable in one sentence, plus at most one constraint.'
+      : 'The deliverable, as concisely as possible, in one or two lines.'
   } Never state word counts, limits, or length rules; the platform shows the word limit. No tips: approach advice, example tactics, or what a good answer does.`;
 
 export const taskGenerationSchema = (

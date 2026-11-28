@@ -13,17 +13,16 @@ import {
 import { candidateObjectiveView } from '../../simulations/candidate-task.util';
 import { QuestionBankTaskContent } from '../../../db/schema/question-bank.schema';
 import { candidateReadingText } from '../utils/task-budget.util';
-import { answerControls } from '../roles/presentation-capabilities';
 import type { ObjectiveComponentType } from '../roles/role-module.interface';
 
 export function buildCritiqueCheckPrompt(skillLevel?: string | null): string {
   return [
     'You are checking a generated job-simulation task.',
     '1. Relevance: the task fits the Category, Intent and seniority. Flag only clear mismatches.',
-    'In presentationProblems: the platform shows each answer control with its own items, so the candidate works on them through that control. Report every place the question, scenario or reference material lists, letters or numbers those items, or asks the candidate to type or enter them. Also report clearly repeated evidence and actions the controls cannot do.',
+    'In presentationProblems, report a questionPrompt that asks the candidate to type or enter the items of the answer control, and clearly repeated evidence between the scenario and the reference material. The items may also be named in the reference table or tabs; that is expected.',
     'Candidate-visible material is scenarioDescription, questionPrompt, interfacePayload and objective item labels and options; answer keys, serverOnly, rubric, openEndedComponent and wordLimit are not.',
     `2. Candidate guidance: ${REQUIREMENT_VS_TIP_RULE}`,
-    'Treat instructions to produce, explain, format, scope, or support a deliverable as requirements, not tips.',
+    "Treat instructions to produce, explain, format, scope, or support a deliverable as requirements, not tips. When the task has an answer control, the first sentence of questionPrompt is the platform's instruction for it, which is also a requirement.",
   ].join('\n');
 }
 
@@ -85,10 +84,6 @@ export async function checkRelevance(
         category: extraction.category,
         intent: extraction.intent,
         skillLevel: extraction.skillLevel ?? null,
-        availableControls: answerControls(
-          task.taskContent.interfaceType,
-          objectiveType,
-        ),
         taskContent: candidateVisibleContent(task.taskContent, objectiveType),
       }),
     ),
